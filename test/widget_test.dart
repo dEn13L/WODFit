@@ -1,30 +1,53 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:wod_fit/domain/entities/workout.dart';
+import 'package:wod_fit/domain/repositories/workout_repository.dart';
 import 'package:wod_fit/main.dart';
 
+class MockWorkoutRepository implements WorkoutRepository {
+  final List<Workout> _workouts = [];
+
+  @override
+  Future<List<Workout>> getWorkouts() async => _workouts;
+
+  @override
+  Future<void> saveWorkout(Workout workout) async {
+    _workouts.add(workout);
+  }
+
+  @override
+  Future<void> deleteWorkout(String id) async {
+    _workouts.removeWhere((w) => w.id == id);
+  }
+
+  @override
+  Stream<int> getStepCountStream() => Stream.value(5432);
+}
+
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('HomeScreen smoke test - displays title, stats and start workout button',
+      (WidgetTester tester) async {
+    final mockRepository = MockWorkoutRepository();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(WodFitApp(workoutRepository: mockRepository));
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Verify header
+    expect(find.text('Привет, Атлет! ⚡'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify "Начать тренировку" button
+    expect(find.text('Начать тренировку'), findsOneWidget);
+
+    // Verify Daily metrics
+    expect(find.text('Активность сегодня'), findsOneWidget);
+    expect(find.text('Шаги'), findsOneWidget);
+    expect(find.text('Калории'), findsOneWidget);
+
+    // Tap "Начать тренировку" button to open modal
+    await tester.tap(find.text('Начать тренировку'));
+    await tester.pumpAndSettle();
+
+    // Verify modal appears with workout types and start action
+    expect(find.text('Выберите тип тренировки'), findsOneWidget);
+    expect(find.text('ПОГНАЛИ!'), findsOneWidget);
   });
 }
