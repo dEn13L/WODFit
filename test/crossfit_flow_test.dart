@@ -44,6 +44,37 @@ class MockCoachAuthRepository implements AuthRepository {
   Future<void> signOut() async => _controller.add(null);
 }
 
+class MockClientAuthRepository implements AuthRepository {
+  final _controller = StreamController<UserProfile?>.broadcast();
+  final UserProfile _client = UserProfile(
+    id: 'client-123',
+    email: 'client@wodfit.com',
+    fullName: 'Иван Атлетов',
+    role: UserRole.client,
+    createdAt: DateTime.now(),
+  );
+
+  @override
+  Future<UserProfile?> getCurrentUserProfile() async => _client;
+
+  @override
+  Stream<UserProfile?> get authStateChanges => Stream.value(_client);
+
+  @override
+  Future<UserProfile> signInWithEmailPassword({required String email, required String password}) async => _client;
+
+  @override
+  Future<UserProfile> signUpWithEmailPassword({
+    required String email,
+    required String password,
+    required String fullName,
+    required UserRole role,
+  }) async => _client;
+
+  @override
+  Future<void> signOut() async => _controller.add(null);
+}
+
 class MockGroupRepository implements GroupRepository {
   final List<Group> _groups = [
     Group(
@@ -225,6 +256,22 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
 
   @override
   Future<List<PartResult>> getUserWorkoutResults(String workoutId) async => [];
+
+  @override
+  Future<List<PartResult>> getClientAllResults() async => [
+        PartResult(
+          id: 'res-1',
+          workoutId: 'w-1',
+          partId: 'p-1',
+          userId: 'client-123',
+          status: ResultStatus.done,
+          scoreText: '',
+          weightKg: 85.0,
+          reps: 2,
+          createdAt: DateTime.now().subtract(const Duration(days: 1)),
+          updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+      ];
 
   @override
   Future<PartResult> submitPartResult({
@@ -610,5 +657,52 @@ void main() {
       updatedAt: DateTime.now(),
     );
     expect(noneResult.formattedScore, 'Выполнено');
+  });
+
+  testWidgets('Client Home Screen displays recent results and history button', (WidgetTester tester) async {
+    final authRepo = MockClientAuthRepository();
+    final groupRepo = MockGroupRepository();
+    final workoutRepo = MockWorkoutRepository();
+    final templateRepo = MockWorkoutTemplateRepository();
+    final legacyRepo = MockLegacyWorkoutRepository();
+
+    await tester.pumpWidget(
+      WodFitApp(
+        authRepository: authRepo,
+        groupRepository: groupRepo,
+        crossfitWorkoutRepository: workoutRepo,
+        workoutTemplateRepository: templateRepo,
+        legacyWorkoutRepository: legacyRepo,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify Client Home Screen
+    expect(find.text('Иван Атлетов'), findsOneWidget);
+    expect(find.text('Личный кабинет атлета'), findsOneWidget);
+    expect(find.text('История и результаты тренировок'), findsOneWidget);
+    expect(find.text('Последние результаты'), findsOneWidget);
+    expect(find.text('Назначенные тренировки (WOD)'), findsOneWidget);
+    expect(find.text('WOD: Fran & Heavy Snatch'), findsWidgets);
+    expect(find.text('2 повт • 85.0 кг'), findsOneWidget);
+
+    // Tap History button to navigate to ClientHistoryScreen
+    await tester.tap(find.text('История и результаты тренировок'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('История тренировок'), findsOneWidget);
+    expect(find.text('Прошедшие'), findsOneWidget);
+    expect(find.text('Будущие'), findsOneWidget);
+    expect(find.text('Все группы'), findsOneWidget);
+    expect(find.text('Сначала новые'), findsOneWidget);
+
+    // Switch to 'Будущие' tab
+    await tester.tap(find.text('Будущие'));
+    await tester.pumpAndSettle();
+
+    // Toggle sorting
+    await tester.tap(find.text('Сначала новые'));
+    await tester.pumpAndSettle();
+    expect(find.text('Сначала старые'), findsOneWidget);
   });
 }

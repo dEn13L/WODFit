@@ -206,6 +206,9 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
   Future<List<PartResult>> getUserWorkoutResults(String workoutId) async => [];
 
   @override
+  Future<List<PartResult>> getClientAllResults() async => [];
+
+  @override
   Future<PartResult> submitPartResult({
     required String workoutId,
     required String partId,

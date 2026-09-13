@@ -22,15 +22,17 @@ class CrossfitWorkoutLoading extends CrossfitWorkoutState {
 
 class CrossfitWorkoutListLoaded extends CrossfitWorkoutState {
   final List<CrossfitWorkout> workouts;
+  final List<PartResult> userResults;
   final String? message;
 
   const CrossfitWorkoutListLoaded({
     required this.workouts,
+    this.userResults = const [],
     this.message,
   });
 
   @override
-  List<Object?> get props => [workouts, message];
+  List<Object?> get props => [workouts, userResults, message];
 }
 
 class CrossfitWorkoutDetailLoaded extends CrossfitWorkoutState {
@@ -79,8 +81,12 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
   Future<void> loadClientWorkouts() async {
     emit(const CrossfitWorkoutLoading());
     try {
-      final workouts = await workoutRepository.getClientWorkouts();
-      emit(CrossfitWorkoutListLoaded(workouts: workouts));
+      final workoutsFuture = workoutRepository.getClientWorkouts();
+      final resultsFuture = workoutRepository.getClientAllResults();
+      final results = await Future.wait([workoutsFuture, resultsFuture]);
+      final workouts = results[0] as List<CrossfitWorkout>;
+      final userResults = results[1] as List<PartResult>;
+      emit(CrossfitWorkoutListLoaded(workouts: workouts, userResults: userResults));
     } catch (e, st) {
       AppLogger.e(_tag, 'loadClientWorkouts failed', e, st);
       emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));

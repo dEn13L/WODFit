@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/crossfit_workout.dart';
+import '../../../domain/entities/part_result.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
@@ -50,6 +51,14 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'История тренировок',
+            icon: const Icon(Icons.history),
+            onPressed: () async {
+              await context.push('/client/history');
+              if (mounted) _loadData();
+            },
+          ),
           IconButton(
             tooltip: 'Выйти',
             icon: const Icon(Icons.logout),
@@ -225,12 +234,87 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                   return const SizedBox.shrink();
                 },
               ),
-              const SizedBox(height: 24),
-              Text(
-                'Назначенные тренировки (WOD)',
-                style: Theme.of(context).textTheme.titleLarge,
+
+              const SizedBox(height: 16),
+
+              // Quick Actions Bar: History button
+              InkWell(
+                onTap: () async {
+                  await context.push('/client/history');
+                  if (mounted) _loadData();
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.surfaceLight),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.surfaceLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.history, color: AppColors.primaryNeon, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'История и результаты тренировок',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            Text(
+                              'Просмотр прошедших WOD и фильтрация',
+                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondary),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 12),
+
+              const SizedBox(height: 24),
+
+              // Recent Results Section
+              BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
+                builder: (context, state) {
+                  if (state is CrossfitWorkoutListLoaded) {
+                    return _buildRecentResultsSection(context, state);
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+
+              const SizedBox(height: 24),
+
+              // Assigned Workouts Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Назначенные тренировки (WOD)',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await context.push('/client/history');
+                      if (mounted) _loadData();
+                    },
+                    child: const Text('Все →', style: TextStyle(color: AppColors.primaryNeon)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
                 builder: (context, state) {
                   if (state is CrossfitWorkoutLoading) {
@@ -292,8 +376,11 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                       separatorBuilder: (context, index) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final workout = state.workouts[index];
+                        final workoutResults = state.userResults.where((r) => r.workoutId == workout.id).toList();
+
                         return _WorkoutClientCard(
                           workout: workout,
+                          userResults: workoutResults,
                           onTap: () async {
                             await context.push('/workout/${workout.id}');
                             if (mounted) _loadData();
@@ -312,14 +399,163 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
       ),
     );
   }
+
+  Widget _buildRecentResultsSection(BuildContext context, CrossfitWorkoutListLoaded state) {
+    final workouts = state.workouts;
+    final userResults = state.userResults;
+
+    // Filter workouts where user has recorded results, or past workouts, up to 5
+    final workoutsWithResults = workouts
+        .where((w) => userResults.any((r) => r.workoutId == w.id))
+        .take(5)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Последние результаты',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            if (workoutsWithResults.isNotEmpty)
+              TextButton(
+                onPressed: () async {
+                  await context.push('/client/history');
+                  if (mounted) _loadData();
+                },
+                child: const Text('Вся история', style: TextStyle(color: AppColors.primaryNeon, fontSize: 13)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (workoutsWithResults.isEmpty) ...[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.assignment_outlined, color: AppColors.primaryNeon, size: 32),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Нет сохраненных результатов',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Откройте тренировку и зафиксируйте свои показатели по каждой части!',
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ] else ...[
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: workoutsWithResults.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final workout = workoutsWithResults[index];
+              final results = userResults.where((r) => r.workoutId == workout.id).toList();
+              final dateFormat = DateFormat('dd.MM.yyyy');
+
+              return InkWell(
+                onTap: () async {
+                  await context.push('/workout/${workout.id}');
+                  if (mounted) _loadData();
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.surfaceLight),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              workout.title,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ),
+                          Text(
+                            dateFormat.format(workout.scheduledAt),
+                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Parts results summary
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: workout.parts.map((p) {
+                          final res = results.where((r) => r.partId == p.id).firstOrNull;
+                          if (res == null) return const SizedBox.shrink();
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceLight,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${p.title}: ',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                ),
+                                Text(
+                                  res.formattedScore,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryNeon,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).where((w) => w is! SizedBox).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class _WorkoutClientCard extends StatelessWidget {
   final CrossfitWorkout workout;
+  final List<PartResult> userResults;
   final VoidCallback onTap;
 
   const _WorkoutClientCard({
     required this.workout,
+    required this.userResults,
     required this.onTap,
   });
 
@@ -327,6 +563,10 @@ class _WorkoutClientCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd.MM.yyyy, HH:mm');
     final dateStr = dateFormat.format(workout.scheduledAt);
+    final completedCount = workout.parts.where((p) {
+      final res = userResults.where((r) => r.partId == p.id);
+      return res.isNotEmpty && res.first.status == ResultStatus.done;
+    }).length;
 
     return Card(
       child: InkWell(
@@ -372,6 +612,26 @@ class _WorkoutClientCard extends StatelessWidget {
                     style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
+                  if (workout.parts.isNotEmpty && userResults.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: completedCount == workout.parts.length
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : AppColors.primaryNeon.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '$completedCount/${workout.parts.length} готово',
+                        style: TextStyle(
+                          color: completedCount == workout.parts.length ? AppColors.success : AppColors.primaryNeon,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(

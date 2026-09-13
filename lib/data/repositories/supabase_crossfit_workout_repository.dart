@@ -355,6 +355,27 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
   }
 
   @override
+  Future<List<PartResult>> getClientAllResults() async {
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    try {
+      final response = await client
+          .from('part_results')
+          .select('*, profiles(*)')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      return (response as List<dynamic>)
+          .map((item) => PartResultModel.fromJson(Map<String, dynamic>.from(item as Map)).toDomain())
+          .toList();
+    } catch (e, st) {
+      AppLogger.e(_tag, 'Ошибка при получении всех результатов клиента', e, st);
+      rethrow;
+    }
+  }
+
+  @override
   Future<PartResult> submitPartResult({
     required String workoutId,
     required String partId,

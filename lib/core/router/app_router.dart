@@ -5,6 +5,7 @@ import '../../presentation/bloc/auth/auth_bloc.dart';
 import '../../presentation/bloc/auth/auth_state.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/register_screen.dart';
+import '../../presentation/screens/client/client_history_screen.dart';
 import '../../presentation/screens/client/client_home_screen.dart';
 import '../../presentation/screens/client/join_group_screen.dart';
 import '../../presentation/screens/coach/coach_home_screen.dart';
@@ -96,6 +97,10 @@ class AppRouter {
             GoRoute(
               path: 'join-group',
               builder: (context, state) => const JoinGroupScreen(),
+            ),
+            GoRoute(
+              path: 'history',
+              builder: (context, state) => const ClientHistoryScreen(),
             ),
           ],
         ),

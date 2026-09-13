@@ -27,6 +27,7 @@ abstract class CrossfitWorkoutRepository {
   Future<void> publishWorkout(String id);
   Future<List<PartResult>> getWorkoutResults(String workoutId);
   Future<List<PartResult>> getUserWorkoutResults(String workoutId);
+  Future<List<PartResult>> getClientAllResults();
   Future<PartResult> submitPartResult({
     required String workoutId,
     required String partId,
