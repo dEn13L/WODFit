@@ -20,6 +20,24 @@ class Group extends Equatable {
 
   @override
   List<Object?> get props => [id, coachId, name, inviteCode, createdAt, memberCount];
+
+  Group copyWith({
+    String? id,
+    String? coachId,
+    String? name,
+    String? inviteCode,
+    DateTime? createdAt,
+    int? memberCount,
+  }) {
+    return Group(
+      id: id ?? this.id,
+      coachId: coachId ?? this.coachId,
+      name: name ?? this.name,
+      inviteCode: inviteCode ?? this.inviteCode,
+      createdAt: createdAt ?? this.createdAt,
+      memberCount: memberCount ?? this.memberCount,
+    );
+  }
 }
 
 class GroupMember extends Equatable {
@@ -27,6 +45,8 @@ class GroupMember extends Equatable {
   final String userId;
   final DateTime joinedAt;
   final UserProfile? userProfile;
+
+  UserProfile? get profile => userProfile;
 
   const GroupMember({
     required this.groupId,

@@ -29,7 +29,12 @@ class _EditablePart {
 }
 
 class CreateWorkoutScreen extends StatefulWidget {
-  const CreateWorkoutScreen({super.key});
+  final CrossfitWorkout? workoutToEdit;
+
+  const CreateWorkoutScreen({
+    super.key,
+    this.workoutToEdit,
+  });
 
   @override
   State<CreateWorkoutScreen> createState() => _CreateWorkoutScreenState();
@@ -37,9 +42,9 @@ class CreateWorkoutScreen extends StatefulWidget {
 
 class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  DateTime _scheduledAt = DateTime.now();
+  late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
+  late DateTime _scheduledAt;
   final Set<String> _selectedGroupIds = {};
   final List<_EditablePart> _parts = [];
   bool _isLoading = false;
@@ -48,9 +53,29 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   void initState() {
     super.initState();
     context.read<GroupCubit>().loadCoachGroups();
-    // Pre-populate with one default part
-    _addPart(WorkoutPartType.warmup, 'Разминка', 'Суставная гимнастика, 3 раунда...');
-    _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', 'For Time: 21-15-9...');
+
+    if (widget.workoutToEdit != null) {
+      final w = widget.workoutToEdit!;
+      _titleController = TextEditingController(text: w.title);
+      _descriptionController = TextEditingController(text: w.description);
+      _scheduledAt = w.scheduledAt;
+      _selectedGroupIds.addAll(w.assignedGroupIds);
+
+      if (w.parts.isNotEmpty) {
+        for (final p in w.parts) {
+          _addPart(p.type, p.title, p.description, p.id);
+        }
+      } else {
+        _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', '');
+      }
+    } else {
+      _titleController = TextEditingController();
+      _descriptionController = TextEditingController();
+      _scheduledAt = DateTime.now();
+      // Pre-populate with one default part
+      _addPart(WorkoutPartType.warmup, 'Разминка', 'Суставная гимнастика, 3 раунда...');
+      _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', 'For Time: 21-15-9...');
+    }
   }
 
   @override
@@ -67,15 +92,34 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
     WorkoutPartType type = WorkoutPartType.crossfitComplex,
     String title = '',
     String description = '',
+    String? id,
   ]) {
     setState(() {
       _parts.add(_EditablePart(
-        id: const Uuid().v4(),
+        id: id ?? const Uuid().v4(),
         type: type,
         initialTitle: title,
         initialDescription: description,
       ));
     });
+  }
+
+  void _movePartUp(int index) {
+    if (index > 0) {
+      setState(() {
+        final item = _parts.removeAt(index);
+        _parts.insert(index - 1, item);
+      });
+    }
+  }
+
+  void _movePartDown(int index) {
+    if (index < _parts.length - 1) {
+      setState(() {
+        final item = _parts.removeAt(index);
+        _parts.insert(index + 1, item);
+      });
+    }
   }
 
   void _removePart(int index) {
@@ -135,6 +179,16 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       return;
     }
 
+    if (_selectedGroupIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Пожалуйста, выберите хотя бы одну группу для тренировки'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -144,7 +198,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       final part = entry.value;
       return WorkoutPart(
         id: part.id,
-        workoutId: '',
+        workoutId: widget.workoutToEdit?.id ?? '',
         type: part.type,
         title: part.titleController.text.trim().isEmpty ? part.type.displayName : part.titleController.text.trim(),
         description: part.descriptionController.text.trim(),
@@ -152,14 +206,28 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       );
     }).toList();
 
-    final success = await context.read<CrossfitWorkoutCubit>().createWorkout(
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          scheduledAt: _scheduledAt,
-          parts: workoutParts,
-          groupIds: _selectedGroupIds.toList(),
-          publish: publish,
-        );
+    bool success;
+    if (widget.workoutToEdit != null) {
+      final status = publish ? WorkoutStatus.published : widget.workoutToEdit!.status;
+      success = await context.read<CrossfitWorkoutCubit>().updateWorkout(
+            id: widget.workoutToEdit!.id,
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim(),
+            scheduledAt: _scheduledAt,
+            parts: workoutParts,
+            groupIds: _selectedGroupIds.toList(),
+            status: status,
+          );
+    } else {
+      success = await context.read<CrossfitWorkoutCubit>().createWorkout(
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim(),
+            scheduledAt: _scheduledAt,
+            parts: workoutParts,
+            groupIds: _selectedGroupIds.toList(),
+            publish: publish,
+          );
+    }
 
     if (mounted) {
       setState(() {
@@ -177,7 +245,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Создание тренировки'),
+        title: Text(widget.workoutToEdit != null ? 'Редактирование тренировки' : 'Создание тренировки'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -354,7 +422,18 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                                 ),
                                 const Spacer(),
                                 IconButton(
+                                  icon: const Icon(Icons.arrow_upward, size: 20),
+                                  tooltip: 'Переместить выше',
+                                  onPressed: index > 0 ? () => _movePartUp(index) : null,
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_downward, size: 20),
+                                  tooltip: 'Переместить ниже',
+                                  onPressed: index < _parts.length - 1 ? () => _movePartDown(index) : null,
+                                ),
+                                IconButton(
                                   icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                                  tooltip: 'Удалить часть',
                                   onPressed: () => _removePart(index),
                                 ),
                               ],

@@ -69,8 +69,35 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Groups section & Join button
-              BlocBuilder<GroupCubit, GroupState>(
+              BlocConsumer<GroupCubit, GroupState>(
+                listener: (context, state) {
+                  if (state is GroupLoaded && state.successMessage != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(state.successMessage!),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  }
+                  if (state is GroupError) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(state.message),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                },
                 builder: (context, state) {
+                  if (state is GroupLoading) {
+                    return const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: Center(child: CircularProgressIndicator(color: AppColors.primaryNeon)),
+                      ),
+                    );
+                  }
+
                   if (state is GroupLoaded) {
                     if (state.groups.isEmpty) {
                       return Container(
@@ -136,16 +163,59 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 6,
-                              children: state.groups.map((g) {
-                                return Chip(
-                                  avatar: const Icon(Icons.group, size: 16, color: AppColors.primaryNeon),
-                                  label: Text(g.name),
-                                  backgroundColor: AppColors.surfaceLight,
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: state.groups.length,
+                              separatorBuilder: (context, index) => const Divider(color: AppColors.surfaceLight, height: 12),
+                              itemBuilder: (context, index) {
+                                final group = state.groups[index];
+                                return Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.groups, size: 20, color: AppColors.primaryNeon),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          group.name,
+                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                        ),
+                                      ],
+                                    ),
+                                    TextButton(
+                                      onPressed: () async {
+                                        final groupCubit = context.read<GroupCubit>();
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (dCtx) => AlertDialog(
+                                            backgroundColor: AppColors.surface,
+                                            title: const Text('Выйти из группы?'),
+                                            content: Text('Вы действительно хотите покинуть группу "${group.name}"?'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(dCtx).pop(false),
+                                                child: const Text('Отмена'),
+                                              ),
+                                              ElevatedButton(
+                                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                                                onPressed: () => Navigator.of(dCtx).pop(true),
+                                                child: const Text('Выйти'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+
+                                        if (confirm == true) {
+                                          await groupCubit.leaveGroup(group.id);
+                                          if (mounted) _loadData();
+                                        }
+                                      },
+                                      child: const Text('Выйти', style: TextStyle(color: AppColors.error, fontSize: 12)),
+                                    ),
+                                  ],
                                 );
-                              }).toList(),
+                              },
                             ),
                           ],
                         ),

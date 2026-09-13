@@ -92,7 +92,27 @@ class FakeGroupRepository implements GroupRepository {
   }
 
   @override
+  Future<Group> updateGroupName({required String groupId, required String name}) async {
+    return Group(
+      id: groupId,
+      coachId: 'coach-1',
+      name: name,
+      inviteCode: 'TEST01',
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> deleteGroup(String groupId) async {}
+
+  @override
+  Future<void> leaveGroup(String groupId) async {}
+
+  @override
   Future<List<GroupMember>> getGroupMembers(String groupId) async => [];
+
+  @override
+  Future<void> removeGroupMember({required String groupId, required String userId}) async {}
 }
 
 class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
@@ -137,6 +157,44 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
   }
 
   @override
+  Future<CrossfitWorkout> updateWorkout({
+    required String id,
+    required String title,
+    required String description,
+    required DateTime scheduledAt,
+    required List<WorkoutPart> parts,
+    required List<String> groupIds,
+    required WorkoutStatus status,
+  }) async {
+    return CrossfitWorkout(
+      id: id,
+      coachId: 'coach-1',
+      title: title,
+      description: description,
+      scheduledAt: scheduledAt,
+      status: status,
+      parts: parts,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<CrossfitWorkout> duplicateWorkout(String workoutId) async {
+    return CrossfitWorkout(
+      id: 'w-copy-1',
+      coachId: 'coach-1',
+      title: 'Test Workout (Копия)',
+      scheduledAt: DateTime.now(),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> deleteWorkout(String workoutId) async {}
+
+  @override
   Future<void> publishWorkout(String id) async {}
 
   @override
@@ -168,6 +226,9 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       updatedAt: DateTime.now(),
     );
   }
+
+  @override
+  Future<void> deletePartResult(String resultId) async {}
 }
 
 class FakeLegacyWorkoutRepository implements WorkoutRepository {

@@ -77,7 +77,31 @@ class MockGroupRepository implements GroupRepository {
   Future<Group> joinGroupByCode({required String inviteCode}) async => _groups.first;
 
   @override
+  Future<Group> updateGroupName({required String groupId, required String name}) async {
+    final idx = _groups.indexWhere((g) => g.id == groupId);
+    if (idx != -1) {
+      final updated = _groups[idx].copyWith(name: name);
+      _groups[idx] = updated;
+      return updated;
+    }
+    throw Exception('Group not found');
+  }
+
+  @override
+  Future<void> deleteGroup(String groupId) async {
+    _groups.removeWhere((g) => g.id == groupId);
+  }
+
+  @override
+  Future<void> leaveGroup(String groupId) async {
+    _groups.removeWhere((g) => g.id == groupId);
+  }
+
+  @override
   Future<List<GroupMember>> getGroupMembers(String groupId) async => [];
+
+  @override
+  Future<void> removeGroupMember({required String groupId, required String userId}) async {}
 }
 
 class MockWorkoutRepository implements CrossfitWorkoutRepository {
@@ -150,6 +174,48 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
   }
 
   @override
+  Future<CrossfitWorkout> updateWorkout({
+    required String id,
+    required String title,
+    required String description,
+    required DateTime scheduledAt,
+    required List<WorkoutPart> parts,
+    required List<String> groupIds,
+    required WorkoutStatus status,
+  }) async {
+    final idx = _workouts.indexWhere((w) => w.id == id);
+    if (idx != -1) {
+      final updated = _workouts[idx].copyWith(
+        title: title,
+        description: description,
+        scheduledAt: scheduledAt,
+        parts: parts,
+        status: status,
+      );
+      _workouts[idx] = updated;
+      return updated;
+    }
+    throw Exception('Workout not found');
+  }
+
+  @override
+  Future<CrossfitWorkout> duplicateWorkout(String workoutId) async {
+    final original = _workouts.firstWhere((w) => w.id == workoutId);
+    final copy = original.copyWith(
+      id: 'w-copy-${DateTime.now().millisecondsSinceEpoch}',
+      title: '${original.title} (Копия)',
+      status: WorkoutStatus.draft,
+    );
+    _workouts.add(copy);
+    return copy;
+  }
+
+  @override
+  Future<void> deleteWorkout(String workoutId) async {
+    _workouts.removeWhere((w) => w.id == workoutId);
+  }
+
+  @override
   Future<void> publishWorkout(String id) async {}
 
   @override
@@ -181,6 +247,9 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
       updatedAt: DateTime.now(),
     );
   }
+
+  @override
+  Future<void> deletePartResult(String resultId) async {}
 }
 
 class MockLegacyWorkoutRepository implements WorkoutRepository {
@@ -220,5 +289,38 @@ void main() {
     expect(find.text('Новая тренировка'), findsOneWidget);
     expect(find.text('Мои группы'), findsWidgets);
     expect(find.text('WOD: Fran & Heavy Snatch'), findsOneWidget);
+  });
+
+  test('Group and Workout operations logic in repositories and cubits', () async {
+    final groupRepo = MockGroupRepository();
+    final workoutRepo = MockWorkoutRepository();
+
+    // 1. Group operations
+    final createdGroup = await groupRepo.createGroup(name: 'Вечерняя 19:00');
+    expect(createdGroup.name, 'Вечерняя 19:00');
+
+    final updatedGroup = await groupRepo.updateGroupName(groupId: createdGroup.id, name: 'Вечерняя 19:30');
+    expect(updatedGroup.name, 'Вечерняя 19:30');
+
+    await groupRepo.deleteGroup(createdGroup.id);
+    final coachGroups = await groupRepo.getCoachGroups();
+    expect(coachGroups.any((g) => g.id == createdGroup.id), isFalse);
+
+    // 2. Workout duplication
+    final duplicate = await workoutRepo.duplicateWorkout('w-1');
+    expect(duplicate.title, contains('(Копия)'));
+    expect(duplicate.status, WorkoutStatus.draft);
+
+    // 3. Workout update
+    final updatedWorkout = await workoutRepo.updateWorkout(
+      id: 'w-1',
+      title: 'WOD: Fran Updated',
+      description: 'Обновленное описание',
+      scheduledAt: DateTime.now(),
+      parts: const [],
+      groupIds: ['g-1'],
+      status: WorkoutStatus.published,
+    );
+    expect(updatedWorkout.title, 'WOD: Fran Updated');
   });
 }

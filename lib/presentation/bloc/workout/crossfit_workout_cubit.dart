@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
 import '../../../domain/repositories/crossfit_workout_repository.dart';
@@ -59,6 +60,7 @@ class CrossfitWorkoutError extends CrossfitWorkoutState {
 }
 
 class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
+  static const String _tag = 'CrossfitWorkoutCubit';
   final CrossfitWorkoutRepository workoutRepository;
 
   CrossfitWorkoutCubit({required this.workoutRepository}) : super(const CrossfitWorkoutInitial());
@@ -68,7 +70,8 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
     try {
       final workouts = await workoutRepository.getCoachWorkouts();
       emit(CrossfitWorkoutListLoaded(workouts: workouts));
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.e(_tag, 'loadCoachWorkouts failed', e, st);
       emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));
     }
   }
@@ -78,7 +81,8 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
     try {
       final workouts = await workoutRepository.getClientWorkouts();
       emit(CrossfitWorkoutListLoaded(workouts: workouts));
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.e(_tag, 'loadClientWorkouts failed', e, st);
       emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));
     }
   }
@@ -115,7 +119,92 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
         ));
       }
       return true;
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.e(_tag, 'createWorkout failed', e, st);
+      emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));
+      return false;
+    }
+  }
+
+  Future<bool> updateWorkout({
+    required String id,
+    required String title,
+    required String description,
+    required DateTime scheduledAt,
+    required List<WorkoutPart> parts,
+    required List<String> groupIds,
+    required WorkoutStatus status,
+  }) async {
+    try {
+      final workout = await workoutRepository.updateWorkout(
+        id: id,
+        title: title,
+        description: description,
+        scheduledAt: scheduledAt,
+        parts: parts,
+        groupIds: groupIds,
+        status: status,
+      );
+
+      final msg = 'Тренировка успешно обновлена';
+      if (state is CrossfitWorkoutDetailLoaded) {
+        final current = state as CrossfitWorkoutDetailLoaded;
+        emit(CrossfitWorkoutDetailLoaded(
+          workout: workout,
+          userResults: current.userResults,
+          allResults: current.allResults,
+          message: msg,
+        ));
+      } else if (state is CrossfitWorkoutListLoaded) {
+        final current = (state as CrossfitWorkoutListLoaded).workouts;
+        emit(CrossfitWorkoutListLoaded(
+          workouts: current.map((w) => w.id == id ? workout : w).toList(),
+          message: msg,
+        ));
+      }
+      return true;
+    } catch (e, st) {
+      AppLogger.e(_tag, 'updateWorkout failed', e, st);
+      emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));
+      return false;
+    }
+  }
+
+  Future<bool> duplicateWorkout(String workoutId) async {
+    try {
+      final duplicated = await workoutRepository.duplicateWorkout(workoutId);
+      if (state is CrossfitWorkoutListLoaded) {
+        final current = (state as CrossfitWorkoutListLoaded).workouts;
+        emit(CrossfitWorkoutListLoaded(
+          workouts: [duplicated, ...current],
+          message: 'Копия тренировки успешно создана',
+        ));
+      } else {
+        await loadCoachWorkouts();
+      }
+      return true;
+    } catch (e, st) {
+      AppLogger.e(_tag, 'duplicateWorkout failed', e, st);
+      emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));
+      return false;
+    }
+  }
+
+  Future<bool> deleteWorkout(String workoutId) async {
+    try {
+      await workoutRepository.deleteWorkout(workoutId);
+      if (state is CrossfitWorkoutListLoaded) {
+        final current = (state as CrossfitWorkoutListLoaded).workouts;
+        emit(CrossfitWorkoutListLoaded(
+          workouts: current.where((w) => w.id != workoutId).toList(),
+          message: 'Тренировка удалена',
+        ));
+      } else {
+        await loadCoachWorkouts();
+      }
+      return true;
+    } catch (e, st) {
+      AppLogger.e(_tag, 'deleteWorkout failed', e, st);
       emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));
       return false;
     }
@@ -125,7 +214,8 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
     try {
       await workoutRepository.publishWorkout(workoutId);
       await loadWorkoutDetails(workoutId);
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.e(_tag, 'publishWorkout failed', e, st);
       emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));
     }
   }
@@ -142,7 +232,8 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
         userResults: userResults,
         allResults: allResults,
       ));
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.e(_tag, 'loadWorkoutDetails failed', e, st);
       emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));
     }
   }
@@ -174,7 +265,23 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
       // Reload details to keep results up to date
       await loadWorkoutDetails(workoutId);
       return true;
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.e(_tag, 'submitPartResult failed', e, st);
+      emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));
+      return false;
+    }
+  }
+
+  Future<bool> deletePartResult({
+    required String workoutId,
+    required String resultId,
+  }) async {
+    try {
+      await workoutRepository.deletePartResult(resultId);
+      await loadWorkoutDetails(workoutId);
+      return true;
+    } catch (e, st) {
+      AppLogger.e(_tag, 'deletePartResult failed', e, st);
       emit(CrossfitWorkoutError(e.toString().replaceAll('Exception: ', '')));
       return false;
     }

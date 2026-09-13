@@ -240,6 +240,32 @@ class _ResultsScreenState extends State<ResultsScreen> {
             );
           }
 
+          if (state is CrossfitWorkoutError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 56, color: AppColors.error),
+                    const SizedBox(height: 16),
+                    Text(
+                      state.message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Повторить попытку'),
+                      onPressed: () => context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(widget.workoutId),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           return const SizedBox.shrink();
         },
       ),

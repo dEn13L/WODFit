@@ -8,6 +8,7 @@ import '../../../domain/entities/part_result.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_state.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
+import '../coach/workouts/create_workout_screen.dart';
 
 class WorkoutDetailScreen extends StatefulWidget {
   final String workoutId;
@@ -65,6 +66,101 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             icon: const Icon(Icons.leaderboard_outlined, color: AppColors.primaryNeon),
             onPressed: () => context.push('/workout/${widget.workoutId}/results'),
           ),
+          if (isCoach)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) async {
+                final cubit = context.read<CrossfitWorkoutCubit>();
+                final messenger = ScaffoldMessenger.of(context);
+                final router = GoRouter.of(context);
+                final state = cubit.state;
+                if (state is! CrossfitWorkoutDetailLoaded) return;
+                final workout = state.workout;
+
+                if (value == 'edit') {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (ctx) => CreateWorkoutScreen(workoutToEdit: workout),
+                    ),
+                  );
+                  if (mounted) {
+                    cubit.loadWorkoutDetails(widget.workoutId);
+                  }
+                } else if (value == 'duplicate') {
+                  final ok = await cubit.duplicateWorkout(workout.id);
+                  if (ok) {
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Копия тренировки успешно создана в черновиках'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  }
+                } else if (value == 'delete') {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (dCtx) => AlertDialog(
+                      backgroundColor: AppColors.surface,
+                      title: const Text('Удалить тренировку?'),
+                      content: Text(
+                        'Вы действительно хотите удалить тренировку "${workout.title}"?\n\n'
+                        'Все части тренировки, назначения и внесенные результаты участников будут безвозвратно удалены.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dCtx).pop(false),
+                          child: const Text('Отмена'),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                          onPressed: () => Navigator.of(dCtx).pop(true),
+                          child: const Text('Удалить'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    final ok = await cubit.deleteWorkout(workout.id);
+                    if (ok) {
+                      router.pop();
+                    }
+                  }
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined, size: 18),
+                      SizedBox(width: 8),
+                      Text('Редактировать'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'duplicate',
+                  child: Row(
+                    children: [
+                      Icon(Icons.copy_outlined, size: 18),
+                      SizedBox(width: 8),
+                      Text('Дублировать'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                      SizedBox(width: 8),
+                      Text('Удалить тренировку', style: TextStyle(color: AppColors.error)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
       body: BlocConsumer<CrossfitWorkoutCubit, CrossfitWorkoutState>(
@@ -356,6 +452,32 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             );
           }
 
+          if (state is CrossfitWorkoutError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 56, color: AppColors.error),
+                    const SizedBox(height: 16),
+                    Text(
+                      state.message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Повторить попытку'),
+                      onPressed: () => context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(widget.workoutId),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           return const SizedBox.shrink();
         },
       ),
@@ -449,8 +571,58 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
     }
   }
 
+  Future<void> _deleteResult() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Удалить результат?'),
+        content: const Text('Вы действительно хотите удалить ваш результат по этой части тренировки?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(false),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.of(dCtx).pop(true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted && widget.initialResult != null) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final success = await context.read<CrossfitWorkoutCubit>().deletePartResult(
+            workoutId: widget.workoutId,
+            resultId: widget.initialResult!.id,
+          );
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        if (success) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Результат удален'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.initialResult != null;
+
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -472,9 +644,9 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Ввод результата',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        Text(
+                          isEditing ? 'Редактирование результата' : 'Ввод результата',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
                           widget.part.title,
@@ -578,8 +750,16 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                 onPressed: _isLoading ? null : _submit,
                 child: _isLoading
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                    : const Text('Сохранить результат'),
+                    : Text(isEditing ? 'Сохранить изменения' : 'Сохранить результат'),
               ),
+              if (isEditing) ...[
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                  label: const Text('Удалить результат', style: TextStyle(color: AppColors.error)),
+                  onPressed: _isLoading ? null : _deleteResult,
+                ),
+              ],
             ],
           ),
         ),

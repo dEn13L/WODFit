@@ -115,6 +115,8 @@ class CrossfitWorkout extends Equatable {
 
   bool get isPublished => status == WorkoutStatus.published;
 
+  List<String> get assignedGroupIds => assignments.map((a) => a.groupId).toList();
+
   CrossfitWorkout copyWith({
     String? id,
     String? coachId,

@@ -13,6 +13,17 @@ abstract class CrossfitWorkoutRepository {
     required List<String> groupIds,
     bool publish = false,
   });
+  Future<CrossfitWorkout> updateWorkout({
+    required String id,
+    required String title,
+    required String description,
+    required DateTime scheduledAt,
+    required List<WorkoutPart> parts,
+    required List<String> groupIds,
+    required WorkoutStatus status,
+  });
+  Future<CrossfitWorkout> duplicateWorkout(String workoutId);
+  Future<void> deleteWorkout(String workoutId);
   Future<void> publishWorkout(String id);
   Future<List<PartResult>> getWorkoutResults(String workoutId);
   Future<List<PartResult>> getUserWorkoutResults(String workoutId);
@@ -27,4 +38,5 @@ abstract class CrossfitWorkoutRepository {
     int? reps,
     double? weightKg,
   });
+  Future<void> deletePartResult(String resultId);
 }

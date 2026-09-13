@@ -25,10 +25,12 @@
 5. Запрос создаст:
    - Enum-типы: `user_role`, `workout_part_type`, `workout_status`, `result_status`.
    - Таблицы: `profiles`, `groups`, `group_members`, `workouts`, `workout_parts`, `workout_assignments`, `part_results`.
-   - Индексы для ускорения выборок.
+   - Индексы для ускорения выборок и ограничение `UNIQUE(part_id, user_id)` для результатов.
    - Триггер `on_auth_user_created` для автоматического создания профиля с ролью (`coach` или `client`) и именем при регистрации.
    - RPC-функцию `join_group_by_code` для безопасного вступления в группу по коду.
-   - Row Level Security (RLS) политики разграничения доступа для атлетов и тренеров.
+   - Row Level Security (RLS) политики полного CRUD разграничения доступа для атлетов и тренеров.
+
+*(Примечание: если у вас уже был развернут проект по старой схеме, выполните содержимое `sql/03_update_rls_and_constraints.sql` в SQL Editor для обновления RLS-политик и уникальных ограничений).*
 
 ---
 

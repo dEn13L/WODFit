@@ -306,3 +306,8 @@ CREATE POLICY "Clients can update own results"
   TO authenticated
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Clients can delete own results"
+  ON public.part_results FOR DELETE
+  TO authenticated
+  USING (user_id = auth.uid());
