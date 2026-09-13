@@ -36,6 +36,84 @@ enum WorkoutPartType {
   }
 }
 
+enum WorkoutScoreType {
+  none,
+  text,
+  time,
+  roundsReps,
+  weight,
+  reps,
+  distance,
+  calories;
+
+  static WorkoutScoreType fromString(String? value) {
+    if (value == null) return WorkoutScoreType.text;
+    final clean = value.toLowerCase().replaceAll('-', '_');
+    switch (clean) {
+      case 'none':
+        return WorkoutScoreType.none;
+      case 'time':
+        return WorkoutScoreType.time;
+      case 'rounds_reps':
+      case 'roundsreps':
+        return WorkoutScoreType.roundsReps;
+      case 'weight':
+        return WorkoutScoreType.weight;
+      case 'reps':
+        return WorkoutScoreType.reps;
+      case 'distance':
+        return WorkoutScoreType.distance;
+      case 'calories':
+        return WorkoutScoreType.calories;
+      case 'text':
+      default:
+        return WorkoutScoreType.text;
+    }
+  }
+
+  String get dbValue {
+    switch (this) {
+      case WorkoutScoreType.none:
+        return 'none';
+      case WorkoutScoreType.text:
+        return 'text';
+      case WorkoutScoreType.time:
+        return 'time';
+      case WorkoutScoreType.roundsReps:
+        return 'rounds_reps';
+      case WorkoutScoreType.weight:
+        return 'weight';
+      case WorkoutScoreType.reps:
+        return 'reps';
+      case WorkoutScoreType.distance:
+        return 'distance';
+      case WorkoutScoreType.calories:
+        return 'calories';
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case WorkoutScoreType.none:
+        return 'Без фиксации (статус)';
+      case WorkoutScoreType.text:
+        return 'Текст (произвольно)';
+      case WorkoutScoreType.time:
+        return 'Время (мин : сек)';
+      case WorkoutScoreType.roundsReps:
+        return 'Раунды и повторы';
+      case WorkoutScoreType.weight:
+        return 'Вес (кг) и повторы';
+      case WorkoutScoreType.reps:
+        return 'Количество повторов';
+      case WorkoutScoreType.distance:
+        return 'Дистанция (метры)';
+      case WorkoutScoreType.calories:
+        return 'Калории (ккал)';
+    }
+  }
+}
+
 enum WorkoutStatus {
   draft,
   published;
@@ -54,6 +132,7 @@ class WorkoutPart extends Equatable {
   final String id;
   final String workoutId;
   final WorkoutPartType type;
+  final WorkoutScoreType scoreType;
   final String title;
   final String description;
   final int sortOrder;
@@ -62,13 +141,34 @@ class WorkoutPart extends Equatable {
     required this.id,
     required this.workoutId,
     required this.type,
+    this.scoreType = WorkoutScoreType.text,
     required this.title,
     this.description = '',
     this.sortOrder = 0,
   });
 
+  WorkoutPart copyWith({
+    String? id,
+    String? workoutId,
+    WorkoutPartType? type,
+    WorkoutScoreType? scoreType,
+    String? title,
+    String? description,
+    int? sortOrder,
+  }) {
+    return WorkoutPart(
+      id: id ?? this.id,
+      workoutId: workoutId ?? this.workoutId,
+      type: type ?? this.type,
+      scoreType: scoreType ?? this.scoreType,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      sortOrder: sortOrder ?? this.sortOrder,
+    );
+  }
+
   @override
-  List<Object?> get props => [id, workoutId, type, title, description, sortOrder];
+  List<Object?> get props => [id, workoutId, type, scoreType, title, description, sortOrder];
 }
 
 class WorkoutAssignment extends Equatable {

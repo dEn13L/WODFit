@@ -37,6 +37,8 @@ abstract class CrossfitWorkoutRepository {
     int? rounds,
     int? reps,
     double? weightKg,
+    double? distanceM,
+    int? calories,
   });
   Future<void> deletePartResult(String resultId);
 }

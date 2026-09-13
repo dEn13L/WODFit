@@ -348,6 +348,21 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                                         ),
                                       ),
                                     ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryNeon.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        part.scoreType.displayName,
+                                        style: const TextStyle(
+                                          color: AppColors.primaryNeon,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
                                     const Spacer(),
                                     Text(
                                       'Часть ${index + 1}',
@@ -386,32 +401,36 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.check_circle, size: 16, color: AppColors.success),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                'Ваш результат: ${userResult.scoreText}',
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'Режим: ${userResult.status.displayName}',
-                                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                                          ),
-                                          if (userResult.note.isNotEmpty) ...[
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.check_circle, size: 16, color: AppColors.success),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Text(
+                                                    'Ваш результат: ${userResult.formattedScore}',
+                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                             const SizedBox(height: 2),
                                             Text(
-                                              'Заметка: ${userResult.note}',
-                                              style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontStyle: FontStyle.italic),
+                                              'Режим: ${userResult.status.displayName}',
+                                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                                             ),
+                                            if (userResult.note.isNotEmpty) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Заметка: ${userResult.note}',
+                                                style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontStyle: FontStyle.italic),
+                                              ),
+                                            ],
                                           ],
-                                        ],
+                                        ),
                                       ),
                                       TextButton.icon(
                                         icon: const Icon(Icons.edit, size: 16),
@@ -508,22 +527,62 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
   late TextEditingController _weightController;
   late TextEditingController _roundsController;
   late TextEditingController _repsController;
+  late TextEditingController _minutesController;
+  late TextEditingController _secondsController;
+  late TextEditingController _distanceController;
+  late TextEditingController _caloriesController;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _status = widget.initialResult?.status ?? ResultStatus.done;
-    _scoreController = TextEditingController(text: widget.initialResult?.scoreText ?? '');
-    _noteController = TextEditingController(text: widget.initialResult?.note ?? '');
+    final res = widget.initialResult;
+    _status = res?.status ?? ResultStatus.done;
+    _scoreController = TextEditingController(text: res?.scoreText ?? '');
+    _noteController = TextEditingController(text: res?.note ?? '');
     _weightController = TextEditingController(
-      text: widget.initialResult?.weightKg != null ? widget.initialResult!.weightKg.toString() : '',
+      text: res?.weightKg != null
+          ? (res!.weightKg!.truncateToDouble() == res.weightKg
+              ? res.weightKg!.toInt().toString()
+              : res.weightKg.toString())
+          : '',
     );
     _roundsController = TextEditingController(
-      text: widget.initialResult?.rounds != null ? widget.initialResult!.rounds.toString() : '',
+      text: res?.rounds != null ? res!.rounds.toString() : '',
     );
     _repsController = TextEditingController(
-      text: widget.initialResult?.reps != null ? widget.initialResult!.reps.toString() : '',
+      text: res?.reps != null ? res!.reps.toString() : '',
+    );
+    _distanceController = TextEditingController(
+      text: res?.distanceM != null
+          ? (res!.distanceM!.truncateToDouble() == res.distanceM
+              ? res.distanceM!.toInt().toString()
+              : res.distanceM.toString())
+          : '',
+    );
+    _caloriesController = TextEditingController(
+      text: res?.calories != null ? res!.calories.toString() : '',
+    );
+
+    // Parse time
+    int? initialMinutes;
+    int? initialSeconds;
+    if (res?.timeMs != null) {
+      final totalSec = res!.timeMs! ~/ 1000;
+      initialMinutes = totalSec ~/ 60;
+      initialSeconds = totalSec % 60;
+    } else if (res != null && res.scoreText.isNotEmpty && res.scoreText.contains(':')) {
+      final parts = res.scoreText.split(':');
+      if (parts.length >= 2) {
+        initialMinutes = int.tryParse(parts[0].trim());
+        initialSeconds = int.tryParse(parts[1].trim());
+      }
+    }
+    _minutesController = TextEditingController(
+      text: initialMinutes != null ? initialMinutes.toString() : '',
+    );
+    _secondsController = TextEditingController(
+      text: initialSeconds != null ? initialSeconds.toString() : '',
     );
   }
 
@@ -534,6 +593,10 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
     _weightController.dispose();
     _roundsController.dispose();
     _repsController.dispose();
+    _minutesController.dispose();
+    _secondsController.dispose();
+    _distanceController.dispose();
+    _caloriesController.dispose();
     super.dispose();
   }
 
@@ -544,15 +607,77 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
       _isLoading = true;
     });
 
+    int? timeMs;
+    int? rounds;
+    int? reps;
+    double? weightKg;
+    double? distanceM;
+    int? calories;
+    String scoreText = '';
+
+    if (_status == ResultStatus.notDone) {
+      scoreText = 'Не выполнено';
+    } else {
+      switch (widget.part.scoreType) {
+        case WorkoutScoreType.time:
+          final min = int.tryParse(_minutesController.text.trim()) ?? 0;
+          final sec = int.tryParse(_secondsController.text.trim()) ?? 0;
+          timeMs = (min * 60 + sec) * 1000;
+          scoreText = '${min.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
+          break;
+        case WorkoutScoreType.roundsReps:
+          rounds = int.tryParse(_roundsController.text.trim()) ?? 0;
+          reps = int.tryParse(_repsController.text.trim());
+          if (reps != null && reps > 0) {
+            scoreText = '$rounds рд + $reps повт';
+          } else {
+            scoreText = '$rounds рд';
+          }
+          break;
+        case WorkoutScoreType.weight:
+          weightKg = double.tryParse(_weightController.text.trim()) ?? 0;
+          reps = int.tryParse(_repsController.text.trim());
+          final wStr = weightKg.truncateToDouble() == weightKg ? weightKg.toInt().toString() : weightKg.toString();
+          if (reps != null && reps > 0) {
+            scoreText = '$wStr кг ($reps повт)';
+          } else {
+            scoreText = '$wStr кг';
+          }
+          break;
+        case WorkoutScoreType.reps:
+          reps = int.tryParse(_repsController.text.trim()) ?? 0;
+          scoreText = '$reps повт';
+          break;
+        case WorkoutScoreType.distance:
+          distanceM = double.tryParse(_distanceController.text.trim()) ?? 0;
+          final dStr = distanceM.truncateToDouble() == distanceM ? distanceM.toInt().toString() : distanceM.toString();
+          scoreText = '$dStr м';
+          break;
+        case WorkoutScoreType.calories:
+          calories = int.tryParse(_caloriesController.text.trim()) ?? 0;
+          scoreText = '$calories кал';
+          break;
+        case WorkoutScoreType.text:
+          scoreText = _scoreController.text.trim();
+          break;
+        case WorkoutScoreType.none:
+          scoreText = '';
+          break;
+      }
+    }
+
     final success = await context.read<CrossfitWorkoutCubit>().submitPartResult(
           workoutId: widget.workoutId,
           partId: widget.part.id,
           status: _status,
-          scoreText: _scoreController.text.trim(),
+          scoreText: scoreText,
           note: _noteController.text.trim(),
-          weightKg: double.tryParse(_weightController.text.trim()),
-          rounds: int.tryParse(_roundsController.text.trim()),
-          reps: int.tryParse(_repsController.text.trim()),
+          timeMs: timeMs,
+          rounds: rounds,
+          reps: reps,
+          weightKg: weightKg,
+          distanceM: distanceM,
+          calories: calories,
         );
 
     if (mounted) {
@@ -619,6 +744,245 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
     }
   }
 
+  Widget _buildScoreInputs() {
+    if (_status == ResultStatus.notDone) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.info_outline, color: AppColors.error, size: 20),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Статус «Не выполнено». Ввод очков не требуется.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    switch (widget.part.scoreType) {
+      case WorkoutScoreType.time:
+        return Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _minutesController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Минуты *',
+                  hintText: 'например: 12',
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  suffixText: 'мин',
+                ),
+                validator: (v) {
+                  if (_status == ResultStatus.notDone) return null;
+                  if ((v == null || v.trim().isEmpty) && _secondsController.text.trim().isEmpty) {
+                    return 'Укажите время';
+                  }
+                  return null;
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _secondsController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Секунды *',
+                  hintText: 'например: 45',
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  suffixText: 'сек',
+                ),
+                validator: (v) {
+                  if (_status == ResultStatus.notDone) return null;
+                  final sec = int.tryParse(v ?? '');
+                  if (sec != null && (sec < 0 || sec >= 60)) {
+                    return '0 - 59 сек';
+                  }
+                  return null;
+                },
+              ),
+            ),
+          ],
+        );
+
+      case WorkoutScoreType.roundsReps:
+        return Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _roundsController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Раунды *',
+                  hintText: 'например: 5',
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  suffixText: 'рд',
+                ),
+                validator: (v) => (_status != ResultStatus.notDone && (v == null || v.trim().isEmpty))
+                    ? 'Введите раунды'
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _repsController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Доп. повторы',
+                  hintText: 'например: 12',
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  suffixText: 'повт',
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case WorkoutScoreType.weight:
+        return Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _weightController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Вес (кг) *',
+                  hintText: 'например: 100',
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  suffixText: 'кг',
+                ),
+                validator: (v) => (_status != ResultStatus.notDone && (v == null || v.trim().isEmpty))
+                    ? 'Введите вес'
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _repsController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Повторы',
+                  hintText: 'например: 3',
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  suffixText: 'повт',
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case WorkoutScoreType.reps:
+        return TextFormField(
+          controller: _repsController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Количество повторов *',
+            hintText: 'например: 150',
+            filled: true,
+            fillColor: AppColors.surfaceLight,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            suffixText: 'повт',
+          ),
+          validator: (v) => (_status != ResultStatus.notDone && (v == null || v.trim().isEmpty))
+              ? 'Введите повторы'
+              : null,
+        );
+
+      case WorkoutScoreType.distance:
+        return TextFormField(
+          controller: _distanceController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: 'Дистанция (метры) *',
+            hintText: 'например: 2000 или 5000',
+            filled: true,
+            fillColor: AppColors.surfaceLight,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            suffixText: 'м',
+          ),
+          validator: (v) => (_status != ResultStatus.notDone && (v == null || v.trim().isEmpty))
+              ? 'Введите дистанцию'
+              : null,
+        );
+
+      case WorkoutScoreType.calories:
+        return TextFormField(
+          controller: _caloriesController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Калории *',
+            hintText: 'например: 350',
+            filled: true,
+            fillColor: AppColors.surfaceLight,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            suffixText: 'ккал',
+          ),
+          validator: (v) => (_status != ResultStatus.notDone && (v == null || v.trim().isEmpty))
+              ? 'Введите калории'
+              : null,
+        );
+
+      case WorkoutScoreType.text:
+        return TextFormField(
+          controller: _scoreController,
+          decoration: InputDecoration(
+            labelText: 'Результат *',
+            hintText: 'например: 5 раундов + 12 берпи или 80 кг',
+            filled: true,
+            fillColor: AppColors.surfaceLight,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+          validator: (v) => (_status != ResultStatus.notDone && (v == null || v.trim().isEmpty))
+              ? 'Введите результат'
+              : null,
+        );
+
+      case WorkoutScoreType.none:
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceLight,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.check_circle_outline, color: AppColors.primaryNeon, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'В этой части не требуется ввод очков. Выберите статус и при желании добавьте заметку.',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.initialResult != null;
@@ -649,7 +1013,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          widget.part.title,
+                          '${widget.part.title} (${widget.part.scoreType.displayName})',
                           style: const TextStyle(color: AppColors.primaryNeon, fontSize: 13),
                         ),
                       ],
@@ -676,63 +1040,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _scoreController,
-                decoration: InputDecoration(
-                  labelText: 'Результат / Счёт *',
-                  hintText: 'например: 12:30 или 140 кг или 5 раундов + 10 бурпи',
-                  filled: true,
-                  fillColor: AppColors.surfaceLight,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Введите результат' : null,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _weightController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: 'Вес (кг)',
-                        hintText: 'опционально',
-                        filled: true,
-                        fillColor: AppColors.surfaceLight,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _roundsController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Раунды',
-                        hintText: 'опционально',
-                        filled: true,
-                        fillColor: AppColors.surfaceLight,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _repsController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Повторы',
-                        hintText: 'опционально',
-                        filled: true,
-                        fillColor: AppColors.surfaceLight,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              _buildScoreInputs(),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _noteController,

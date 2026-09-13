@@ -5,6 +5,7 @@ class WorkoutTemplatePartModel {
   final String id;
   final String templateId;
   final String type;
+  final String scoreType;
   final String title;
   final String description;
   final int sortOrder;
@@ -13,6 +14,7 @@ class WorkoutTemplatePartModel {
     required this.id,
     required this.templateId,
     required this.type,
+    this.scoreType = 'text',
     required this.title,
     this.description = '',
     this.sortOrder = 0,
@@ -23,6 +25,7 @@ class WorkoutTemplatePartModel {
       id: json['id'] as String,
       templateId: json['template_id'] as String,
       type: json['type'] as String,
+      scoreType: (json['score_type'] as String?) ?? 'text',
       title: json['title'] as String,
       description: (json['description'] as String?) ?? '',
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
@@ -34,6 +37,7 @@ class WorkoutTemplatePartModel {
       'id': id,
       'template_id': templateId,
       'type': type,
+      'score_type': scoreType,
       'title': title,
       'description': description,
       'sort_order': sortOrder,
@@ -45,6 +49,7 @@ class WorkoutTemplatePartModel {
       id: id,
       templateId: templateId,
       type: WorkoutPartType.fromString(type),
+      scoreType: WorkoutScoreType.fromString(scoreType),
       title: title,
       description: description,
       sortOrder: sortOrder,
@@ -56,6 +61,7 @@ class WorkoutTemplatePartModel {
       id: entity.id,
       templateId: entity.templateId,
       type: entity.type.name,
+      scoreType: entity.scoreType.dbValue,
       title: entity.title,
       description: entity.description,
       sortOrder: entity.sortOrder,

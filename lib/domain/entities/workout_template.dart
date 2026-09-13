@@ -5,6 +5,7 @@ class WorkoutTemplatePart extends Equatable {
   final String id;
   final String templateId;
   final WorkoutPartType type;
+  final WorkoutScoreType scoreType;
   final String title;
   final String description;
   final int sortOrder;
@@ -13,6 +14,7 @@ class WorkoutTemplatePart extends Equatable {
     required this.id,
     required this.templateId,
     required this.type,
+    this.scoreType = WorkoutScoreType.text,
     required this.title,
     this.description = '',
     this.sortOrder = 0,
@@ -22,6 +24,7 @@ class WorkoutTemplatePart extends Equatable {
     String? id,
     String? templateId,
     WorkoutPartType? type,
+    WorkoutScoreType? scoreType,
     String? title,
     String? description,
     int? sortOrder,
@@ -30,6 +33,7 @@ class WorkoutTemplatePart extends Equatable {
       id: id ?? this.id,
       templateId: templateId ?? this.templateId,
       type: type ?? this.type,
+      scoreType: scoreType ?? this.scoreType,
       title: title ?? this.title,
       description: description ?? this.description,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -37,7 +41,7 @@ class WorkoutTemplatePart extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, templateId, type, title, description, sortOrder];
+  List<Object?> get props => [id, templateId, type, scoreType, title, description, sortOrder];
 }
 
 class WorkoutTemplate extends Equatable {

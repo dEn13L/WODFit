@@ -10,12 +10,14 @@ import '../../../bloc/template/workout_template_cubit.dart';
 class _EditableTemplatePart {
   final String id;
   WorkoutPartType type;
+  WorkoutScoreType scoreType;
   final TextEditingController titleController;
   final TextEditingController descriptionController;
 
   _EditableTemplatePart({
     required this.id,
     this.type = WorkoutPartType.crossfitComplex,
+    this.scoreType = WorkoutScoreType.text,
     String initialTitle = '',
     String initialDescription = '',
   })  : titleController = TextEditingController(text: initialTitle),
@@ -55,16 +57,16 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
       _descriptionController = TextEditingController(text: t.description);
       if (t.parts.isNotEmpty) {
         for (final p in t.parts) {
-          _addPart(p.type, p.title, p.description, p.id);
+          _addPart(p.type, p.scoreType, p.title, p.description, p.id);
         }
       } else {
-        _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', '');
+        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'WOD: Главный комплекс', '');
       }
     } else {
       _titleController = TextEditingController();
       _descriptionController = TextEditingController();
-      _addPart(WorkoutPartType.warmup, 'Разминка', 'Суставная гимнастика, 3 раунда...');
-      _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', 'For Time: 21-15-9...');
+      _addPart(WorkoutPartType.warmup, WorkoutScoreType.none, 'Разминка', 'Суставная гимнастика, 3 раунда...');
+      _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'WOD: Главный комплекс', 'For Time: 21-15-9...');
     }
   }
 
@@ -80,6 +82,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
 
   void _addPart([
     WorkoutPartType type = WorkoutPartType.crossfitComplex,
+    WorkoutScoreType scoreType = WorkoutScoreType.text,
     String title = '',
     String description = '',
     String? id,
@@ -88,6 +91,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
       _parts.add(_EditableTemplatePart(
         id: id ?? const Uuid().v4(),
         type: type,
+        scoreType: scoreType,
         initialTitle: title,
         initialDescription: description,
       ));
@@ -151,6 +155,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
         id: p.id,
         templateId: widget.templateToEdit?.id ?? '',
         type: p.type,
+        scoreType: p.scoreType,
         title: p.titleController.text.trim().isEmpty ? p.type.displayName : p.titleController.text.trim(),
         description: p.descriptionController.text.trim(),
         sortOrder: idx,
@@ -377,6 +382,27 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
               ],
             ),
             const SizedBox(height: 12),
+            DropdownButtonFormField<WorkoutScoreType>(
+              initialValue: part.scoreType,
+              decoration: const InputDecoration(
+                labelText: 'Тип результата (Score Type)',
+                isDense: true,
+              ),
+              items: WorkoutScoreType.values.map((st) {
+                return DropdownMenuItem(
+                  value: st,
+                  child: Text(st.displayName, style: const TextStyle(fontSize: 14)),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    part.scoreType = val;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 8),
             TextFormField(
               controller: part.titleController,
               decoration: const InputDecoration(

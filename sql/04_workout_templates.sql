@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.workout_template_parts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   template_id UUID NOT NULL REFERENCES public.workout_templates(id) ON DELETE CASCADE,
   type public.workout_part_type NOT NULL,
+  score_type TEXT NOT NULL DEFAULT 'text',
   title TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   sort_order INTEGER NOT NULL DEFAULT 0

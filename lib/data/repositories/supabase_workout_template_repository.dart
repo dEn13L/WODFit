@@ -97,6 +97,7 @@ class SupabaseWorkoutTemplateRepository implements WorkoutTemplateRepository {
           return {
             'template_id': templateId,
             'type': p.type.name,
+            'score_type': p.scoreType.dbValue,
             'title': p.title.trim(),
             'description': p.description.trim(),
             'sort_order': idx,
@@ -148,6 +149,7 @@ class SupabaseWorkoutTemplateRepository implements WorkoutTemplateRepository {
           return {
             'template_id': id,
             'type': p.type.name,
+            'score_type': p.scoreType.dbValue,
             'title': p.title.trim(),
             'description': p.description.trim(),
             'sort_order': idx,

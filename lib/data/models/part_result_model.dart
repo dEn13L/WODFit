@@ -13,6 +13,8 @@ class PartResultModel {
   final int? rounds;
   final int? reps;
   final double? weightKg;
+  final double? distanceM;
+  final int? calories;
   final String createdAt;
   final String updatedAt;
   final UserProfileModel? profile;
@@ -29,6 +31,8 @@ class PartResultModel {
     this.rounds,
     this.reps,
     this.weightKg,
+    this.distanceM,
+    this.calories,
     required this.createdAt,
     required this.updatedAt,
     this.profile,
@@ -52,6 +56,8 @@ class PartResultModel {
       rounds: (json['rounds'] as num?)?.toInt(),
       reps: (json['reps'] as num?)?.toInt(),
       weightKg: json['weight_kg'] != null ? (json['weight_kg'] as num).toDouble() : null,
+      distanceM: json['distance_m'] != null ? (json['distance_m'] as num).toDouble() : null,
+      calories: (json['calories'] as num?)?.toInt(),
       createdAt: (json['created_at'] as String?) ?? DateTime.now().toIso8601String(),
       updatedAt: (json['updated_at'] as String?) ?? DateTime.now().toIso8601String(),
       profile: profileModel,
@@ -71,6 +77,8 @@ class PartResultModel {
       'rounds': rounds,
       'reps': reps,
       'weight_kg': weightKg,
+      'distance_m': distanceM,
+      'calories': calories,
       'created_at': createdAt,
       'updated_at': updatedAt,
     };
@@ -89,6 +97,8 @@ class PartResultModel {
       rounds: rounds,
       reps: reps,
       weightKg: weightKg,
+      distanceM: distanceM,
+      calories: calories,
       createdAt: DateTime.tryParse(createdAt) ?? DateTime.now(),
       updatedAt: DateTime.tryParse(updatedAt) ?? DateTime.now(),
       userProfile: profile?.toDomain(),

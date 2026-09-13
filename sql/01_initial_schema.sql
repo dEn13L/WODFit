@@ -59,6 +59,7 @@ CREATE TABLE public.workout_parts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workout_id UUID NOT NULL REFERENCES public.workouts(id) ON DELETE CASCADE,
   type public.workout_part_type NOT NULL,
+  score_type TEXT NOT NULL DEFAULT 'text',
   title TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   sort_order INTEGER NOT NULL DEFAULT 0
@@ -85,6 +86,8 @@ CREATE TABLE public.part_results (
   rounds INTEGER,
   reps INTEGER,
   weight_kg NUMERIC(6, 2),
+  distance_m NUMERIC(8, 2),
+  calories INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   UNIQUE (part_id, user_id)

@@ -13,12 +13,14 @@ import '../../../bloc/workout/crossfit_workout_cubit.dart';
 class _EditablePart {
   final String id;
   WorkoutPartType type;
+  WorkoutScoreType scoreType;
   final TextEditingController titleController;
   final TextEditingController descriptionController;
 
   _EditablePart({
     required this.id,
     this.type = WorkoutPartType.crossfitComplex,
+    this.scoreType = WorkoutScoreType.text,
     String initialTitle = '',
     String initialDescription = '',
   })  : titleController = TextEditingController(text: initialTitle),
@@ -67,10 +69,10 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
       if (w.parts.isNotEmpty) {
         for (final p in w.parts) {
-          _addPart(p.type, p.title, p.description, p.id);
+          _addPart(p.type, p.scoreType, p.title, p.description, p.id);
         }
       } else {
-        _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', '');
+        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'WOD: Главный комплекс', '');
       }
     } else if (widget.initialTemplate != null) {
       final t = widget.initialTemplate!;
@@ -80,18 +82,18 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
       if (t.parts.isNotEmpty) {
         for (final p in t.parts) {
-          _addPart(p.type, p.title, p.description);
+          _addPart(p.type, p.scoreType, p.title, p.description);
         }
       } else {
-        _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', '');
+        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'WOD: Главный комплекс', '');
       }
     } else {
       _titleController = TextEditingController();
       _descriptionController = TextEditingController();
       _scheduledAt = DateTime.now();
       // Pre-populate with default parts
-      _addPart(WorkoutPartType.warmup, 'Разминка', 'Суставная гимнастика, 3 раунда...');
-      _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', 'For Time: 21-15-9...');
+      _addPart(WorkoutPartType.warmup, WorkoutScoreType.none, 'Разминка', 'Суставная гимнастика, 3 раунда...');
+      _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'WOD: Главный комплекс', 'For Time: 21-15-9...');
     }
   }
 
@@ -109,12 +111,13 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
           _parts.add(_EditablePart(
             id: const Uuid().v4(),
             type: p.type,
+            scoreType: p.scoreType,
             initialTitle: p.title,
             initialDescription: p.description,
           ));
         }
       } else {
-        _addPart(WorkoutPartType.crossfitComplex, template.title, template.description);
+        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, template.title, template.description);
       }
     });
 
@@ -230,6 +233,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
   void _addPart([
     WorkoutPartType type = WorkoutPartType.crossfitComplex,
+    WorkoutScoreType scoreType = WorkoutScoreType.text,
     String title = '',
     String description = '',
     String? id,
@@ -238,6 +242,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       _parts.add(_EditablePart(
         id: id ?? const Uuid().v4(),
         type: type,
+        scoreType: scoreType,
         initialTitle: title,
         initialDescription: description,
       ));
@@ -340,6 +345,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
         id: part.id,
         workoutId: widget.workoutToEdit?.id ?? '',
         type: part.type,
+        scoreType: part.scoreType,
         title: part.titleController.text.trim().isEmpty ? part.type.displayName : part.titleController.text.trim(),
         description: part.descriptionController.text.trim(),
         sortOrder: idx,
@@ -612,6 +618,29 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                                 if (newType != null) {
                                   setState(() {
                                     part.type = newType;
+                                  });
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<WorkoutScoreType>(
+                              initialValue: part.scoreType,
+                              decoration: InputDecoration(
+                                labelText: 'Тип результата (Score Type)',
+                                filled: true,
+                                fillColor: AppColors.surfaceLight,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              ),
+                              items: WorkoutScoreType.values.map((st) {
+                                return DropdownMenuItem(
+                                  value: st,
+                                  child: Text(st.displayName),
+                                );
+                              }).toList(),
+                              onChanged: (newScoreType) {
+                                if (newScoreType != null) {
+                                  setState(() {
+                                    part.scoreType = newScoreType;
                                   });
                                 }
                               },

@@ -248,6 +248,8 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
     int? rounds,
     int? reps,
     double? weightKg,
+    double? distanceM,
+    int? calories,
   }) async {
     try {
       await workoutRepository.submitPartResult(
@@ -260,6 +262,8 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
         rounds: rounds,
         reps: reps,
         weightKg: weightKg,
+        distanceM: distanceM,
+        calories: calories,
       );
 
       // Reload details to keep results up to date

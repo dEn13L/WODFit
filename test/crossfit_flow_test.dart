@@ -237,6 +237,8 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
     int? rounds,
     int? reps,
     double? weightKg,
+    double? distanceM,
+    int? calories,
   }) async {
     return PartResult(
       id: 'res-1',
@@ -245,6 +247,13 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
       userId: 'user-1',
       status: status,
       scoreText: scoreText,
+      note: note,
+      timeMs: timeMs,
+      rounds: rounds,
+      reps: reps,
+      weightKg: weightKg,
+      distanceM: distanceM,
+      calories: calories,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -504,5 +513,102 @@ void main() {
     await templateRepo.deleteTemplate(duplicated.id);
     final allTemplates = await templateRepo.getCoachTemplates();
     expect(allTemplates.any((t) => t.id == duplicated.id), isFalse);
+  });
+
+  test('WorkoutScoreType mapping and PartResult formattedScore with backward compatibility', () {
+    // 1. ScoreType fromString & dbValue
+    expect(WorkoutScoreType.fromString('time'), WorkoutScoreType.time);
+    expect(WorkoutScoreType.fromString('rounds_reps'), WorkoutScoreType.roundsReps);
+    expect(WorkoutScoreType.fromString('weight'), WorkoutScoreType.weight);
+    expect(WorkoutScoreType.fromString('reps'), WorkoutScoreType.reps);
+    expect(WorkoutScoreType.fromString('distance'), WorkoutScoreType.distance);
+    expect(WorkoutScoreType.fromString('calories'), WorkoutScoreType.calories);
+    expect(WorkoutScoreType.fromString('none'), WorkoutScoreType.none);
+    expect(WorkoutScoreType.fromString('text'), WorkoutScoreType.text);
+    expect(WorkoutScoreType.fromString(null), WorkoutScoreType.text);
+
+    expect(WorkoutScoreType.roundsReps.dbValue, 'rounds_reps');
+    expect(WorkoutScoreType.time.dbValue, 'time');
+
+    // 2. PartResult formattedScore backward compatibility with legacy scoreText
+    final legacyResult = PartResult(
+      id: 'r-legacy',
+      workoutId: 'w-1',
+      partId: 'p-1',
+      userId: 'u-1',
+      scoreText: '12:45 (Rx)',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    expect(legacyResult.formattedScore, '12:45 (Rx)');
+
+    // 3. Formatted scores derived from structured metrics
+    final timeResult = PartResult(
+      id: 'r-time',
+      workoutId: 'w-1',
+      partId: 'p-1',
+      userId: 'u-1',
+      timeMs: 765000, // 12 min 45 sec
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    expect(timeResult.formattedScore, '12:45');
+
+    final roundsRepsResult = PartResult(
+      id: 'r-rr',
+      workoutId: 'w-1',
+      partId: 'p-1',
+      userId: 'u-1',
+      rounds: 5,
+      reps: 12,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    expect(roundsRepsResult.formattedScore, '5 рд • 12 повт');
+
+    final weightResult = PartResult(
+      id: 'r-w',
+      workoutId: 'w-1',
+      partId: 'p-1',
+      userId: 'u-1',
+      weightKg: 105.5,
+      reps: 3,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    expect(weightResult.formattedScore, '3 повт • 105.5 кг');
+
+    final distanceResult = PartResult(
+      id: 'r-dist',
+      workoutId: 'w-1',
+      partId: 'p-1',
+      userId: 'u-1',
+      distanceM: 2000,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    expect(distanceResult.formattedScore, '2000 м');
+
+    final caloriesResult = PartResult(
+      id: 'r-cal',
+      workoutId: 'w-1',
+      partId: 'p-1',
+      userId: 'u-1',
+      calories: 350,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    expect(caloriesResult.formattedScore, '350 кал');
+
+    final noneResult = PartResult(
+      id: 'r-none',
+      workoutId: 'w-1',
+      partId: 'p-1',
+      userId: 'u-1',
+      status: ResultStatus.done,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    expect(noneResult.formattedScore, 'Выполнено');
   });
 }

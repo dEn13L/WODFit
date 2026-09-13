@@ -216,6 +216,8 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     int? rounds,
     int? reps,
     double? weightKg,
+    double? distanceM,
+    int? calories,
   }) async {
     return PartResult(
       id: 'res-1',
@@ -224,6 +226,13 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       userId: 'user-1',
       status: status,
       scoreText: scoreText,
+      note: note,
+      timeMs: timeMs,
+      rounds: rounds,
+      reps: reps,
+      weightKg: weightKg,
+      distanceM: distanceM,
+      calories: calories,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

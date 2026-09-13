@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
 
@@ -107,6 +108,21 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryNeon.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          part.scoreType.displayName,
+                                          style: const TextStyle(
+                                            color: AppColors.primaryNeon,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
                                           part.title,
@@ -189,21 +205,28 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                                     ],
                                                   ),
                                                   const SizedBox(height: 4),
-                                                  Text(
-                                                    'Результат: ${result.scoreText}',
-                                                    style: const TextStyle(
-                                                      color: AppColors.textPrimary,
-                                                      fontWeight: FontWeight.w600,
-                                                      fontSize: 14,
+                                                  if (part.scoreType != WorkoutScoreType.none || result.scoreText.isNotEmpty)
+                                                    Text(
+                                                      'Результат: ${result.formattedScore}',
+                                                      style: const TextStyle(
+                                                        color: AppColors.textPrimary,
+                                                        fontWeight: FontWeight.w600,
+                                                        fontSize: 14,
+                                                      ),
                                                     ),
-                                                  ),
-                                                  if (result.weightKg != null || result.rounds != null || result.reps != null) ...[
+                                                  if (result.weightKg != null ||
+                                                      result.rounds != null ||
+                                                      result.reps != null ||
+                                                      result.distanceM != null ||
+                                                      result.calories != null) ...[
                                                     const SizedBox(height: 2),
                                                     Text(
                                                       [
                                                         if (result.weightKg != null) 'Вес: ${result.weightKg} кг',
                                                         if (result.rounds != null) 'Раунды: ${result.rounds}',
                                                         if (result.reps != null) 'Повторы: ${result.reps}',
+                                                        if (result.distanceM != null) 'Дистанция: ${result.distanceM!.truncateToDouble() == result.distanceM ? result.distanceM!.toInt() : result.distanceM} м',
+                                                        if (result.calories != null) 'Калории: ${result.calories} кал',
                                                       ].join(' • '),
                                                       style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                                                     ),
