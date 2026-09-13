@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
+import '../../../../domain/entities/workout_template.dart';
 import '../../../bloc/group/group_cubit.dart';
+import '../../../bloc/template/workout_template_cubit.dart';
 import '../../../bloc/workout/crossfit_workout_cubit.dart';
 
 class _EditablePart {
@@ -30,10 +32,12 @@ class _EditablePart {
 
 class CreateWorkoutScreen extends StatefulWidget {
   final CrossfitWorkout? workoutToEdit;
+  final WorkoutTemplate? initialTemplate;
 
   const CreateWorkoutScreen({
     super.key,
     this.workoutToEdit,
+    this.initialTemplate,
   });
 
   @override
@@ -68,14 +72,150 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       } else {
         _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', '');
       }
+    } else if (widget.initialTemplate != null) {
+      final t = widget.initialTemplate!;
+      _titleController = TextEditingController(text: t.title);
+      _descriptionController = TextEditingController(text: t.description);
+      _scheduledAt = DateTime.now();
+
+      if (t.parts.isNotEmpty) {
+        for (final p in t.parts) {
+          _addPart(p.type, p.title, p.description);
+        }
+      } else {
+        _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', '');
+      }
     } else {
       _titleController = TextEditingController();
       _descriptionController = TextEditingController();
       _scheduledAt = DateTime.now();
-      // Pre-populate with one default part
+      // Pre-populate with default parts
       _addPart(WorkoutPartType.warmup, 'Разминка', 'Суставная гимнастика, 3 раунда...');
       _addPart(WorkoutPartType.crossfitComplex, 'WOD: Главный комплекс', 'For Time: 21-15-9...');
     }
+  }
+
+  void _applyTemplate(WorkoutTemplate template) {
+    setState(() {
+      _titleController.text = template.title;
+      _descriptionController.text = template.description;
+      for (final p in _parts) {
+        p.dispose();
+      }
+      _parts.clear();
+
+      if (template.parts.isNotEmpty) {
+        for (final p in template.parts) {
+          _parts.add(_EditablePart(
+            id: const Uuid().v4(),
+            type: p.type,
+            initialTitle: p.title,
+            initialDescription: p.description,
+          ));
+        }
+      } else {
+        _addPart(WorkoutPartType.crossfitComplex, template.title, template.description);
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Данные заполнены из шаблона "${template.title}"'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+  }
+
+  void _showTemplatePicker() {
+    context.read<WorkoutTemplateCubit>().loadTemplates();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Выберите шаблон тренировки',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(),
+                Flexible(
+                  child: BlocBuilder<WorkoutTemplateCubit, WorkoutTemplateState>(
+                    builder: (context, state) {
+                      if (state is WorkoutTemplateLoading) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24.0),
+                            child: CircularProgressIndicator(color: AppColors.primaryNeon),
+                          ),
+                        );
+                      }
+                      final templates = state is WorkoutTemplateLoaded ? state.templates : <WorkoutTemplate>[];
+                      if (templates.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.all(24.0),
+                          child: Center(
+                            child: Text(
+                              'У вас пока нет сохраненных шаблонов.\nСоздайте их в разделе «Шаблоны».',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
+                          ),
+                        );
+                      }
+
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: templates.length,
+                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final t = templates[index];
+                          return ListTile(
+                            leading: const Icon(Icons.bookmark_outline, color: AppColors.primaryNeon),
+                            title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(
+                              '${t.parts.length} частей • ${t.description.isNotEmpty ? t.description : "Без описания"}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            ),
+                            trailing: const Icon(Icons.chevron_right, size: 20),
+                            onTap: () {
+                              Navigator.of(ctx).pop();
+                              _applyTemplate(t);
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -259,6 +399,21 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (widget.workoutToEdit == null) ...[
+                  OutlinedButton.icon(
+                    onPressed: _showTemplatePicker,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primaryNeon),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.bookmark_border, color: AppColors.primaryNeon),
+                    label: const Text(
+                      'Заполнить из шаблона',
+                      style: TextStyle(color: AppColors.primaryNeon, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 Text(
                   'Основная информация',
                   style: Theme.of(context).textTheme.titleLarge,

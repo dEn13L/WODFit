@@ -5,10 +5,12 @@ import 'package:wod_fit/domain/entities/group.dart';
 import 'package:wod_fit/domain/entities/part_result.dart';
 import 'package:wod_fit/domain/entities/user_profile.dart';
 import 'package:wod_fit/domain/entities/workout.dart';
+import 'package:wod_fit/domain/entities/workout_template.dart';
 import 'package:wod_fit/domain/repositories/auth_repository.dart';
 import 'package:wod_fit/domain/repositories/crossfit_workout_repository.dart';
 import 'package:wod_fit/domain/repositories/group_repository.dart';
 import 'package:wod_fit/domain/repositories/workout_repository.dart';
+import 'package:wod_fit/domain/repositories/workout_template_repository.dart';
 import 'package:wod_fit/main.dart';
 
 class MockCoachAuthRepository implements AuthRepository {
@@ -252,6 +254,103 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
   Future<void> deletePartResult(String resultId) async {}
 }
 
+class MockWorkoutTemplateRepository implements WorkoutTemplateRepository {
+  final List<WorkoutTemplate> _templates = [
+    WorkoutTemplate(
+      id: 't-1',
+      coachId: 'coach-123',
+      title: 'WOD: Мёрф (Классика)',
+      description: 'Знаменитый комплекс в бронежилете',
+      parts: const [
+        WorkoutTemplatePart(
+          id: 'tp-1',
+          templateId: 't-1',
+          type: WorkoutPartType.warmup,
+          title: 'Разминка суставов',
+          description: '10 мин кардио и стретчинг',
+          sortOrder: 0,
+        ),
+        WorkoutTemplatePart(
+          id: 'tp-2',
+          templateId: 't-1',
+          type: WorkoutPartType.crossfitComplex,
+          title: 'Мёрф',
+          description: '1 миля бег, 100 подтягиваний, 200 отжиманий, 300 приседаний, 1 миля бег',
+          sortOrder: 1,
+        ),
+      ],
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),
+  ];
+
+  @override
+  Future<List<WorkoutTemplate>> getCoachTemplates() async => _templates;
+
+  @override
+  Future<WorkoutTemplate> getTemplateById(String templateId) async {
+    return _templates.firstWhere((t) => t.id == templateId);
+  }
+
+  @override
+  Future<WorkoutTemplate> createTemplate({
+    required String title,
+    required String description,
+    required List<WorkoutTemplatePart> parts,
+  }) async {
+    final t = WorkoutTemplate(
+      id: 't-${DateTime.now().millisecondsSinceEpoch}',
+      coachId: 'coach-123',
+      title: title,
+      description: description,
+      parts: parts,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    _templates.add(t);
+    return t;
+  }
+
+  @override
+  Future<WorkoutTemplate> updateTemplate({
+    required String id,
+    required String title,
+    required String description,
+    required List<WorkoutTemplatePart> parts,
+  }) async {
+    final idx = _templates.indexWhere((t) => t.id == id);
+    if (idx != -1) {
+      final updated = _templates[idx].copyWith(
+        title: title,
+        description: description,
+        parts: parts,
+        updatedAt: DateTime.now(),
+      );
+      _templates[idx] = updated;
+      return updated;
+    }
+    throw Exception('Template not found');
+  }
+
+  @override
+  Future<void> deleteTemplate(String templateId) async {
+    _templates.removeWhere((t) => t.id == templateId);
+  }
+
+  @override
+  Future<WorkoutTemplate> duplicateTemplate(String templateId) async {
+    final original = await getTemplateById(templateId);
+    final copy = original.copyWith(
+      id: 't-copy-${DateTime.now().millisecondsSinceEpoch}',
+      title: '${original.title} (Копия)',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    _templates.add(copy);
+    return copy;
+  }
+}
+
 class MockLegacyWorkoutRepository implements WorkoutRepository {
   @override
   Future<List<Workout>> getWorkouts() async => [];
@@ -271,6 +370,7 @@ void main() {
     final authRepo = MockCoachAuthRepository();
     final groupRepo = MockGroupRepository();
     final workoutRepo = MockWorkoutRepository();
+    final templateRepo = MockWorkoutTemplateRepository();
     final legacyRepo = MockLegacyWorkoutRepository();
 
     await tester.pumpWidget(
@@ -278,6 +378,7 @@ void main() {
         authRepository: authRepo,
         groupRepository: groupRepo,
         crossfitWorkoutRepository: workoutRepo,
+        workoutTemplateRepository: templateRepo,
         legacyWorkoutRepository: legacyRepo,
       ),
     );
@@ -287,6 +388,7 @@ void main() {
     expect(find.text('Главный Тренер'), findsOneWidget);
     expect(find.text('Панель тренера'), findsOneWidget);
     expect(find.text('Новая тренировка'), findsOneWidget);
+    expect(find.text('Шаблоны'), findsWidgets);
     expect(find.text('Мои группы'), findsWidgets);
     expect(find.text('WOD: Fran & Heavy Snatch'), findsOneWidget);
   });
@@ -322,5 +424,85 @@ void main() {
       status: WorkoutStatus.published,
     );
     expect(updatedWorkout.title, 'WOD: Fran Updated');
+  });
+
+  test('Workout Template CRUD and creating workout from template logic', () async {
+    final templateRepo = MockWorkoutTemplateRepository();
+    final workoutRepo = MockWorkoutRepository();
+
+    // 1. Get templates
+    final initialTemplates = await templateRepo.getCoachTemplates();
+    expect(initialTemplates.length, 1);
+    expect(initialTemplates.first.title, 'WOD: Мёрф (Классика)');
+    expect(initialTemplates.first.parts.length, 2);
+
+    // 2. Create template
+    final newTemplate = await templateRepo.createTemplate(
+      title: 'Синди (Cindy)',
+      description: 'AMRAP 20 минут',
+      parts: const [
+        WorkoutTemplatePart(
+          id: 'p-1',
+          templateId: '',
+          type: WorkoutPartType.crossfitComplex,
+          title: 'Cindy',
+          description: '5 подтягиваний, 10 отжиманий, 15 приседаний',
+          sortOrder: 0,
+        ),
+      ],
+    );
+    expect(newTemplate.title, 'Синди (Cindy)');
+    expect(newTemplate.parts.length, 1);
+
+    // 3. Update template
+    final updatedTemplate = await templateRepo.updateTemplate(
+      id: newTemplate.id,
+      title: 'Синди Hardcore',
+      description: 'AMRAP 30 минут',
+      parts: newTemplate.parts,
+    );
+    expect(updatedTemplate.title, 'Синди Hardcore');
+    expect(updatedTemplate.description, 'AMRAP 30 минут');
+
+    // 4. Duplicate template
+    final duplicated = await templateRepo.duplicateTemplate(updatedTemplate.id);
+    expect(duplicated.title, 'Синди Hardcore (Копия)');
+    expect(duplicated.parts.length, 1);
+
+    // 5. Create Workout from Template (copying parts without mutating template)
+    final templateToUse = await templateRepo.getTemplateById('t-1');
+    final copiedParts = templateToUse.parts.map((tp) {
+      return WorkoutPart(
+        id: 'wp-${tp.id}',
+        workoutId: '',
+        type: tp.type,
+        title: tp.title,
+        description: tp.description,
+        sortOrder: tp.sortOrder,
+      );
+    }).toList();
+
+    final createdWorkout = await workoutRepo.createWorkout(
+      title: templateToUse.title,
+      description: templateToUse.description,
+      scheduledAt: DateTime.now().add(const Duration(days: 1)),
+      parts: copiedParts,
+      groupIds: ['g-1'],
+      publish: true,
+    );
+
+    expect(createdWorkout.title, templateToUse.title);
+    expect(createdWorkout.parts.length, 2);
+    expect(createdWorkout.status, WorkoutStatus.published);
+
+    // Verify original template is untouched
+    final templateAfter = await templateRepo.getTemplateById('t-1');
+    expect(templateAfter.title, 'WOD: Мёрф (Классика)');
+    expect(templateAfter.parts.length, 2);
+
+    // 6. Delete template
+    await templateRepo.deleteTemplate(duplicated.id);
+    final allTemplates = await templateRepo.getCoachTemplates();
+    expect(allTemplates.any((t) => t.id == duplicated.id), isFalse);
   });
 }

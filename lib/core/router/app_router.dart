@@ -10,6 +10,8 @@ import '../../presentation/screens/client/join_group_screen.dart';
 import '../../presentation/screens/coach/coach_home_screen.dart';
 import '../../presentation/screens/coach/groups/coach_groups_screen.dart';
 import '../../presentation/screens/coach/groups/create_group_screen.dart';
+import '../../presentation/screens/coach/templates/coach_templates_screen.dart';
+import '../../presentation/screens/coach/templates/create_template_screen.dart';
 import '../../presentation/screens/coach/workouts/create_workout_screen.dart';
 import '../../presentation/screens/workout/results_screen.dart';
 import '../../presentation/screens/workout/workout_detail_screen.dart';
@@ -68,6 +70,16 @@ class AppRouter {
                 GoRoute(
                   path: 'create',
                   builder: (context, state) => const CreateGroupScreen(),
+                ),
+              ],
+            ),
+            GoRoute(
+              path: 'templates',
+              builder: (context, state) => const CoachTemplatesScreen(),
+              routes: [
+                GoRoute(
+                  path: 'create',
+                  builder: (context, state) => const CreateTemplateScreen(),
                 ),
               ],
             ),

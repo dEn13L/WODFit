@@ -5,10 +5,12 @@ import 'package:wod_fit/domain/entities/group.dart';
 import 'package:wod_fit/domain/entities/part_result.dart';
 import 'package:wod_fit/domain/entities/user_profile.dart';
 import 'package:wod_fit/domain/entities/workout.dart';
+import 'package:wod_fit/domain/entities/workout_template.dart';
 import 'package:wod_fit/domain/repositories/auth_repository.dart';
 import 'package:wod_fit/domain/repositories/crossfit_workout_repository.dart';
 import 'package:wod_fit/domain/repositories/group_repository.dart';
 import 'package:wod_fit/domain/repositories/workout_repository.dart';
+import 'package:wod_fit/domain/repositories/workout_template_repository.dart';
 import 'package:wod_fit/main.dart';
 
 class FakeAuthRepository implements AuthRepository {
@@ -231,6 +233,71 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
   Future<void> deletePartResult(String resultId) async {}
 }
 
+class FakeWorkoutTemplateRepository implements WorkoutTemplateRepository {
+  @override
+  Future<List<WorkoutTemplate>> getCoachTemplates() async => [];
+
+  @override
+  Future<WorkoutTemplate> getTemplateById(String templateId) async {
+    return WorkoutTemplate(
+      id: templateId,
+      coachId: 'coach-1',
+      title: 'Шаблон',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<WorkoutTemplate> createTemplate({
+    required String title,
+    required String description,
+    required List<WorkoutTemplatePart> parts,
+  }) async {
+    return WorkoutTemplate(
+      id: 'template-1',
+      coachId: 'coach-1',
+      title: title,
+      description: description,
+      parts: parts,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<WorkoutTemplate> updateTemplate({
+    required String id,
+    required String title,
+    required String description,
+    required List<WorkoutTemplatePart> parts,
+  }) async {
+    return WorkoutTemplate(
+      id: id,
+      coachId: 'coach-1',
+      title: title,
+      description: description,
+      parts: parts,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> deleteTemplate(String templateId) async {}
+
+  @override
+  Future<WorkoutTemplate> duplicateTemplate(String templateId) async {
+    return WorkoutTemplate(
+      id: 'template-copy-1',
+      coachId: 'coach-1',
+      title: 'Шаблон (Копия)',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+}
+
 class FakeLegacyWorkoutRepository implements WorkoutRepository {
   @override
   Future<List<Workout>> getWorkouts() async => [];
@@ -250,6 +317,7 @@ void main() {
     final authRepo = FakeAuthRepository();
     final groupRepo = FakeGroupRepository();
     final workoutRepo = FakeCrossfitWorkoutRepository();
+    final templateRepo = FakeWorkoutTemplateRepository();
     final legacyRepo = FakeLegacyWorkoutRepository();
 
     await tester.pumpWidget(
@@ -257,6 +325,7 @@ void main() {
         authRepository: authRepo,
         groupRepository: groupRepo,
         crossfitWorkoutRepository: workoutRepo,
+        workoutTemplateRepository: templateRepo,
         legacyWorkoutRepository: legacyRepo,
       ),
     );

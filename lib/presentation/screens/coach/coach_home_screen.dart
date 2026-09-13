@@ -51,6 +51,11 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Шаблоны',
+            icon: const Icon(Icons.bookmark_outline),
+            onPressed: () => context.push('/coach/templates'),
+          ),
+          IconButton(
             tooltip: 'Группы',
             icon: const Icon(Icons.group_outlined),
             onPressed: () => context.push('/coach/groups'),
@@ -88,10 +93,20 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _QuickActionButton(
-                      icon: Icons.group_add_outlined,
+                      icon: Icons.bookmark_outline,
+                      label: 'Шаблоны',
+                      color: AppColors.surface,
+                      textColor: AppColors.textPrimary,
+                      onTap: () => context.push('/coach/templates'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _QuickActionButton(
+                      icon: Icons.group_outlined,
                       label: 'Мои группы',
                       color: AppColors.surface,
                       textColor: AppColors.textPrimary,
