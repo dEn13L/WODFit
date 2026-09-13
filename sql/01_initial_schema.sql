@@ -142,7 +142,34 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 11. ROW LEVEL SECURITY (RLS) POLICIES
+-- 11. HELPER SECURITY DEFINER FUNCTIONS (Prevents RLS infinite recursion)
+CREATE OR REPLACE FUNCTION public.is_group_member(p_group_id UUID, p_user_id UUID DEFAULT auth.uid())
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.group_members WHERE group_id = p_group_id AND user_id = p_user_id
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION public.is_group_coach(p_group_id UUID, p_coach_id UUID DEFAULT auth.uid())
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.groups WHERE id = p_group_id AND coach_id = p_coach_id
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION public.can_user_view_workout(p_workout_id UUID, p_user_id UUID DEFAULT auth.uid())
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.workouts WHERE id = p_workout_id AND coach_id = p_user_id
+  ) OR EXISTS (
+    SELECT 1 FROM public.workouts w
+    JOIN public.workout_assignments wa ON wa.workout_id = w.id
+    JOIN public.group_members gm ON gm.group_id = wa.group_id
+    WHERE w.id = p_workout_id AND w.status = 'published' AND gm.user_id = p_user_id
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- 12. ROW LEVEL SECURITY (RLS) POLICIES
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
@@ -173,7 +200,7 @@ CREATE POLICY "Coach and members can read groups"
   TO authenticated
   USING (
     coach_id = auth.uid()
-    OR id IN (SELECT group_id FROM public.group_members WHERE user_id = auth.uid())
+    OR public.is_group_member(id, auth.uid())
   );
 
 CREATE POLICY "Coach can update own groups"
@@ -192,21 +219,21 @@ CREATE POLICY "Members and coaches can view group members"
   TO authenticated
   USING (
     user_id = auth.uid()
-    OR group_id IN (SELECT id FROM public.groups WHERE coach_id = auth.uid())
-    OR group_id IN (SELECT gm.group_id FROM public.group_members gm WHERE gm.user_id = auth.uid())
+    OR public.is_group_coach(group_id, auth.uid())
+    OR public.is_group_member(group_id, auth.uid())
   );
 
 CREATE POLICY "Users can join groups"
   ON public.group_members FOR INSERT
   TO authenticated
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (user_id = auth.uid() OR public.is_group_coach(group_id, auth.uid()));
 
 CREATE POLICY "Users or coaches can leave/remove from group"
   ON public.group_members FOR DELETE
   TO authenticated
   USING (
     user_id = auth.uid()
-    OR group_id IN (SELECT id FROM public.groups WHERE coach_id = auth.uid())
+    OR public.is_group_coach(group_id, auth.uid())
   );
 
 -- Workouts policies
@@ -220,14 +247,7 @@ CREATE POLICY "Clients can read published workouts assigned to their groups"
   ON public.workouts FOR SELECT
   TO authenticated
   USING (
-    coach_id = auth.uid()
-    OR (
-      status = 'published'
-      AND id IN (
-        SELECT workout_id FROM public.workout_assignments
-        WHERE group_id IN (SELECT group_id FROM public.group_members WHERE user_id = auth.uid())
-      )
-    )
+    public.can_user_view_workout(id, auth.uid())
   );
 
 -- Workout parts policies
@@ -235,7 +255,7 @@ CREATE POLICY "Users can view workout parts of visible workouts"
   ON public.workout_parts FOR SELECT
   TO authenticated
   USING (
-    workout_id IN (SELECT id FROM public.workouts)
+    public.can_user_view_workout(workout_id, auth.uid())
   );
 
 CREATE POLICY "Coach can manage workout parts"
@@ -253,18 +273,18 @@ CREATE POLICY "Users can view assignments of visible workouts/groups"
   ON public.workout_assignments FOR SELECT
   TO authenticated
   USING (
-    group_id IN (SELECT id FROM public.groups WHERE coach_id = auth.uid())
-    OR group_id IN (SELECT group_id FROM public.group_members WHERE user_id = auth.uid())
+    public.is_group_coach(group_id, auth.uid())
+    OR public.is_group_member(group_id, auth.uid())
   );
 
 CREATE POLICY "Coach can manage assignments"
   ON public.workout_assignments FOR ALL
   TO authenticated
   USING (
-    group_id IN (SELECT id FROM public.groups WHERE coach_id = auth.uid())
+    public.is_group_coach(group_id, auth.uid())
   )
   WITH CHECK (
-    group_id IN (SELECT id FROM public.groups WHERE coach_id = auth.uid())
+    public.is_group_coach(group_id, auth.uid())
   );
 
 -- Part results policies
@@ -273,11 +293,7 @@ CREATE POLICY "Users can view results for assigned workouts"
   TO authenticated
   USING (
     user_id = auth.uid()
-    OR workout_id IN (SELECT id FROM public.workouts WHERE coach_id = auth.uid())
-    OR workout_id IN (
-      SELECT workout_id FROM public.workout_assignments
-      WHERE group_id IN (SELECT group_id FROM public.group_members WHERE user_id = auth.uid())
-    )
+    OR public.can_user_view_workout(workout_id, auth.uid())
   );
 
 CREATE POLICY "Clients can create own results"
