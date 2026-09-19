@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../domain/entities/crossfit_workout.dart';
 import '../../domain/entities/user_profile.dart';
+import '../../domain/entities/workout_template.dart';
 import '../../presentation/bloc/auth/auth_bloc.dart';
 import '../../presentation/bloc/auth/auth_state.dart';
 import '../../presentation/screens/auth/login_screen.dart';
@@ -11,8 +13,10 @@ import '../../presentation/screens/client/join_program_screen.dart';
 import '../../presentation/screens/coach/coach_home_screen.dart';
 import '../../presentation/screens/coach/programs/coach_programs_screen.dart';
 import '../../presentation/screens/coach/programs/create_program_screen.dart';
+import '../../presentation/screens/coach/programs/program_detail_screen.dart';
 import '../../presentation/screens/coach/templates/coach_templates_screen.dart';
 import '../../presentation/screens/coach/templates/create_template_screen.dart';
+import '../../presentation/screens/coach/workouts/coach_all_workouts_screen.dart';
 import '../../presentation/screens/coach/workouts/create_workout_screen.dart';
 import '../../presentation/screens/workout/results_screen.dart';
 import '../../presentation/screens/workout/workout_detail_screen.dart';
@@ -72,6 +76,13 @@ class AppRouter {
                   path: 'create',
                   builder: (context, state) => const CreateProgramScreen(),
                 ),
+                GoRoute(
+                  path: ':id',
+                  builder: (context, state) {
+                    final id = state.pathParameters['id'] ?? '';
+                    return ProgramDetailScreen(programId: id);
+                  },
+                ),
               ],
             ),
             GoRoute(
@@ -89,8 +100,27 @@ class AppRouter {
               ],
             ),
             GoRoute(
+              path: 'workouts',
+              builder: (context, state) => const CoachAllWorkoutsScreen(),
+            ),
+            GoRoute(
               path: 'workouts/create',
-              builder: (context, state) => const CreateWorkoutScreen(),
+              builder: (context, state) {
+                final extra = state.extra;
+                if (extra is CrossfitWorkout) {
+                  return CreateWorkoutScreen(workoutToEdit: extra);
+                } else if (extra is WorkoutTemplate) {
+                  return CreateWorkoutScreen(initialTemplate: extra);
+                } else if (extra is Map<String, dynamic>) {
+                  return CreateWorkoutScreen(
+                    workoutToEdit: extra['workoutToEdit'] as CrossfitWorkout?,
+                    initialTemplate: extra['initialTemplate'] as WorkoutTemplate?,
+                    initialProgramId: extra['initialProgramId'] as String?,
+                    initialProgramIds: extra['initialProgramIds'] as List<String>?,
+                  );
+                }
+                return const CreateWorkoutScreen();
+              },
             ),
           ],
         ),

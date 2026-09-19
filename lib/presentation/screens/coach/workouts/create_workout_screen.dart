@@ -36,11 +36,15 @@ class _EditablePart {
 class CreateWorkoutScreen extends StatefulWidget {
   final CrossfitWorkout? workoutToEdit;
   final WorkoutTemplate? initialTemplate;
+  final String? initialProgramId;
+  final List<String>? initialProgramIds;
 
   const CreateWorkoutScreen({
     super.key,
     this.workoutToEdit,
     this.initialTemplate,
+    this.initialProgramId,
+    this.initialProgramIds,
   });
 
   @override
@@ -60,6 +64,13 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   void initState() {
     super.initState();
     context.read<ProgramCubit>().loadCoachPrograms();
+
+    if (widget.initialProgramId != null) {
+      _selectedProgramIds.add(widget.initialProgramId!);
+    }
+    if (widget.initialProgramIds != null) {
+      _selectedProgramIds.addAll(widget.initialProgramIds!);
+    }
 
     if (widget.workoutToEdit != null) {
       final w = widget.workoutToEdit!;

@@ -313,11 +313,19 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                             : AppColors.primaryNeon.withValues(alpha: 0.2),
                       ),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        await context.push('/coach/programs/${program.id}');
+                        if (context.mounted) {
+                          context.read<ProgramCubit>().loadCoachPrograms();
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                           Row(
                             children: [
                               Container(
@@ -511,8 +519,9 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                         ],
                       ),
                     ),
-                  );
-                },
+                  ),
+                );
+              },
               ),
             );
           }

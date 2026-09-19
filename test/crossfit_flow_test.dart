@@ -148,7 +148,20 @@ class MockProgramRepository implements ProgramRepository {
   }
 
   @override
-  Future<List<ProgramMember>> getProgramMembers(String programId) async => [];
+  Future<List<ProgramMember>> getProgramMembers(String programId) async => [
+        ProgramMember(
+          programId: programId,
+          userId: 'client-123',
+          joinedAt: DateTime(2026, 1, 15),
+          userProfile: UserProfile(
+            id: 'client-123',
+            email: 'client@wodfit.com',
+            fullName: 'Иван Атлетов',
+            role: UserRole.client,
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        ),
+      ];
 
   @override
   Future<void> removeProgramMember({required String programId, required String userId}) async {}
@@ -269,7 +282,18 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
   Future<void> publishWorkout(String id) async {}
 
   @override
-  Future<List<PartResult>> getWorkoutResults(String workoutId) async => [];
+  Future<List<PartResult>> getWorkoutResults(String workoutId) async => [
+        PartResult(
+          id: 'res-1',
+          workoutId: workoutId,
+          partId: 'p-1',
+          userId: 'client-123',
+          status: ResultStatus.done,
+          scoreText: '12:45',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      ];
 
   @override
   Future<List<PartResult>> getUserWorkoutResults(String workoutId) async => [];
@@ -460,10 +484,40 @@ void main() {
     // Verify Coach Home Screen
     expect(find.text('Главный Тренер'), findsOneWidget);
     expect(find.text('Панель тренера'), findsOneWidget);
+    expect(find.text('Сегодня'), findsOneWidget);
     expect(find.text('Новая тренировка'), findsOneWidget);
     expect(find.text('Шаблоны'), findsWidgets);
     expect(find.text('Программы'), findsWidgets);
-    expect(find.text('WOD: Fran & Heavy Snatch'), findsOneWidget);
+    expect(find.text('Все тренировки'), findsWidgets);
+    expect(find.text('WOD: Fran & Heavy Snatch'), findsWidgets);
+    expect(find.text('Утренняя группа 07:00'), findsOneWidget);
+    expect(find.text('5 участников'), findsOneWidget);
+    expect(find.text('1 тренировок'), findsOneWidget);
+
+    // Tap on program card -> opens ProgramDetailScreen
+    await tester.tap(find.text('Утренняя группа 07:00'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Код приглашения: '), findsOneWidget);
+    expect(find.text('CF0700'), findsOneWidget);
+    expect(find.text('Тренировка'), findsOneWidget);
+    expect(find.text('Из шаблона'), findsOneWidget);
+    expect(find.text('Участники (1)'), findsOneWidget);
+    expect(find.text('Иван Атлетов'), findsOneWidget);
+    expect(find.text('Заполнено 1/1'), findsOneWidget);
+
+    // Go back
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    // Tap "Все тренировки"
+    await tester.tap(find.text('Все тренировки').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Все тренировки'), findsOneWidget);
+    expect(find.text('Все'), findsOneWidget);
+    expect(find.text('Опубликованные'), findsOneWidget);
+    expect(find.text('Черновики'), findsOneWidget);
   });
 
   test('TrainingProgram and Workout operations logic in repositories and cubits', () async {

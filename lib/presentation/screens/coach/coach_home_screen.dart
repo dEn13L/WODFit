@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/crossfit_workout.dart';
+import '../../../domain/entities/training_program.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
@@ -34,6 +35,23 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
     final authState = context.watch<AuthBloc>().state;
     final user = authState is Authenticated ? authState.user : null;
 
+    final workoutState = context.watch<CrossfitWorkoutCubit>().state;
+    final programState = context.watch<ProgramCubit>().state;
+
+    final isLoading = workoutState is CrossfitWorkoutLoading && programState is ProgramLoading;
+
+    final allWorkouts = workoutState is CrossfitWorkoutListLoaded ? workoutState.workouts : <CrossfitWorkout>[];
+    final allPrograms = programState is ProgramLoaded ? programState.programs : <TrainingProgram>[];
+
+    final now = DateTime.now();
+    final todayWorkouts = allWorkouts.where((w) {
+      final scheduled = w.scheduledAt.toLocal();
+      return scheduled.year == now.year &&
+          scheduled.month == now.month &&
+          scheduled.day == now.day;
+    }).toList()
+      ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -51,14 +69,17 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Все тренировки',
+            icon: const Icon(Icons.format_list_bulleted),
+            onPressed: () async {
+              await context.push('/coach/workouts');
+              if (mounted) _loadData();
+            },
+          ),
+          IconButton(
             tooltip: 'Шаблоны',
             icon: const Icon(Icons.bookmark_outline),
             onPressed: () => context.push('/coach/templates'),
-          ),
-          IconButton(
-            tooltip: 'Программы',
-            icon: const Icon(Icons.fitness_center_outlined),
-            onPressed: () => context.push('/coach/programs'),
           ),
           IconButton(
             tooltip: 'Выйти',
@@ -72,137 +93,509 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
       body: RefreshIndicator(
         onRefresh: () async => _loadData(),
         color: AppColors.primaryNeon,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Quick Actions
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickActionButton(
-                      icon: Icons.add_circle_outline,
-                      label: 'Новая тренировка',
-                      color: AppColors.primaryNeon,
-                      textColor: Colors.black,
-                      onTap: () async {
-                        await context.push('/coach/workouts/create');
-                        if (mounted) _loadData();
-                      },
+        child: isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primaryNeon),
+              )
+            : SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Quick Actions Block
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _QuickActionButton(
+                            icon: Icons.add_circle_outline,
+                            label: 'Новая тренировка',
+                            color: AppColors.primaryNeon,
+                            textColor: Colors.black,
+                            onTap: () async {
+                              await context.push('/coach/workouts/create');
+                              if (mounted) _loadData();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _QuickActionButton(
+                            icon: Icons.bookmark_outline,
+                            label: 'Шаблоны',
+                            color: AppColors.surface,
+                            textColor: AppColors.textPrimary,
+                            onTap: () => context.push('/coach/templates'),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _QuickActionButton(
-                      icon: Icons.bookmark_outline,
-                      label: 'Шаблоны',
-                      color: AppColors.surface,
-                      textColor: AppColors.textPrimary,
-                      onTap: () => context.push('/coach/templates'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _QuickActionButton(
-                      icon: Icons.fitness_center_outlined,
-                      label: 'Программы',
-                      color: AppColors.surface,
-                      textColor: AppColors.textPrimary,
-                      onTap: () => context.push('/coach/programs'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Созданные тренировки',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
-                builder: (context, state) {
-                  if (state is CrossfitWorkoutLoading) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40.0),
-                      child: Center(child: CircularProgressIndicator(color: AppColors.primaryNeon)),
-                    );
-                  }
 
-                  if (state is CrossfitWorkoutError) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 30.0),
-                        child: Column(
+                    const SizedBox(height: 24),
+
+                    // Block "Сегодня"
+                    Row(
+                      children: [
+                        const Icon(Icons.today, size: 20, color: AppColors.primaryNeon),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Сегодня',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          DateFormat('dd.MM.yyyy').format(now),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (workoutState is CrossfitWorkoutError)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
                           children: [
-                            Text(state.message, style: const TextStyle(color: AppColors.error)),
-                            const SizedBox(height: 12),
-                            ElevatedButton(
+                            const Icon(Icons.error_outline, color: AppColors.error),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                workoutState.message,
+                                style: const TextStyle(color: AppColors.error, fontSize: 13),
+                              ),
+                            ),
+                            TextButton(
                               onPressed: _loadData,
                               child: const Text('Повторить'),
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  }
-
-                  if (state is CrossfitWorkoutListLoaded) {
-                    if (state.workouts.isEmpty) {
-                      return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                const Icon(Icons.fitness_center, size: 48, color: AppColors.textSecondary),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'У вас пока нет созданных тренировок',
-                                  style: TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Нажмите «Новая тренировка», чтобы составить WOD и назначить его программам.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    await context.push('/coach/workouts/create');
-                                    if (mounted) _loadData();
-                                  },
-                                  child: const Text('Создать тренировку'),
-                                ),
-                              ],
-                            ),
-                          ),
+                      )
+                    else if (todayWorkouts.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white10),
                         ),
-                      );
-                    }
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.event_available,
+                              size: 36,
+                              color: AppColors.textSecondary.withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Сегодня тренировок нет',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Запланируйте тренировку на сегодня кнопкой «Новая тренировка».',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: todayWorkouts.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final workout = todayWorkouts[index];
+                          return _TodayWorkoutCard(
+                            workout: workout,
+                            onTap: () async {
+                              await context.push('/workout/${workout.id}');
+                              if (mounted) _loadData();
+                            },
+                          );
+                        },
+                      ),
 
-                    return ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: state.workouts.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final workout = state.workouts[index];
-                        return _WorkoutCoachCard(
-                          workout: workout,
-                          onTap: () async {
-                            await context.push('/workout/${workout.id}');
+                    const SizedBox(height: 28),
+
+                    // Block "Программы"
+                    Row(
+                      children: [
+                        const Icon(Icons.fitness_center_outlined, size: 20, color: AppColors.primaryNeon),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Программы',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: () async {
+                            await context.push('/coach/workouts');
                             if (mounted) _loadData();
                           },
-                        );
-                      },
-                    );
-                  }
+                          icon: const Icon(Icons.list, size: 16),
+                          label: const Text('Все тренировки'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primaryNeon,
+                            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (programState is ProgramError)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: AppColors.error),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                programState.message,
+                                style: const TextStyle(color: AppColors.error, fontSize: 13),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _loadData,
+                              child: const Text('Повторить'),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (allPrograms.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white10),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.group_work_outlined,
+                              size: 40,
+                              color: AppColors.textSecondary.withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'У вас пока нет программ',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Создайте групповую или персональную программу для назначения тренировок атлетам.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                await context.push('/coach/programs/create');
+                                if (mounted) _loadData();
+                              },
+                              icon: const Icon(Icons.add),
+                              label: const Text('Создать программу'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryNeon,
+                                foregroundColor: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: allPrograms.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final program = allPrograms[index];
+                          final programWorkouts = allWorkouts
+                              .where((w) => w.assignedProgramIds.contains(program.id))
+                              .toList();
 
-                  return const SizedBox.shrink();
-                },
+                          final upcoming = programWorkouts
+                              .where((w) => w.scheduledAt.isAfter(now) || w.scheduledAt.isAtSameMomentAs(now))
+                              .toList()
+                            ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+
+                          final DateTime? nearestDate = upcoming.isNotEmpty ? upcoming.first.scheduledAt : null;
+
+                          return _CoachProgramDashboardCard(
+                            program: program,
+                            workoutCount: programWorkouts.length,
+                            nearestWorkoutDate: nearestDate,
+                            onTap: () async {
+                              await context.push('/coach/programs/${program.id}');
+                              if (mounted) _loadData();
+                            },
+                          );
+                        },
+                      ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _TodayWorkoutCard extends StatelessWidget {
+  final CrossfitWorkout workout;
+  final VoidCallback onTap;
+
+  const _TodayWorkoutCard({
+    required this.workout,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final timeFormat = DateFormat('HH:mm');
+    final isDraft = workout.status == WorkoutStatus.draft;
+
+    return Card(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: isDraft
+              ? Colors.amber.withValues(alpha: 0.3)
+              : AppColors.primaryNeon.withValues(alpha: 0.25),
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(14.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryNeon.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  timeFormat.format(workout.scheduledAt),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryNeon,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      workout.title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${workout.parts.length} частей${workout.assignments.isNotEmpty ? ' • ${workout.assignments.map((a) => a.programName ?? 'Программа').join(', ')}' : ''}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (isDraft) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'Черновик',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.amber,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CoachProgramDashboardCard extends StatelessWidget {
+  final TrainingProgram program;
+  final int workoutCount;
+  final DateTime? nearestWorkoutDate;
+  final VoidCallback onTap;
+
+  const _CoachProgramDashboardCard({
+    required this.program,
+    required this.workoutCount,
+    required this.nearestWorkoutDate,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPersonal = program.kind == ProgramKind.personal;
+    final nearestDateText = nearestWorkoutDate != null
+        ? DateFormat('dd.MM HH:mm').format(nearestWorkoutDate!)
+        : 'Нет запланированных';
+
+    return Card(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isPersonal
+              ? Colors.purpleAccent.withValues(alpha: 0.3)
+              : AppColors.primaryNeon.withValues(alpha: 0.2),
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isPersonal
+                          ? Colors.purpleAccent.withValues(alpha: 0.15)
+                          : AppColors.primaryNeon.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      isPersonal ? Icons.person : Icons.groups,
+                      color: isPersonal ? Colors.purpleAccent : AppColors.primaryNeon,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      program.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isPersonal
+                          ? Colors.purpleAccent.withValues(alpha: 0.2)
+                          : AppColors.primaryNeon.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      program.kind.displayName,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isPersonal ? Colors.purpleAccent : AppColors.primaryNeon,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  // Members count
+                  Row(
+                    children: [
+                      const Icon(Icons.people_outline, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${program.memberCount} участников',
+                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  // Workout count
+                  Row(
+                    children: [
+                      const Icon(Icons.fitness_center, size: 13, color: AppColors.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$workoutCount тренировок',
+                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.event_outlined, size: 14, color: AppColors.primaryNeon),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Ближайшая: $nearestDateText',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: nearestWorkoutDate != null ? FontWeight.w600 : FontWeight.normal,
+                      color: nearestWorkoutDate != null ? AppColors.primaryNeon : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -231,129 +624,28 @@ class _QuickActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: color,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: textColor, size: 28),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+              Icon(icon, color: textColor, size: 20),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textAlign: TextAlign.center,
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WorkoutCoachCard extends StatelessWidget {
-  final CrossfitWorkout workout;
-  final VoidCallback onTap;
-
-  const _WorkoutCoachCard({
-    required this.workout,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd.MM.yyyy, HH:mm');
-    final dateStr = dateFormat.format(workout.scheduledAt);
-
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      workout.title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: workout.isPublished
-                          ? AppColors.success.withValues(alpha: 0.2)
-                          : AppColors.accentOrange.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: workout.isPublished ? AppColors.success : AppColors.accentOrange,
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      workout.status.displayName,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: workout.isPublished ? AppColors.success : AppColors.accentOrange,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.event, size: 16, color: AppColors.textSecondary),
-                  const SizedBox(width: 6),
-                  Text(
-                    dateStr,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                  ),
-                  const SizedBox(width: 16),
-                  const Icon(Icons.format_list_numbered, size: 16, color: AppColors.textSecondary),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Частей: ${workout.parts.length}',
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                  ),
-                ],
-              ),
-              if (workout.assignments.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: workout.assignments.map((assignment) {
-                    return Chip(
-                      label: Text(
-                        assignment.programName ?? 'Программа',
-                        style: const TextStyle(fontSize: 11, color: AppColors.primaryNeon),
-                      ),
-                      backgroundColor: AppColors.surfaceLight,
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                    );
-                  }).toList(),
-                ),
-              ],
             ],
           ),
         ),
