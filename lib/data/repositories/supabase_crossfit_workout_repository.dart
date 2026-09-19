@@ -30,7 +30,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     try {
       final response = await client
           .from('workouts')
-          .select('*, workout_parts(*), workout_assignments(*, groups(name))')
+          .select('*, workout_parts(*), workout_assignments(*, programs(name))')
           .eq('coach_id', userId)
           .order('scheduled_at', ascending: false);
 
@@ -49,17 +49,17 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     if (userId == null) return [];
 
     try {
-      // 1. Get all group IDs for current user
-      final memberRes = await client.from('group_members').select('group_id').eq('user_id', userId);
-      final groupIds = (memberRes as List<dynamic>).map((e) => e['group_id'] as String).toList();
+      // 1. Get all program IDs for current user
+      final memberRes = await client.from('program_members').select('program_id').eq('user_id', userId);
+      final programIds = (memberRes as List<dynamic>).map((e) => (e['program_id'] ?? e['group_id']) as String).toList();
 
-      if (groupIds.isEmpty) return [];
+      if (programIds.isEmpty) return [];
 
-      // 2. Get assignments for these groups
+      // 2. Get assignments for these programs
       final assignRes = await client
           .from('workout_assignments')
           .select('workout_id')
-          .filter('group_id', 'in', groupIds);
+          .filter('program_id', 'in', programIds);
 
       final workoutIds = (assignRes as List<dynamic>).map((e) => e['workout_id'] as String).toSet().toList();
 
@@ -68,7 +68,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       // 3. Get published workouts
       final response = await client
           .from('workouts')
-          .select('*, workout_parts(*), workout_assignments(*, groups(name))')
+          .select('*, workout_parts(*), workout_assignments(*, programs(name))')
           .filter('id', 'in', workoutIds)
           .eq('status', 'published')
           .order('scheduled_at', ascending: false);
@@ -87,7 +87,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     try {
       final response = await client
           .from('workouts')
-          .select('*, workout_parts(*), workout_assignments(*, groups(name))')
+          .select('*, workout_parts(*), workout_assignments(*, programs(name))')
           .eq('id', id)
           .single();
 
@@ -108,7 +108,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     required String description,
     required DateTime scheduledAt,
     required List<WorkoutPart> parts,
-    required List<String> groupIds,
+    required List<String> programIds,
     bool publish = false,
   }) async {
     final userId = client.auth.currentUser?.id;
@@ -147,10 +147,10 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       }
 
       // 3. Insert assignments
-      if (groupIds.isNotEmpty) {
-        final assignmentsData = groupIds.map((groupId) => {
+      if (programIds.isNotEmpty) {
+        final assignmentsData = programIds.map((programId) => {
           'workout_id': workoutId,
-          'group_id': groupId,
+          'program_id': programId,
         }).toList();
 
         await client.from('workout_assignments').insert(assignmentsData);
@@ -171,7 +171,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     required String description,
     required DateTime scheduledAt,
     required List<WorkoutPart> parts,
-    required List<String> groupIds,
+    required List<String> programIds,
     required WorkoutStatus status,
   }) async {
     final userId = client.auth.currentUser?.id;
@@ -235,10 +235,10 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       // 3. Update assignments
       await client.from('workout_assignments').delete().eq('workout_id', id);
 
-      if (groupIds.isNotEmpty) {
-        final assignmentsData = groupIds.map((groupId) => {
+      if (programIds.isNotEmpty) {
+        final assignmentsData = programIds.map((programId) => {
           'workout_id': id,
-          'group_id': groupId,
+          'program_id': programId,
         }).toList();
 
         await client.from('workout_assignments').insert(assignmentsData);
@@ -267,7 +267,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
         description: original.description,
         scheduledAt: DateTime.now().add(const Duration(days: 1)),
         parts: original.parts,
-        groupIds: original.assignedGroupIds,
+        programIds: original.assignedProgramIds,
         publish: false,
       );
 

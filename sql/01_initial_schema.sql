@@ -4,6 +4,7 @@
 
 -- 1. ENUM TYPES
 CREATE TYPE public.user_role AS ENUM ('coach', 'client');
+CREATE TYPE public.program_kind AS ENUM ('personal', 'group');
 CREATE TYPE public.workout_part_type AS ENUM (
   'warmup',
   'weightlifting',
@@ -25,21 +26,24 @@ CREATE TABLE public.profiles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 3. GROUPS TABLE
-CREATE TABLE public.groups (
+-- 3. PROGRAMS TABLE
+CREATE TABLE public.programs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   coach_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  kind public.program_kind NOT NULL DEFAULT 'group',
+  description TEXT NOT NULL DEFAULT '',
   invite_code TEXT NOT NULL UNIQUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 4. GROUP MEMBERS TABLE
-CREATE TABLE public.group_members (
-  group_id UUID NOT NULL REFERENCES public.groups(id) ON DELETE CASCADE,
+-- 4. PROGRAM MEMBERS TABLE
+CREATE TABLE public.program_members (
+  program_id UUID NOT NULL REFERENCES public.programs(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   joined_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-  PRIMARY KEY (group_id, user_id)
+  PRIMARY KEY (program_id, user_id)
 );
 
 -- 5. WORKOUTS TABLE
@@ -68,9 +72,9 @@ CREATE TABLE public.workout_parts (
 -- 7. WORKOUT ASSIGNMENTS TABLE
 CREATE TABLE public.workout_assignments (
   workout_id UUID NOT NULL REFERENCES public.workouts(id) ON DELETE CASCADE,
-  group_id UUID NOT NULL REFERENCES public.groups(id) ON DELETE CASCADE,
+  program_id UUID NOT NULL REFERENCES public.programs(id) ON DELETE CASCADE,
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-  PRIMARY KEY (workout_id, group_id)
+  PRIMARY KEY (workout_id, program_id)
 );
 
 -- 8. PART RESULTS TABLE
@@ -94,11 +98,12 @@ CREATE TABLE public.part_results (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_groups_coach ON public.groups(coach_id);
-CREATE INDEX idx_group_members_user ON public.group_members(user_id);
+CREATE INDEX idx_programs_coach ON public.programs(coach_id);
+CREATE INDEX idx_program_members_program ON public.program_members(program_id);
+CREATE INDEX idx_program_members_user ON public.program_members(user_id);
 CREATE INDEX idx_workouts_coach ON public.workouts(coach_id);
 CREATE INDEX idx_workout_parts_workout ON public.workout_parts(workout_id);
-CREATE INDEX idx_workout_assignments_group ON public.workout_assignments(group_id);
+CREATE INDEX idx_workout_assignments_program ON public.workout_assignments(program_id);
 CREATE INDEX idx_part_results_workout ON public.part_results(workout_id);
 CREATE INDEX idx_part_results_part ON public.part_results(part_id);
 CREATE INDEX idx_part_results_user ON public.part_results(user_id);
@@ -122,41 +127,46 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- 10. RPC: JOIN GROUP BY INVITE CODE
-CREATE OR REPLACE FUNCTION public.join_group_by_code(code TEXT)
+-- 10. RPC: JOIN PROGRAM BY INVITE CODE
+CREATE OR REPLACE FUNCTION public.join_program_by_code(code TEXT)
 RETURNS JSON AS $$
 DECLARE
-  v_group_id UUID;
-  v_group_name TEXT;
+  v_program_id UUID;
+  v_program_name TEXT;
+  v_program_kind public.program_kind;
 BEGIN
-  SELECT id, name INTO v_group_id, v_group_name
-  FROM public.groups
+  SELECT id, name, kind INTO v_program_id, v_program_name, v_program_kind
+  FROM public.programs
   WHERE UPPER(invite_code) = UPPER(TRIM(code));
 
-  IF v_group_id IS NULL THEN
-    RAISE EXCEPTION 'Группа с кодом % не найдена', code;
+  IF v_program_id IS NULL THEN
+    RAISE EXCEPTION 'Программа с кодом % не найдена', code;
   END IF;
 
-  INSERT INTO public.group_members (group_id, user_id)
-  VALUES (v_group_id, auth.uid())
-  ON CONFLICT (group_id, user_id) DO NOTHING;
+  INSERT INTO public.program_members (program_id, user_id)
+  VALUES (v_program_id, auth.uid())
+  ON CONFLICT (program_id, user_id) DO NOTHING;
 
-  RETURN json_build_object('id', v_group_id, 'name', v_group_name);
+  RETURN json_build_object(
+    'id', v_program_id,
+    'name', v_program_name,
+    'kind', v_program_kind
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 11. HELPER SECURITY DEFINER FUNCTIONS (Prevents RLS infinite recursion)
-CREATE OR REPLACE FUNCTION public.is_group_member(p_group_id UUID, p_user_id UUID DEFAULT auth.uid())
+CREATE OR REPLACE FUNCTION public.is_program_member(p_program_id UUID, p_user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
-    SELECT 1 FROM public.group_members WHERE group_id = p_group_id AND user_id = p_user_id
+    SELECT 1 FROM public.program_members WHERE program_id = p_program_id AND user_id = p_user_id
   );
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
-CREATE OR REPLACE FUNCTION public.is_group_coach(p_group_id UUID, p_coach_id UUID DEFAULT auth.uid())
+CREATE OR REPLACE FUNCTION public.is_program_coach(p_program_id UUID, p_coach_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
-    SELECT 1 FROM public.groups WHERE id = p_group_id AND coach_id = p_coach_id
+    SELECT 1 FROM public.programs WHERE id = p_program_id AND coach_id = p_coach_id
   );
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
@@ -167,15 +177,15 @@ RETURNS BOOLEAN AS $$
   ) OR EXISTS (
     SELECT 1 FROM public.workouts w
     JOIN public.workout_assignments wa ON wa.workout_id = w.id
-    JOIN public.group_members gm ON gm.group_id = wa.group_id
-    WHERE w.id = p_workout_id AND w.status = 'published' AND gm.user_id = p_user_id
+    JOIN public.program_members pm ON pm.program_id = wa.program_id
+    WHERE w.id = p_workout_id AND w.status = 'published' AND pm.user_id = p_user_id
   );
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- 12. ROW LEVEL SECURITY (RLS) POLICIES
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.programs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.program_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workouts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workout_parts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workout_assignments ENABLE ROW LEVEL SECURITY;
@@ -192,51 +202,51 @@ CREATE POLICY "Users can update own profile"
   TO authenticated
   USING (auth.uid() = id);
 
--- Groups policies
-CREATE POLICY "Coach can create groups"
-  ON public.groups FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = coach_id);
-
-CREATE POLICY "Coach and members can read groups"
-  ON public.groups FOR SELECT
+-- Programs policies
+CREATE POLICY "Coach and members can read programs"
+  ON public.programs FOR SELECT
   TO authenticated
   USING (
     coach_id = auth.uid()
-    OR public.is_group_member(id, auth.uid())
+    OR public.is_program_member(id, auth.uid())
   );
 
-CREATE POLICY "Coach can update own groups"
-  ON public.groups FOR UPDATE
+CREATE POLICY "Coach can create programs"
+  ON public.programs FOR INSERT
+  TO authenticated
+  WITH CHECK (coach_id = auth.uid());
+
+CREATE POLICY "Coach can update own programs"
+  ON public.programs FOR UPDATE
+  TO authenticated
+  USING (coach_id = auth.uid())
+  WITH CHECK (coach_id = auth.uid());
+
+CREATE POLICY "Coach can delete own programs"
+  ON public.programs FOR DELETE
   TO authenticated
   USING (coach_id = auth.uid());
 
-CREATE POLICY "Coach can delete own groups"
-  ON public.groups FOR DELETE
-  TO authenticated
-  USING (coach_id = auth.uid());
-
--- Group members policies
-CREATE POLICY "Members and coaches can view group members"
-  ON public.group_members FOR SELECT
+-- Program members policies
+CREATE POLICY "Members and coaches can view program members"
+  ON public.program_members FOR SELECT
   TO authenticated
   USING (
     user_id = auth.uid()
-    OR public.is_group_coach(group_id, auth.uid())
-    OR public.is_group_member(group_id, auth.uid())
+    OR public.is_program_coach(program_id, auth.uid())
   );
 
-CREATE POLICY "Users can join groups"
-  ON public.group_members FOR INSERT
+CREATE POLICY "Users can join programs"
+  ON public.program_members FOR INSERT
   TO authenticated
-  WITH CHECK (user_id = auth.uid() OR public.is_group_coach(group_id, auth.uid()));
+  WITH CHECK (user_id = auth.uid());
 
-CREATE POLICY "Users or coaches can leave/remove from group"
-  ON public.group_members FOR DELETE
+CREATE POLICY "Users or coaches can leave or remove from program"
+  ON public.program_members FOR DELETE
   TO authenticated
   USING (
     user_id = auth.uid()
-    OR public.is_group_coach(group_id, auth.uid())
+    OR public.is_program_coach(program_id, auth.uid())
   );
 
 -- Workouts policies
@@ -246,7 +256,7 @@ CREATE POLICY "Coach can manage workouts"
   USING (coach_id = auth.uid())
   WITH CHECK (coach_id = auth.uid());
 
-CREATE POLICY "Clients can read published workouts assigned to their groups"
+CREATE POLICY "Clients can read published workouts assigned to their programs"
   ON public.workouts FOR SELECT
   TO authenticated
   USING (
@@ -272,22 +282,27 @@ CREATE POLICY "Coach can manage workout parts"
   );
 
 -- Workout assignments policies
-CREATE POLICY "Users can view assignments of visible workouts/groups"
+CREATE POLICY "Coach or members can view workout assignments"
   ON public.workout_assignments FOR SELECT
   TO authenticated
   USING (
-    public.is_group_coach(group_id, auth.uid())
-    OR public.is_group_member(group_id, auth.uid())
+    EXISTS (SELECT 1 FROM public.workouts w WHERE w.id = workout_id AND w.coach_id = auth.uid())
+    OR public.is_program_member(program_id, auth.uid())
   );
 
-CREATE POLICY "Coach can manage assignments"
-  ON public.workout_assignments FOR ALL
+CREATE POLICY "Coach can assign workout to own program"
+  ON public.workout_assignments FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM public.workouts w WHERE w.id = workout_id AND w.coach_id = auth.uid())
+    AND public.is_program_coach(program_id, auth.uid())
+  );
+
+CREATE POLICY "Coach can delete workout assignments"
+  ON public.workout_assignments FOR DELETE
   TO authenticated
   USING (
-    public.is_group_coach(group_id, auth.uid())
-  )
-  WITH CHECK (
-    public.is_group_coach(group_id, auth.uid())
+    EXISTS (SELECT 1 FROM public.workouts w WHERE w.id = workout_id AND w.coach_id = auth.uid())
   );
 
 -- Part results policies

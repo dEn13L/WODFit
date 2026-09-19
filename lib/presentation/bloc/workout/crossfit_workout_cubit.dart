@@ -98,7 +98,7 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
     required String description,
     required DateTime scheduledAt,
     required List<WorkoutPart> parts,
-    required List<String> groupIds,
+    required List<String> programIds,
     bool publish = false,
   }) async {
     try {
@@ -107,7 +107,7 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
         description: description,
         scheduledAt: scheduledAt,
         parts: parts,
-        groupIds: groupIds,
+        programIds: programIds,
         publish: publish,
       );
 
@@ -138,7 +138,7 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
     required String description,
     required DateTime scheduledAt,
     required List<WorkoutPart> parts,
-    required List<String> groupIds,
+    required List<String> programIds,
     required WorkoutStatus status,
   }) async {
     try {
@@ -148,7 +148,7 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
         description: description,
         scheduledAt: scheduledAt,
         parts: parts,
-        groupIds: groupIds,
+        programIds: programIds,
         status: status,
       );
 

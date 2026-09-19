@@ -8,8 +8,9 @@ import '../../../domain/entities/part_result.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
-import '../../bloc/group/group_cubit.dart';
+import '../../bloc/program/program_cubit.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
+import '../../../domain/entities/training_program.dart';
 
 class ClientHomeScreen extends StatefulWidget {
   const ClientHomeScreen({super.key});
@@ -27,7 +28,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
 
   void _loadData() {
     context.read<CrossfitWorkoutCubit>().loadClientWorkouts();
-    context.read<GroupCubit>().loadClientGroups();
+    context.read<ProgramCubit>().loadClientPrograms();
   }
 
   @override
@@ -77,10 +78,10 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Groups section & Join button
-              BlocConsumer<GroupCubit, GroupState>(
+              // Programs section & Join button
+              BlocConsumer<ProgramCubit, ProgramState>(
                 listener: (context, state) {
-                  if (state is GroupLoaded && state.successMessage != null) {
+                  if (state is ProgramLoaded && state.successMessage != null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(state.successMessage!),
@@ -88,7 +89,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                       ),
                     );
                   }
-                  if (state is GroupError) {
+                  if (state is ProgramError) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(state.message),
@@ -98,7 +99,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                   }
                 },
                 builder: (context, state) {
-                  if (state is GroupLoading) {
+                  if (state is ProgramLoading) {
                     return const Card(
                       child: Padding(
                         padding: EdgeInsets.all(24.0),
@@ -107,8 +108,8 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                     );
                   }
 
-                  if (state is GroupLoaded) {
-                    if (state.groups.isEmpty) {
+                  if (state is ProgramLoaded) {
+                    if (state.programs.isEmpty) {
                       return Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -124,22 +125,22 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                 Icon(Icons.info_outline, color: AppColors.primaryNeon),
                                 SizedBox(width: 8),
                                 Text(
-                                  'Вы пока не состоите ни в одной группе',
+                                  'Вы пока не состоите ни в одной программе',
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 6),
                             const Text(
-                              'Попросите у вашего тренера 6-значный код приглашения, чтобы видеть тренировки группы.',
+                              'Попросите у вашего тренера 6-значный код приглашения, чтобы видеть тренировки программы.',
                               style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                             ),
                             const SizedBox(height: 12),
                             ElevatedButton.icon(
-                              icon: const Icon(Icons.group_add),
-                              label: const Text('Вступить в группу по коду'),
+                              icon: const Icon(Icons.fitness_center),
+                              label: const Text('Вступить в программу по коду'),
                               onPressed: () async {
-                                await context.push('/client/join-group');
+                                await context.push('/client/join-program');
                                 if (mounted) _loadData();
                               },
                             ),
@@ -158,14 +159,14 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text(
-                                  'Мои группы',
+                                  'Мои программы',
                                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
                                 TextButton.icon(
                                   icon: const Icon(Icons.add, size: 18, color: AppColors.primaryNeon),
                                   label: const Text('Вступить еще', style: TextStyle(color: AppColors.primaryNeon)),
                                   onPressed: () async {
-                                    await context.push('/client/join-group');
+                                    await context.push('/client/join-program');
                                     if (mounted) _loadData();
                                   },
                                 ),
@@ -175,32 +176,53 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                             ListView.separated(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              itemCount: state.groups.length,
+                              itemCount: state.programs.length,
                               separatorBuilder: (context, index) => const Divider(color: AppColors.surfaceLight, height: 12),
                               itemBuilder: (context, index) {
-                                final group = state.groups[index];
+                                final program = state.programs[index];
                                 return Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
                                       children: [
-                                        const Icon(Icons.groups, size: 20, color: AppColors.primaryNeon),
+                                        Icon(
+                                          program.kind == ProgramKind.personal ? Icons.person : Icons.groups,
+                                          size: 20,
+                                          color: program.kind == ProgramKind.personal ? Colors.purpleAccent : AppColors.primaryNeon,
+                                        ),
                                         const SizedBox(width: 10),
                                         Text(
-                                          group.name,
+                                          program.name,
                                           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: program.kind == ProgramKind.personal
+                                                ? Colors.purpleAccent.withValues(alpha: 0.2)
+                                                : AppColors.primaryNeon.withValues(alpha: 0.2),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            program.kind.displayName,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: program.kind == ProgramKind.personal ? Colors.purpleAccent : AppColors.primaryNeon,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
                                     TextButton(
                                       onPressed: () async {
-                                        final groupCubit = context.read<GroupCubit>();
+                                        final programCubit = context.read<ProgramCubit>();
                                         final confirm = await showDialog<bool>(
                                           context: context,
                                           builder: (dCtx) => AlertDialog(
                                             backgroundColor: AppColors.surface,
-                                            title: const Text('Выйти из группы?'),
-                                            content: Text('Вы действительно хотите покинуть группу "${group.name}"?'),
+                                            title: const Text('Выйти из программы?'),
+                                            content: Text('Вы действительно хотите покинуть программу "${program.name}"?'),
                                             actions: [
                                               TextButton(
                                                 onPressed: () => Navigator.of(dCtx).pop(false),
@@ -216,7 +238,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                         );
 
                                         if (confirm == true) {
-                                          await groupCubit.leaveGroup(group.id);
+                                          await programCubit.leaveProgram(program.id);
                                           if (mounted) _loadData();
                                         }
                                       },
@@ -358,7 +380,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 const Text(
-                                  'Когда тренер опубликует тренировку для вашей группы, она появится здесь.',
+                                  'Когда тренер опубликует тренировку для вашей программы, она появится здесь.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                 ),

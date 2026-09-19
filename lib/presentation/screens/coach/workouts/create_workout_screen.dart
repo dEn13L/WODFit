@@ -5,8 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
+import '../../../../domain/entities/training_program.dart';
 import '../../../../domain/entities/workout_template.dart';
-import '../../../bloc/group/group_cubit.dart';
+import '../../../bloc/program/program_cubit.dart';
 import '../../../bloc/template/workout_template_cubit.dart';
 import '../../../bloc/workout/crossfit_workout_cubit.dart';
 
@@ -51,21 +52,21 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late DateTime _scheduledAt;
-  final Set<String> _selectedGroupIds = {};
+  final Set<String> _selectedProgramIds = {};
   final List<_EditablePart> _parts = [];
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    context.read<GroupCubit>().loadCoachGroups();
+    context.read<ProgramCubit>().loadCoachPrograms();
 
     if (widget.workoutToEdit != null) {
       final w = widget.workoutToEdit!;
       _titleController = TextEditingController(text: w.title);
       _descriptionController = TextEditingController(text: w.description);
       _scheduledAt = w.scheduledAt;
-      _selectedGroupIds.addAll(w.assignedGroupIds);
+      _selectedProgramIds.addAll(w.assignedProgramIds);
 
       if (w.parts.isNotEmpty) {
         for (final p in w.parts) {
@@ -324,10 +325,10 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       return;
     }
 
-    if (_selectedGroupIds.isEmpty) {
+    if (_selectedProgramIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Пожалуйста, выберите хотя бы одну группу для тренировки'),
+          content: Text('Пожалуйста, выберите хотя бы одну программу для тренировки'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -361,7 +362,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
             description: _descriptionController.text.trim(),
             scheduledAt: _scheduledAt,
             parts: workoutParts,
-            groupIds: _selectedGroupIds.toList(),
+            programIds: _selectedProgramIds.toList(),
             status: status,
           );
     } else {
@@ -370,7 +371,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
             description: _descriptionController.text.trim(),
             scheduledAt: _scheduledAt,
             parts: workoutParts,
-            groupIds: _selectedGroupIds.toList(),
+            programIds: _selectedProgramIds.toList(),
             publish: publish,
           );
     }
@@ -481,14 +482,14 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Назначить группам',
+                  'Назначить программам',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
-                BlocBuilder<GroupCubit, GroupState>(
+                BlocBuilder<ProgramCubit, ProgramState>(
                   builder: (context, state) {
-                    if (state is GroupLoaded) {
-                      if (state.groups.isEmpty) {
+                    if (state is ProgramLoaded) {
+                      if (state.programs.isEmpty) {
                         return Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -496,7 +497,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Text(
-                            'У вас пока нет групп. Вы сможете назначить тренировку позже или создать группу в разделе "Мои группы".',
+                            'У вас пока нет программ. Вы сможете назначить тренировку позже или создать программу в разделе "Программы".',
                             style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                           ),
                         );
@@ -505,17 +506,22 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                       return Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: state.groups.map((group) {
-                          final isSelected = _selectedGroupIds.contains(group.id);
+                        children: state.programs.map((program) {
+                          final isSelected = _selectedProgramIds.contains(program.id);
                           return FilterChip(
-                            label: Text(group.name),
+                            avatar: Icon(
+                              program.kind == ProgramKind.personal ? Icons.person : Icons.groups,
+                              size: 16,
+                              color: isSelected ? Colors.black : AppColors.primaryNeon,
+                            ),
+                            label: Text('${program.name} (${program.kind.displayName})'),
                             selected: isSelected,
                             onSelected: (selected) {
                               setState(() {
                                 if (selected) {
-                                  _selectedGroupIds.add(group.id);
+                                  _selectedProgramIds.add(program.id);
                                 } else {
-                                  _selectedGroupIds.remove(group.id);
+                                  _selectedProgramIds.remove(program.id);
                                 }
                               });
                             },

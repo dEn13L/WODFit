@@ -70,37 +70,45 @@ class WorkoutPartModel {
 
 class WorkoutAssignmentModel {
   final String workoutId;
-  final String groupId;
+  final String programId;
   final String assignedAt;
-  final String? groupName;
+  final String? programName;
+
+  // Backward compatibility aliases
+  String get groupId => programId;
+  String? get groupName => programName;
 
   const WorkoutAssignmentModel({
     required this.workoutId,
-    required this.groupId,
+    required this.programId,
     required this.assignedAt,
-    this.groupName,
+    this.programName,
   });
 
   factory WorkoutAssignmentModel.fromJson(Map<String, dynamic> json) {
     String? name;
-    if (json['groups'] != null && json['groups'] is Map) {
+    if (json['programs'] != null && json['programs'] is Map) {
+      name = json['programs']['name'] as String?;
+    } else if (json['groups'] != null && json['groups'] is Map) {
       name = json['groups']['name'] as String?;
     }
 
+    final pId = (json['program_id'] ?? json['group_id']) as String;
+
     return WorkoutAssignmentModel(
       workoutId: json['workout_id'] as String,
-      groupId: json['group_id'] as String,
+      programId: pId,
       assignedAt: (json['assigned_at'] as String?) ?? DateTime.now().toIso8601String(),
-      groupName: name,
+      programName: name,
     );
   }
 
   WorkoutAssignment toDomain() {
     return WorkoutAssignment(
       workoutId: workoutId,
-      groupId: groupId,
+      programId: programId,
       assignedAt: DateTime.tryParse(assignedAt) ?? DateTime.now(),
-      groupName: groupName,
+      programName: programName,
     );
   }
 }

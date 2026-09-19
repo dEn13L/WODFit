@@ -9,17 +9,17 @@ import 'data/datasources/local/workout_local_datasource.dart';
 import 'data/datasources/sensors/sensor_datasource.dart';
 import 'data/repositories/supabase_auth_repository.dart';
 import 'data/repositories/supabase_crossfit_workout_repository.dart';
-import 'data/repositories/supabase_group_repository.dart';
+import 'data/repositories/supabase_program_repository.dart';
 import 'data/repositories/supabase_workout_template_repository.dart';
 import 'data/repositories/workout_repository_impl.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/crossfit_workout_repository.dart';
-import 'domain/repositories/group_repository.dart';
+import 'domain/repositories/program_repository.dart';
 import 'domain/repositories/workout_repository.dart';
 import 'domain/repositories/workout_template_repository.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/bloc/auth/auth_event.dart';
-import 'presentation/bloc/group/group_cubit.dart';
+import 'presentation/bloc/program/program_cubit.dart';
 import 'presentation/bloc/template/workout_template_cubit.dart';
 import 'presentation/bloc/workout/crossfit_workout_cubit.dart';
 import 'presentation/bloc/workout_bloc.dart';
@@ -39,7 +39,7 @@ Future<void> main() async {
 
   // 3. Instantiate repositories
   final AuthRepository authRepository = SupabaseAuthRepository();
-  final GroupRepository groupRepository = SupabaseGroupRepository();
+  final ProgramRepository programRepository = SupabaseProgramRepository();
   final CrossfitWorkoutRepository crossfitWorkoutRepository = SupabaseCrossfitWorkoutRepository();
   final WorkoutTemplateRepository workoutTemplateRepository = SupabaseWorkoutTemplateRepository();
   final WorkoutRepository legacyWorkoutRepository = WorkoutRepositoryImpl(
@@ -50,7 +50,7 @@ Future<void> main() async {
   runApp(
     WodFitApp(
       authRepository: authRepository,
-      groupRepository: groupRepository,
+      programRepository: programRepository,
       crossfitWorkoutRepository: crossfitWorkoutRepository,
       workoutTemplateRepository: workoutTemplateRepository,
       legacyWorkoutRepository: legacyWorkoutRepository,
@@ -60,7 +60,7 @@ Future<void> main() async {
 
 class WodFitApp extends StatefulWidget {
   final AuthRepository authRepository;
-  final GroupRepository groupRepository;
+  final ProgramRepository programRepository;
   final CrossfitWorkoutRepository crossfitWorkoutRepository;
   final WorkoutTemplateRepository workoutTemplateRepository;
   final WorkoutRepository legacyWorkoutRepository;
@@ -68,7 +68,7 @@ class WodFitApp extends StatefulWidget {
   const WodFitApp({
     super.key,
     required this.authRepository,
-    required this.groupRepository,
+    required this.programRepository,
     required this.crossfitWorkoutRepository,
     required this.workoutTemplateRepository,
     required this.legacyWorkoutRepository,
@@ -100,7 +100,7 @@ class _WodFitAppState extends State<WodFitApp> {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<AuthRepository>.value(value: widget.authRepository),
-        RepositoryProvider<GroupRepository>.value(value: widget.groupRepository),
+        RepositoryProvider<ProgramRepository>.value(value: widget.programRepository),
         RepositoryProvider<CrossfitWorkoutRepository>.value(value: widget.crossfitWorkoutRepository),
         RepositoryProvider<WorkoutTemplateRepository>.value(value: widget.workoutTemplateRepository),
         RepositoryProvider<WorkoutRepository>.value(value: widget.legacyWorkoutRepository),
@@ -108,8 +108,8 @@ class _WodFitAppState extends State<WodFitApp> {
       child: MultiBlocProvider(
         providers: [
           BlocProvider<AuthBloc>.value(value: _authBloc),
-          BlocProvider<GroupCubit>(
-            create: (context) => GroupCubit(groupRepository: widget.groupRepository),
+          BlocProvider<ProgramCubit>(
+            create: (context) => ProgramCubit(programRepository: widget.programRepository),
           ),
           BlocProvider<CrossfitWorkoutCubit>(
             create: (context) => CrossfitWorkoutCubit(workoutRepository: widget.crossfitWorkoutRepository),

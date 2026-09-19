@@ -10,7 +10,7 @@ abstract class CrossfitWorkoutRepository {
     required String description,
     required DateTime scheduledAt,
     required List<WorkoutPart> parts,
-    required List<String> groupIds,
+    required List<String> programIds,
     bool publish = false,
   });
   Future<CrossfitWorkout> updateWorkout({
@@ -19,7 +19,7 @@ abstract class CrossfitWorkoutRepository {
     required String description,
     required DateTime scheduledAt,
     required List<WorkoutPart> parts,
-    required List<String> groupIds,
+    required List<String> programIds,
     required WorkoutStatus status,
   });
   Future<CrossfitWorkout> duplicateWorkout(String workoutId);

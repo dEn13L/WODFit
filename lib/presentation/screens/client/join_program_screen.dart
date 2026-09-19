@@ -1,35 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../bloc/group/group_cubit.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../bloc/program/program_cubit.dart';
 
-class CreateGroupScreen extends StatefulWidget {
-  const CreateGroupScreen({super.key});
+class JoinProgramScreen extends StatefulWidget {
+  const JoinProgramScreen({super.key});
 
   @override
-  State<CreateGroupScreen> createState() => _CreateGroupScreenState();
+  State<JoinProgramScreen> createState() => _JoinProgramScreenState();
 }
 
-class _CreateGroupScreenState extends State<CreateGroupScreen> {
+class _JoinProgramScreenState extends State<JoinProgramScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _codeController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
-  Future<void> _onSubmit() async {
+  Future<void> _onJoin() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() {
       _isLoading = true;
     });
 
-    final success = await context.read<GroupCubit>().createGroup(_nameController.text);
+    final success = await context.read<ProgramCubit>().joinProgram(_codeController.text.trim());
 
     if (mounted) {
       setState(() {
@@ -45,7 +45,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Создание группы'),
+        title: const Text('Вступление в программу'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -59,46 +59,63 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const Icon(Icons.fitness_center, size: 64, color: AppColors.primaryNeon),
+                const SizedBox(height: 16),
                 Text(
-                  'Новая группа',
+                  'Ввести код программы',
+                  textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Укажите название группы. Код приглашения для атлетов сгенерируется автоматически.',
+                  'Введите 6-значный код приглашения, который вам передал тренер.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
                 TextFormField(
-                  controller: _nameController,
+                  controller: _codeController,
+                  textCapitalization: TextCapitalization.characters,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    letterSpacing: 6,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryNeon,
+                  ),
                   decoration: InputDecoration(
-                    labelText: 'Название группы',
-                    hintText: 'например: Утренняя группа 08:00',
-                    prefixIcon: const Icon(Icons.group_outlined),
+                    hintText: 'PROGXX',
+                    hintStyle: TextStyle(
+                      color: AppColors.textSecondary.withValues(alpha: 0.4),
+                      letterSpacing: 4,
+                    ),
                     filled: true,
                     fillColor: AppColors.surface,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Введите название группы';
+                      return 'Введите код приглашения';
+                    }
+                    if (value.trim().length < 4) {
+                      return 'Код слишком короткий';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _onSubmit,
+                  onPressed: _isLoading ? null : _onJoin,
                   child: _isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                         )
-                      : const Text('Создать группу'),
+                      : const Text('Присоединиться к программе'),
                 ),
               ],
             ),

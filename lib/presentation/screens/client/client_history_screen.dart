@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/crossfit_workout.dart';
-import '../../../domain/entities/group.dart';
+import '../../../domain/entities/training_program.dart';
 import '../../../domain/entities/part_result.dart';
-import '../../bloc/group/group_cubit.dart';
+import '../../bloc/program/program_cubit.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
 
 class ClientHistoryScreen extends StatefulWidget {
@@ -18,7 +18,7 @@ class ClientHistoryScreen extends StatefulWidget {
 
 class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String? _selectedGroupId; // null means 'All groups'
+  String? _selectedProgramId; // null means 'All programs'
   bool _sortAscending = false; // false = newest first, true = oldest first
 
   @override
@@ -41,7 +41,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
 
   void _loadData() {
     context.read<CrossfitWorkoutCubit>().loadClientWorkouts();
-    context.read<GroupCubit>().loadClientGroups();
+    context.read<ProgramCubit>().loadClientPrograms();
   }
 
   @override
@@ -62,8 +62,8 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
       ),
       body: BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
         builder: (context, workoutState) {
-          final groupState = context.watch<GroupCubit>().state;
-          final groups = groupState is GroupLoaded ? groupState.groups : <Group>[];
+          final programState = context.watch<ProgramCubit>().state;
+          final programs = programState is ProgramLoaded ? programState.programs : <TrainingProgram>[];
 
           if (workoutState is CrossfitWorkoutLoading) {
             return const Center(
@@ -105,7 +105,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
 
             return Column(
               children: [
-                _buildFiltersBar(groups),
+                _buildFiltersBar(programs),
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
@@ -133,7 +133,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
     );
   }
 
-  Widget _buildFiltersBar(List<Group> groups) {
+  Widget _buildFiltersBar(List<TrainingProgram> programs) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: const BoxDecoration(
@@ -147,7 +147,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
         children: [
           Row(
             children: [
-              // Group selector
+              // Program selector
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -158,9 +158,9 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String?>(
                       isExpanded: true,
-                      value: _selectedGroupId,
+                      value: _selectedProgramId,
                       hint: const Text(
-                        'Все группы',
+                        'Все программы',
                         style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                       ),
                       dropdownColor: AppColors.surface,
@@ -168,13 +168,13 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
                       items: [
                         const DropdownMenuItem<String?>(
                           value: null,
-                          child: Text('Все группы', style: TextStyle(fontSize: 13)),
+                          child: Text('Все программы', style: TextStyle(fontSize: 13)),
                         ),
-                        ...groups.map(
-                          (g) => DropdownMenuItem<String?>(
-                            value: g.id,
+                        ...programs.map(
+                          (p) => DropdownMenuItem<String?>(
+                            value: p.id,
                             child: Text(
-                              g.name,
+                              '${p.name} (${p.kind.displayName})',
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 13),
                             ),
@@ -183,7 +183,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
                       ],
                       onChanged: (val) {
                         setState(() {
-                          _selectedGroupId = val;
+                          _selectedProgramId = val;
                         });
                       },
                     ),
@@ -233,10 +233,10 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
     required List<PartResult> userResults,
     required bool isPast,
   }) {
-    // Filter by group if selected
+    // Filter by program if selected
     var filtered = workouts;
-    if (_selectedGroupId != null) {
-      filtered = filtered.where((w) => w.assignments.any((a) => a.groupId == _selectedGroupId)).toList();
+    if (_selectedProgramId != null) {
+      filtered = filtered.where((w) => w.assignments.any((a) => a.programId == _selectedProgramId)).toList();
     }
 
     // Sort by date
@@ -263,8 +263,8 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  _selectedGroupId != null
-                      ? 'В выбранной группе нет ${isPast ? 'прошедших' : 'предстоящих'} тренировок'
+                  _selectedProgramId != null
+                      ? 'В выбранной программе нет ${isPast ? 'прошедших' : 'предстоящих'} тренировок'
                       : (isPast ? 'Нет прошедших тренировок' : 'Нет запланированных тренировок'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -457,7 +457,7 @@ class _HistoryWorkoutCard extends StatelessWidget {
                         const Icon(Icons.groups, size: 12, color: AppColors.textSecondary),
                         const SizedBox(width: 4),
                         Text(
-                          a.groupName ?? 'Группа',
+                          a.programName ?? 'Программа',
                           style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                         ),
                       ],

@@ -173,19 +173,23 @@ class WorkoutPart extends Equatable {
 
 class WorkoutAssignment extends Equatable {
   final String workoutId;
-  final String groupId;
+  final String programId;
   final DateTime assignedAt;
-  final String? groupName;
+  final String? programName;
+
+  // Backward-compat aliases
+  String get groupId => programId;
+  String? get groupName => programName;
 
   const WorkoutAssignment({
     required this.workoutId,
-    required this.groupId,
+    required this.programId,
     required this.assignedAt,
-    this.groupName,
+    this.programName,
   });
 
   @override
-  List<Object?> get props => [workoutId, groupId, assignedAt, groupName];
+  List<Object?> get props => [workoutId, programId, assignedAt, programName];
 }
 
 class CrossfitWorkout extends Equatable {
@@ -215,7 +219,8 @@ class CrossfitWorkout extends Equatable {
 
   bool get isPublished => status == WorkoutStatus.published;
 
-  List<String> get assignedGroupIds => assignments.map((a) => a.groupId).toList();
+  List<String> get assignedProgramIds => assignments.map((a) => a.programId).toList();
+  List<String> get assignedGroupIds => assignedProgramIds;
 
   CrossfitWorkout copyWith({
     String? id,

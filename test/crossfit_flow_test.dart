@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wod_fit/domain/entities/crossfit_workout.dart';
-import 'package:wod_fit/domain/entities/group.dart';
+import 'package:wod_fit/domain/entities/training_program.dart';
 import 'package:wod_fit/domain/entities/part_result.dart';
 import 'package:wod_fit/domain/entities/user_profile.dart';
 import 'package:wod_fit/domain/entities/workout.dart';
 import 'package:wod_fit/domain/entities/workout_template.dart';
 import 'package:wod_fit/domain/repositories/auth_repository.dart';
 import 'package:wod_fit/domain/repositories/crossfit_workout_repository.dart';
-import 'package:wod_fit/domain/repositories/group_repository.dart';
+import 'package:wod_fit/domain/repositories/program_repository.dart';
 import 'package:wod_fit/domain/repositories/workout_repository.dart';
 import 'package:wod_fit/domain/repositories/workout_template_repository.dart';
 import 'package:wod_fit/main.dart';
@@ -75,12 +75,14 @@ class MockClientAuthRepository implements AuthRepository {
   Future<void> signOut() async => _controller.add(null);
 }
 
-class MockGroupRepository implements GroupRepository {
-  final List<Group> _groups = [
-    Group(
-      id: 'g-1',
+class MockProgramRepository implements ProgramRepository {
+  final List<TrainingProgram> _programs = [
+    TrainingProgram(
+      id: 'p-1',
       coachId: 'coach-123',
       name: 'Утренняя группа 07:00',
+      kind: ProgramKind.group,
+      description: 'Основная группа',
       inviteCode: 'CF0700',
       createdAt: DateTime.now(),
       memberCount: 5,
@@ -88,53 +90,68 @@ class MockGroupRepository implements GroupRepository {
   ];
 
   @override
-  Future<List<Group>> getCoachGroups() async => _groups;
+  Future<List<TrainingProgram>> getCoachPrograms() async => _programs;
 
   @override
-  Future<List<Group>> getClientGroups() async => _groups;
+  Future<List<TrainingProgram>> getClientPrograms() async => _programs;
 
   @override
-  Future<Group> createGroup({required String name}) async {
-    final g = Group(
-      id: 'g-2',
+  Future<TrainingProgram> createProgram({
+    required String name,
+    ProgramKind kind = ProgramKind.group,
+    String description = '',
+  }) async {
+    final p = TrainingProgram(
+      id: 'p-2',
       coachId: 'coach-123',
       name: name,
+      kind: kind,
+      description: description,
       inviteCode: 'NEW123',
       createdAt: DateTime.now(),
     );
-    _groups.add(g);
-    return g;
+    _programs.add(p);
+    return p;
   }
 
   @override
-  Future<Group> joinGroupByCode({required String inviteCode}) async => _groups.first;
+  Future<TrainingProgram> joinProgramByCode({required String inviteCode}) async => _programs.first;
 
   @override
-  Future<Group> updateGroupName({required String groupId, required String name}) async {
-    final idx = _groups.indexWhere((g) => g.id == groupId);
+  Future<TrainingProgram> updateProgram({
+    required String programId,
+    required String name,
+    ProgramKind? kind,
+    String? description,
+  }) async {
+    final idx = _programs.indexWhere((p) => p.id == programId);
     if (idx != -1) {
-      final updated = _groups[idx].copyWith(name: name);
-      _groups[idx] = updated;
+      final updated = _programs[idx].copyWith(
+        name: name,
+        kind: kind,
+        description: description,
+      );
+      _programs[idx] = updated;
       return updated;
     }
-    throw Exception('Group not found');
+    throw Exception('Program not found');
   }
 
   @override
-  Future<void> deleteGroup(String groupId) async {
-    _groups.removeWhere((g) => g.id == groupId);
+  Future<void> deleteProgram(String programId) async {
+    _programs.removeWhere((p) => p.id == programId);
   }
 
   @override
-  Future<void> leaveGroup(String groupId) async {
-    _groups.removeWhere((g) => g.id == groupId);
+  Future<void> leaveProgram(String programId) async {
+    _programs.removeWhere((p) => p.id == programId);
   }
 
   @override
-  Future<List<GroupMember>> getGroupMembers(String groupId) async => [];
+  Future<List<ProgramMember>> getProgramMembers(String programId) async => [];
 
   @override
-  Future<void> removeGroupMember({required String groupId, required String userId}) async {}
+  Future<void> removeProgramMember({required String programId, required String userId}) async {}
 }
 
 class MockWorkoutRepository implements CrossfitWorkoutRepository {
@@ -165,9 +182,9 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
       assignments: [
         WorkoutAssignment(
           workoutId: 'w-1',
-          groupId: 'g-1',
+          programId: 'p-1',
           assignedAt: DateTime(2026, 1, 1),
-          groupName: 'Утренняя группа 07:00',
+          programName: 'Утренняя группа 07:00',
         ),
       ],
     ),
@@ -188,7 +205,7 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
     required String description,
     required DateTime scheduledAt,
     required List<WorkoutPart> parts,
-    required List<String> groupIds,
+    required List<String> programIds,
     bool publish = false,
   }) async {
     final w = CrossfitWorkout(
@@ -213,7 +230,7 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
     required String description,
     required DateTime scheduledAt,
     required List<WorkoutPart> parts,
-    required List<String> groupIds,
+    required List<String> programIds,
     required WorkoutStatus status,
   }) async {
     final idx = _workouts.indexWhere((w) => w.id == id);
@@ -424,7 +441,7 @@ class MockLegacyWorkoutRepository implements WorkoutRepository {
 void main() {
   testWidgets('Coach Home Screen displays coach profile, workouts and navigation', (WidgetTester tester) async {
     final authRepo = MockCoachAuthRepository();
-    final groupRepo = MockGroupRepository();
+    final programRepo = MockProgramRepository();
     final workoutRepo = MockWorkoutRepository();
     final templateRepo = MockWorkoutTemplateRepository();
     final legacyRepo = MockLegacyWorkoutRepository();
@@ -432,7 +449,7 @@ void main() {
     await tester.pumpWidget(
       WodFitApp(
         authRepository: authRepo,
-        groupRepository: groupRepo,
+        programRepository: programRepo,
         crossfitWorkoutRepository: workoutRepo,
         workoutTemplateRepository: templateRepo,
         legacyWorkoutRepository: legacyRepo,
@@ -445,24 +462,41 @@ void main() {
     expect(find.text('Панель тренера'), findsOneWidget);
     expect(find.text('Новая тренировка'), findsOneWidget);
     expect(find.text('Шаблоны'), findsWidgets);
-    expect(find.text('Мои группы'), findsWidgets);
+    expect(find.text('Программы'), findsWidgets);
     expect(find.text('WOD: Fran & Heavy Snatch'), findsOneWidget);
   });
 
-  test('Group and Workout operations logic in repositories and cubits', () async {
-    final groupRepo = MockGroupRepository();
+  test('TrainingProgram and Workout operations logic in repositories and cubits', () async {
+    final programRepo = MockProgramRepository();
     final workoutRepo = MockWorkoutRepository();
 
-    // 1. Group operations
-    final createdGroup = await groupRepo.createGroup(name: 'Вечерняя 19:00');
-    expect(createdGroup.name, 'Вечерняя 19:00');
+    // 1. Program operations (group & personal)
+    final createdProgram = await programRepo.createProgram(
+      name: 'Вечерняя 19:00',
+      kind: ProgramKind.group,
+      description: 'Группа для продвинутых',
+    );
+    expect(createdProgram.name, 'Вечерняя 19:00');
+    expect(createdProgram.kind, ProgramKind.group);
 
-    final updatedGroup = await groupRepo.updateGroupName(groupId: createdGroup.id, name: 'Вечерняя 19:30');
-    expect(updatedGroup.name, 'Вечерняя 19:30');
+    final personalProgram = await programRepo.createProgram(
+      name: 'Персональная (Алексей)',
+      kind: ProgramKind.personal,
+      description: 'Подготовка к соревнованиям',
+    );
+    expect(personalProgram.kind, ProgramKind.personal);
 
-    await groupRepo.deleteGroup(createdGroup.id);
-    final coachGroups = await groupRepo.getCoachGroups();
-    expect(coachGroups.any((g) => g.id == createdGroup.id), isFalse);
+    final updatedProgram = await programRepo.updateProgram(
+      programId: createdProgram.id,
+      name: 'Вечерняя 19:30',
+      description: 'Обновленное описание',
+    );
+    expect(updatedProgram.name, 'Вечерняя 19:30');
+    expect(updatedProgram.description, 'Обновленное описание');
+
+    await programRepo.deleteProgram(createdProgram.id);
+    final coachPrograms = await programRepo.getCoachPrograms();
+    expect(coachPrograms.any((p) => p.id == createdProgram.id), isFalse);
 
     // 2. Workout duplication
     final duplicate = await workoutRepo.duplicateWorkout('w-1');
@@ -476,7 +510,7 @@ void main() {
       description: 'Обновленное описание',
       scheduledAt: DateTime.now(),
       parts: const [],
-      groupIds: ['g-1'],
+      programIds: ['p-1'],
       status: WorkoutStatus.published,
     );
     expect(updatedWorkout.title, 'WOD: Fran Updated');
@@ -529,7 +563,7 @@ void main() {
     final templateToUse = await templateRepo.getTemplateById('t-1');
     final copiedParts = templateToUse.parts.map((tp) {
       return WorkoutPart(
-        id: 'wp-${tp.id}',
+        id: 'p-${tp.id}',
         workoutId: '',
         type: tp.type,
         title: tp.title,
@@ -541,12 +575,11 @@ void main() {
     final createdWorkout = await workoutRepo.createWorkout(
       title: templateToUse.title,
       description: templateToUse.description,
-      scheduledAt: DateTime.now().add(const Duration(days: 1)),
+      scheduledAt: DateTime.now(),
       parts: copiedParts,
-      groupIds: ['g-1'],
+      programIds: ['p-1'],
       publish: true,
     );
-
     expect(createdWorkout.title, templateToUse.title);
     expect(createdWorkout.parts.length, 2);
     expect(createdWorkout.status, WorkoutStatus.published);
@@ -661,7 +694,7 @@ void main() {
 
   testWidgets('Client Home Screen displays recent results and history button', (WidgetTester tester) async {
     final authRepo = MockClientAuthRepository();
-    final groupRepo = MockGroupRepository();
+    final programRepo = MockProgramRepository();
     final workoutRepo = MockWorkoutRepository();
     final templateRepo = MockWorkoutTemplateRepository();
     final legacyRepo = MockLegacyWorkoutRepository();
@@ -669,7 +702,7 @@ void main() {
     await tester.pumpWidget(
       WodFitApp(
         authRepository: authRepo,
-        groupRepository: groupRepo,
+        programRepository: programRepo,
         crossfitWorkoutRepository: workoutRepo,
         workoutTemplateRepository: templateRepo,
         legacyWorkoutRepository: legacyRepo,
@@ -693,7 +726,7 @@ void main() {
     expect(find.text('История тренировок'), findsOneWidget);
     expect(find.text('Прошедшие'), findsOneWidget);
     expect(find.text('Будущие'), findsOneWidget);
-    expect(find.text('Все группы'), findsOneWidget);
+    expect(find.text('Все программы'), findsOneWidget);
     expect(find.text('Сначала новые'), findsOneWidget);
 
     // Switch to 'Будущие' tab

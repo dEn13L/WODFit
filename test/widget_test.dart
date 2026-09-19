@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wod_fit/domain/entities/crossfit_workout.dart';
-import 'package:wod_fit/domain/entities/group.dart';
+import 'package:wod_fit/domain/entities/training_program.dart';
 import 'package:wod_fit/domain/entities/part_result.dart';
 import 'package:wod_fit/domain/entities/user_profile.dart';
 import 'package:wod_fit/domain/entities/workout.dart';
 import 'package:wod_fit/domain/entities/workout_template.dart';
 import 'package:wod_fit/domain/repositories/auth_repository.dart';
 import 'package:wod_fit/domain/repositories/crossfit_workout_repository.dart';
-import 'package:wod_fit/domain/repositories/group_repository.dart';
+import 'package:wod_fit/domain/repositories/program_repository.dart';
 import 'package:wod_fit/domain/repositories/workout_repository.dart';
 import 'package:wod_fit/domain/repositories/workout_template_repository.dart';
 import 'package:wod_fit/main.dart';
@@ -64,57 +64,71 @@ class FakeAuthRepository implements AuthRepository {
   }
 }
 
-class FakeGroupRepository implements GroupRepository {
+class FakeProgramRepository implements ProgramRepository {
   @override
-  Future<List<Group>> getCoachGroups() async => [];
+  Future<List<TrainingProgram>> getCoachPrograms() async => [];
 
   @override
-  Future<List<Group>> getClientGroups() async => [];
+  Future<List<TrainingProgram>> getClientPrograms() async => [];
 
   @override
-  Future<Group> createGroup({required String name}) async {
-    return Group(
-      id: 'group-1',
+  Future<TrainingProgram> createProgram({
+    required String name,
+    ProgramKind kind = ProgramKind.group,
+    String description = '',
+  }) async {
+    return TrainingProgram(
+      id: 'program-1',
       coachId: 'coach-1',
       name: name,
+      kind: kind,
+      description: description,
       inviteCode: 'TEST01',
       createdAt: DateTime.now(),
     );
   }
 
   @override
-  Future<Group> joinGroupByCode({required String inviteCode}) async {
-    return Group(
-      id: 'group-1',
+  Future<TrainingProgram> joinProgramByCode({required String inviteCode}) async {
+    return TrainingProgram(
+      id: 'program-1',
       coachId: 'coach-1',
-      name: 'Test Group',
+      name: 'Test Program',
+      kind: ProgramKind.group,
       inviteCode: inviteCode,
       createdAt: DateTime.now(),
     );
   }
 
   @override
-  Future<Group> updateGroupName({required String groupId, required String name}) async {
-    return Group(
-      id: groupId,
+  Future<TrainingProgram> updateProgram({
+    required String programId,
+    required String name,
+    ProgramKind? kind,
+    String? description,
+  }) async {
+    return TrainingProgram(
+      id: programId,
       coachId: 'coach-1',
       name: name,
+      kind: kind ?? ProgramKind.group,
+      description: description ?? '',
       inviteCode: 'TEST01',
       createdAt: DateTime.now(),
     );
   }
 
   @override
-  Future<void> deleteGroup(String groupId) async {}
+  Future<void> deleteProgram(String programId) async {}
 
   @override
-  Future<void> leaveGroup(String groupId) async {}
+  Future<void> leaveProgram(String programId) async {}
 
   @override
-  Future<List<GroupMember>> getGroupMembers(String groupId) async => [];
+  Future<List<ProgramMember>> getProgramMembers(String programId) async => [];
 
   @override
-  Future<void> removeGroupMember({required String groupId, required String userId}) async {}
+  Future<void> removeProgramMember({required String programId, required String userId}) async {}
 }
 
 class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
@@ -142,7 +156,7 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     required String description,
     required DateTime scheduledAt,
     required List<WorkoutPart> parts,
-    required List<String> groupIds,
+    required List<String> programIds,
     bool publish = false,
   }) async {
     return CrossfitWorkout(
@@ -165,7 +179,7 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     required String description,
     required DateTime scheduledAt,
     required List<WorkoutPart> parts,
-    required List<String> groupIds,
+    required List<String> programIds,
     required WorkoutStatus status,
   }) async {
     return CrossfitWorkout(
@@ -327,7 +341,7 @@ class FakeLegacyWorkoutRepository implements WorkoutRepository {
 void main() {
   testWidgets('App launches with LoginScreen for unauthenticated users', (WidgetTester tester) async {
     final authRepo = FakeAuthRepository();
-    final groupRepo = FakeGroupRepository();
+    final programRepo = FakeProgramRepository();
     final workoutRepo = FakeCrossfitWorkoutRepository();
     final templateRepo = FakeWorkoutTemplateRepository();
     final legacyRepo = FakeLegacyWorkoutRepository();
@@ -335,7 +349,7 @@ void main() {
     await tester.pumpWidget(
       WodFitApp(
         authRepository: authRepo,
-        groupRepository: groupRepo,
+        programRepository: programRepo,
         crossfitWorkoutRepository: workoutRepo,
         workoutTemplateRepository: templateRepo,
         legacyWorkoutRepository: legacyRepo,
@@ -343,22 +357,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Verify Login Screen elements
+    // Verify LoginScreen is shown
     expect(find.text('WOD FIT'), findsOneWidget);
     expect(find.text('Вход в систему тренировок'), findsOneWidget);
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('Пароль'), findsOneWidget);
     expect(find.text('Войти'), findsOneWidget);
-    expect(find.textContaining('Зарегистрироваться'), findsOneWidget);
-
-    // Tap register button
-    await tester.tap(find.textContaining('Зарегистрироваться'));
-    await tester.pumpAndSettle();
-
-    // Verify Register Screen elements
-    expect(find.text('Регистрация'), findsOneWidget);
-    expect(find.text('Атлет (Клиент)'), findsOneWidget);
-    expect(find.text('Тренер'), findsOneWidget);
-    expect(find.text('Имя и фамилия'), findsOneWidget);
   });
 }

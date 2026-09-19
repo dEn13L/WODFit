@@ -32,7 +32,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Результаты группы'),
+        title: const Text('Результаты программы'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -68,7 +68,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Результаты участников группы по частям тренировки:',
+                      'Результаты участников по частям тренировки:',
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                     ),
                     const SizedBox(height: 16),

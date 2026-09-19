@@ -62,7 +62,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Результаты группы',
+            tooltip: 'Результаты атлетов',
             icon: const Icon(Icons.leaderboard_outlined, color: AppColors.primaryNeon),
             onPressed: () => context.push('/workout/${widget.workoutId}/results'),
           ),
@@ -253,7 +253,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                           if (workout.assignments.isNotEmpty) ...[
                             const SizedBox(height: 14),
                             const Text(
-                              'Назначено группам:',
+                              'Назначено программам:',
                               style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 6),
@@ -261,7 +261,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                               spacing: 6,
                               children: workout.assignments.map((a) {
                                 return Chip(
-                                  label: Text(a.groupName ?? 'Группа', style: const TextStyle(fontSize: 11)),
+                                  label: Text(a.programName ?? 'Программа', style: const TextStyle(fontSize: 11)),
                                   backgroundColor: AppColors.surfaceLight,
                                   visualDensity: VisualDensity.compact,
                                 );

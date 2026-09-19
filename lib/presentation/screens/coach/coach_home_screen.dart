@@ -7,7 +7,7 @@ import '../../../domain/entities/crossfit_workout.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
-import '../../bloc/group/group_cubit.dart';
+import '../../bloc/program/program_cubit.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
 
 class CoachHomeScreen extends StatefulWidget {
@@ -26,7 +26,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
 
   void _loadData() {
     context.read<CrossfitWorkoutCubit>().loadCoachWorkouts();
-    context.read<GroupCubit>().loadCoachGroups();
+    context.read<ProgramCubit>().loadCoachPrograms();
   }
 
   @override
@@ -56,9 +56,9 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
             onPressed: () => context.push('/coach/templates'),
           ),
           IconButton(
-            tooltip: 'Группы',
-            icon: const Icon(Icons.group_outlined),
-            onPressed: () => context.push('/coach/groups'),
+            tooltip: 'Программы',
+            icon: const Icon(Icons.fitness_center_outlined),
+            onPressed: () => context.push('/coach/programs'),
           ),
           IconButton(
             tooltip: 'Выйти',
@@ -106,11 +106,11 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _QuickActionButton(
-                      icon: Icons.group_outlined,
-                      label: 'Мои группы',
+                      icon: Icons.fitness_center_outlined,
+                      label: 'Программы',
                       color: AppColors.surface,
                       textColor: AppColors.textPrimary,
-                      onTap: () => context.push('/coach/groups'),
+                      onTap: () => context.push('/coach/programs'),
                     ),
                   ),
                 ],
@@ -164,7 +164,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 const Text(
-                                  'Нажмите «Новая тренировка», чтобы составить WOD и назначить его группам.',
+                                  'Нажмите «Новая тренировка», чтобы составить WOD и назначить его программам.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                 ),
@@ -344,7 +344,7 @@ class _WorkoutCoachCard extends StatelessWidget {
                   children: workout.assignments.map((assignment) {
                     return Chip(
                       label: Text(
-                        assignment.groupName ?? 'Группа',
+                        assignment.programName ?? 'Программа',
                         style: const TextStyle(fontSize: 11, color: AppColors.primaryNeon),
                       ),
                       backgroundColor: AppColors.surfaceLight,

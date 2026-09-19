@@ -7,10 +7,10 @@ import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/register_screen.dart';
 import '../../presentation/screens/client/client_history_screen.dart';
 import '../../presentation/screens/client/client_home_screen.dart';
-import '../../presentation/screens/client/join_group_screen.dart';
+import '../../presentation/screens/client/join_program_screen.dart';
 import '../../presentation/screens/coach/coach_home_screen.dart';
-import '../../presentation/screens/coach/groups/coach_groups_screen.dart';
-import '../../presentation/screens/coach/groups/create_group_screen.dart';
+import '../../presentation/screens/coach/programs/coach_programs_screen.dart';
+import '../../presentation/screens/coach/programs/create_program_screen.dart';
 import '../../presentation/screens/coach/templates/coach_templates_screen.dart';
 import '../../presentation/screens/coach/templates/create_template_screen.dart';
 import '../../presentation/screens/coach/workouts/create_workout_screen.dart';
@@ -65,14 +65,18 @@ class AppRouter {
           builder: (context, state) => const CoachHomeScreen(),
           routes: [
             GoRoute(
-              path: 'groups',
-              builder: (context, state) => const CoachGroupsScreen(),
+              path: 'programs',
+              builder: (context, state) => const CoachProgramsScreen(),
               routes: [
                 GoRoute(
                   path: 'create',
-                  builder: (context, state) => const CreateGroupScreen(),
+                  builder: (context, state) => const CreateProgramScreen(),
                 ),
               ],
+            ),
+            GoRoute(
+              path: 'groups',
+              redirect: (context, state) => '/coach/programs',
             ),
             GoRoute(
               path: 'templates',
@@ -95,8 +99,12 @@ class AppRouter {
           builder: (context, state) => const ClientHomeScreen(),
           routes: [
             GoRoute(
+              path: 'join-program',
+              builder: (context, state) => const JoinProgramScreen(),
+            ),
+            GoRoute(
               path: 'join-group',
-              builder: (context, state) => const JoinGroupScreen(),
+              redirect: (context, state) => '/client/join-program',
             ),
             GoRoute(
               path: 'history',
