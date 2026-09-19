@@ -471,7 +471,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Откройте тренировку и зафиксируйте свои показатели по каждой части!',
+                          'Откройте тренировку и зафиксируйте свои показатели!',
                           style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                         ),
                       ],
@@ -654,15 +654,19 @@ class _WorkoutClientCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                   ],
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceLight,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'Блоков: ${workout.parts.length}',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        workout.workoutTypesSummary,
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ],

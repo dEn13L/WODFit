@@ -421,15 +421,19 @@ class _CoachWorkoutItemCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.layers_outlined, size: 14, color: AppColors.primaryNeon.withValues(alpha: 0.8)),
+                  Icon(Icons.fitness_center_outlined, size: 14, color: AppColors.primaryNeon.withValues(alpha: 0.8)),
                   const SizedBox(width: 4),
-                  Text(
-                    'Частей: ${workout.parts.length}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  Expanded(
+                    child: Text(
+                      workout.workoutTypesSummary,
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const Spacer(),
                   if (workout.assignments.isNotEmpty) ...[
-                    const Icon(Icons.fitness_center, size: 14, color: AppColors.primaryNeon),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.groups_outlined, size: 14, color: AppColors.primaryNeon),
                     const SizedBox(width: 4),
                     Text(
                       workout.assignments.map((a) => a.programName ?? 'Программа').join(', '),

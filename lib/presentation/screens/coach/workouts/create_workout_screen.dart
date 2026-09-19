@@ -209,7 +209,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                             leading: const Icon(Icons.bookmark_outline, color: AppColors.primaryNeon),
                             title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Text(
-                              '${t.parts.length} частей • ${t.description.isNotEmpty ? t.description : "Без описания"}',
+                              '${t.workoutTypesSummary} • ${t.description.isNotEmpty ? t.description : "Без описания"}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
@@ -283,7 +283,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
     if (_parts.length <= 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Тренировка должна содержать хотя бы одну часть'),
+          content: Text('Тренировка должна содержать хотя бы один блок'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -329,7 +329,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
     if (_parts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Добавьте хотя бы одну часть тренировки'),
+          content: Text('Добавьте хотя бы одно задание или блок тренировки'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -555,13 +555,13 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Части тренировки (${_parts.length})',
+                      'Блоки тренировки (${_parts.length})',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     TextButton.icon(
                       onPressed: () => _addPart(),
                       icon: const Icon(Icons.add, color: AppColors.primaryNeon),
-                      label: const Text('Добавить часть', style: TextStyle(color: AppColors.primaryNeon, fontWeight: FontWeight.bold)),
+                      label: const Text('Добавить блок', style: TextStyle(color: AppColors.primaryNeon, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -595,7 +595,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                                 const Icon(Icons.drag_handle, color: AppColors.textSecondary),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Часть ${index + 1}',
+                                  'Блок ${index + 1}',
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
                                 const Spacer(),
@@ -611,7 +611,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                                  tooltip: 'Удалить часть',
+                                  tooltip: 'Удалить блок',
                                   onPressed: () => _removePart(index),
                                 ),
                               ],
@@ -620,7 +620,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                             DropdownButtonFormField<WorkoutPartType>(
                               initialValue: part.type,
                               decoration: InputDecoration(
-                                labelText: 'Тип части',
+                                labelText: 'Тип тренировки',
                                 filled: true,
                                 fillColor: AppColors.surfaceLight,
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),

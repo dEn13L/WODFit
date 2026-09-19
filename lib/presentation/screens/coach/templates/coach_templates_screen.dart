@@ -364,10 +364,15 @@ class _CoachTemplatesScreenState extends State<CoachTemplatesScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '${template.parts.length} ${_pluralizeParts(template.parts.length)}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                Expanded(
+                  child: Text(
+                    template.workoutTypesSummary,
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: () async {
                     await Navigator.of(context).push(
@@ -391,11 +396,5 @@ class _CoachTemplatesScreenState extends State<CoachTemplatesScreen> {
         ),
       ),
     );
-  }
-
-  String _pluralizeParts(int count) {
-    if (count % 10 == 1 && count % 100 != 11) return 'часть';
-    if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20)) return 'части';
-    return 'частей';
   }
 }

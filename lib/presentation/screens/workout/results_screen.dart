@@ -68,12 +68,12 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Результаты участников по частям тренировки:',
+                      'Результаты участников по блокам тренировки:',
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                     ),
                     const SizedBox(height: 16),
                     if (workout.parts.isEmpty)
-                      const Center(child: Text('В тренировке нет частей'))
+                      const Center(child: Text('В тренировке пока нет заданий'))
                     else
                       ListView.separated(
                         shrinkWrap: true,
@@ -140,7 +140,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                       padding: EdgeInsets.symmetric(vertical: 12.0),
                                       child: Center(
                                         child: Text(
-                                          'Пока никто не внес результат по этой части',
+                                          'Пока никто не внес результат по этому блоку',
                                           style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                         ),
                                       ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wod_fit/domain/entities/crossfit_workout.dart';
 import 'package:wod_fit/domain/entities/training_program.dart';
@@ -486,6 +487,7 @@ void main() {
     expect(find.text('Панель тренера'), findsOneWidget);
     expect(find.text('Сегодня'), findsOneWidget);
     expect(find.text('Новая тренировка'), findsOneWidget);
+    expect(find.text('Новая программа'), findsOneWidget);
     expect(find.text('Шаблоны'), findsWidgets);
     expect(find.text('Программы'), findsWidgets);
     expect(find.text('Все тренировки'), findsWidgets);
@@ -493,6 +495,18 @@ void main() {
     expect(find.text('Утренняя группа 07:00'), findsOneWidget);
     expect(find.text('5 участников'), findsOneWidget);
     expect(find.text('1 тренировок'), findsOneWidget);
+
+    // Tap "Новая программа" -> opens CreateProgramScreen
+    await tester.tap(find.text('Новая программа'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Создание программы'), findsOneWidget);
+    expect(find.text('Название программы *'), findsOneWidget);
+    expect(find.text('Тип программы'), findsOneWidget);
+
+    // Go back using AppBar back button
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
 
     // Tap on program card -> opens ProgramDetailScreen
     await tester.tap(find.text('Утренняя группа 07:00'));

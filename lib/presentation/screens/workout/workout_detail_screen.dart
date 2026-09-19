@@ -104,7 +104,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                       title: const Text('Удалить тренировку?'),
                       content: Text(
                         'Вы действительно хотите удалить тренировку "${workout.title}"?\n\n'
-                        'Все части тренировки, назначения и внесенные результаты участников будут безвозвратно удалены.',
+                        'Все данные тренировки, назначения и внесенные результаты участников будут безвозвратно удалены.',
                       ),
                       actions: [
                         TextButton(
@@ -290,7 +290,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Части тренировки (${workout.parts.length})',
+                        'Блоки тренировки (${workout.parts.length})',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       OutlinedButton.icon(
@@ -312,7 +312,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                     const Card(
                       child: Padding(
                         padding: EdgeInsets.all(20.0),
-                        child: Center(child: Text('В этой тренировке пока нет частей')),
+                        child: Center(child: Text('В этой тренировке пока нет заданий')),
                       ),
                     )
                   else
@@ -365,7 +365,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                                     ),
                                     const Spacer(),
                                     Text(
-                                      'Часть ${index + 1}',
+                                      'Блок ${index + 1}',
                                       style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                                     ),
                                   ],
@@ -702,7 +702,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
       builder: (dCtx) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: const Text('Удалить результат?'),
-        content: const Text('Вы действительно хотите удалить ваш результат по этой части тренировки?'),
+        content: const Text('Вы действительно хотите удалить ваш результат по этому заданию?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dCtx).pop(false),
@@ -973,7 +973,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'В этой части не требуется ввод очков. Выберите статус и при желании добавьте заметку.',
+                  'В этом блоке не требуется ввод очков. Выберите статус и при желании добавьте заметку.',
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                 ),
               ),

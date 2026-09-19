@@ -63,6 +63,11 @@ class WorkoutTemplate extends Equatable {
     this.parts = const [],
   });
 
+  String get workoutTypesSummary {
+    if (parts.isEmpty) return 'Шаблон';
+    return parts.map((p) => p.type.displayName).toSet().join(', ');
+  }
+
   WorkoutTemplate copyWith({
     String? id,
     String? coachId,

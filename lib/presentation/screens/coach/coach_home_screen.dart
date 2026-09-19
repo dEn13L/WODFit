@@ -118,7 +118,20 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _QuickActionButton(
+                            icon: Icons.group_add_outlined,
+                            label: 'Новая программа',
+                            color: AppColors.surface,
+                            textColor: AppColors.textPrimary,
+                            onTap: () async {
+                              await context.push('/coach/programs/create');
+                              if (mounted) _loadData();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: _QuickActionButton(
                             icon: Icons.bookmark_outline,
@@ -246,6 +259,14 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                               ),
                         ),
                         const Spacer(),
+                        IconButton(
+                          tooltip: 'Создать программу',
+                          icon: const Icon(Icons.add, color: AppColors.primaryNeon),
+                          onPressed: () async {
+                            await context.push('/coach/programs/create');
+                            if (mounted) _loadData();
+                          },
+                        ),
                         TextButton.icon(
                           onPressed: () async {
                             await context.push('/coach/workouts');
@@ -432,7 +453,7 @@ class _TodayWorkoutCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${workout.parts.length} частей${workout.assignments.isNotEmpty ? ' • ${workout.assignments.map((a) => a.programName ?? 'Программа').join(', ')}' : ''}',
+                      '${workout.workoutTypesSummary}${workout.assignments.isNotEmpty ? ' • ${workout.assignments.map((a) => a.programName ?? 'Программа').join(', ')}' : ''}',
                       style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

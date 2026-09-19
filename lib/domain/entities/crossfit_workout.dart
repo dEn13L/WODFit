@@ -23,7 +23,7 @@ enum WorkoutPartType {
       case WorkoutPartType.weightlifting:
         return 'Тяжелая атлетика';
       case WorkoutPartType.strength:
-        return 'Силовая часть';
+        return 'Силовая';
       case WorkoutPartType.crossfitComplex:
         return 'Комплекс (WOD)';
       case WorkoutPartType.cooldown:
@@ -218,6 +218,11 @@ class CrossfitWorkout extends Equatable {
   });
 
   bool get isPublished => status == WorkoutStatus.published;
+
+  String get workoutTypesSummary {
+    if (parts.isEmpty) return 'Тренировка';
+    return parts.map((p) => p.type.displayName).toSet().join(', ');
+  }
 
   List<String> get assignedProgramIds => assignments.map((a) => a.programId).toList();
   List<String> get assignedGroupIds => assignedProgramIds;

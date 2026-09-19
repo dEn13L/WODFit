@@ -120,7 +120,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
     if (_parts.length <= 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('В шаблоне должна быть хотя бы одна часть'),
+          content: Text('В шаблоне должен быть хотя бы один блок'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -137,7 +137,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
     if (_parts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Добавьте хотя бы одну часть в шаблон'),
+          content: Text('Добавьте хотя бы один блок в шаблон'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -260,7 +260,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Части тренировки (${_parts.length})',
+                    'Блоки тренировки (${_parts.length})',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: AppColors.primaryNeon,
                           fontWeight: FontWeight.bold,
@@ -269,7 +269,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
                   TextButton.icon(
                     onPressed: () => _addPart(),
                     icon: const Icon(Icons.add, color: AppColors.primaryNeon),
-                    label: const Text('Добавить часть', style: TextStyle(color: AppColors.primaryNeon)),
+                    label: const Text('Добавить блок', style: TextStyle(color: AppColors.primaryNeon)),
                   ),
                 ],
               ),
@@ -286,7 +286,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
               OutlinedButton.icon(
                 onPressed: () => _addPart(),
                 icon: const Icon(Icons.add_circle_outline),
-                label: const Text('Добавить еще часть тренировки'),
+                label: const Text('Добавить еще один блок'),
               ),
               const SizedBox(height: 32),
 
@@ -376,7 +376,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
-                  tooltip: 'Удалить часть',
+                  tooltip: 'Удалить блок',
                   onPressed: () => _removePart(index),
                 ),
               ],
@@ -406,13 +406,13 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
             TextFormField(
               controller: part.titleController,
               decoration: const InputDecoration(
-                labelText: 'Название части',
+                labelText: 'Название задания / упражнения',
                 hintText: 'Например: Комплекс 1 / Взятия на грудь',
                 isDense: true,
               ),
               validator: (val) {
                 if (val == null || val.trim().isEmpty) {
-                  return 'Укажите название части';
+                  return 'Укажите название';
                 }
                 return null;
               },
@@ -422,7 +422,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
               controller: part.descriptionController,
               maxLines: 4,
               decoration: const InputDecoration(
-                labelText: 'Описание и задание части',
+                labelText: 'Описание и задание',
                 hintText: '5 раундов на время:\n- 10 бурпи\n- 15 махов гирей 24 кг\n- 20 приседаний',
                 alignLabelWithHint: true,
                 isDense: true,

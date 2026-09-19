@@ -352,7 +352,7 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                         return ListTile(
                           title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w600)),
                           subtitle: Text(
-                            '${t.parts.length} частей${t.description.isNotEmpty ? ' • ${t.description}' : ''}',
+                            '${t.workoutTypesSummary}${t.description.isNotEmpty ? ' • ${t.description}' : ''}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -890,11 +890,15 @@ class _ProgramWorkoutCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Text(
-                    'Частей: ${workout.parts.length}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  Expanded(
+                    child: Text(
+                      workout.workoutTypesSummary,
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(

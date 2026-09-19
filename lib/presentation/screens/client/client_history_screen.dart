@@ -473,14 +473,14 @@ class _HistoryWorkoutCard extends StatelessWidget {
 
             // Workout Parts with User Results
             const Text(
-              'Части тренировки:',
+              'Задания и комплексы:',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
 
             if (workout.parts.isEmpty)
               const Text(
-                'В тренировке пока нет частей',
+                'В тренировке пока нет заданий',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               )
             else
