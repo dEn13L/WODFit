@@ -76,7 +76,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       final w = widget.workoutToEdit!;
       _titleController = TextEditingController(text: w.title);
       _descriptionController = TextEditingController(text: w.description);
-      _scheduledAt = w.scheduledAt;
+      _scheduledAt = w.scheduledAt.toLocal();
       _selectedProgramIds.addAll(w.assignedProgramIds);
 
       if (w.parts.isNotEmpty) {
@@ -481,7 +481,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                               children: [
                                 const Text('Дата и время проведения', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                 const SizedBox(height: 2),
-                                Text(dateFormat.format(_scheduledAt), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text(dateFormat.format(_scheduledAt.toLocal()), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                               ],
                             ),
                           ],

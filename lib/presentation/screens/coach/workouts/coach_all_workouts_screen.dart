@@ -348,7 +348,7 @@ class _CoachWorkoutItemCard extends StatelessWidget {
                             const Icon(Icons.event, size: 14, color: AppColors.textSecondary),
                             const SizedBox(width: 4),
                             Text(
-                              dateFormat.format(workout.scheduledAt),
+                              dateFormat.format(workout.scheduledAt.toLocal()),
                               style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                             ),
                           ],

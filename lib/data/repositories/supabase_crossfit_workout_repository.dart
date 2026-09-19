@@ -122,7 +122,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
         'coach_id': userId,
         'title': title.trim(),
         'description': description.trim(),
-        'scheduled_at': scheduledAt.toIso8601String(),
+        'scheduled_at': scheduledAt.toUtc().toIso8601String(),
         'status': publish ? 'published' : 'draft',
       }).select().single();
 
@@ -184,9 +184,9 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       await client.from('workouts').update({
         'title': title.trim(),
         'description': description.trim(),
-        'scheduled_at': scheduledAt.toIso8601String(),
+        'scheduled_at': scheduledAt.toUtc().toIso8601String(),
         'status': status.name,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', id).eq('coach_id', userId);
 
       // 2. Get existing parts from DB
@@ -305,7 +305,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     try {
       await client.from('workouts').update({
         'status': 'published',
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', id);
 
       AppLogger.i(_tag, 'Тренировка $id опубликована');
@@ -408,7 +408,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
         'weight_kg': weightKg,
         'distance_m': distanceM,
         'calories': calories,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
 
       final response = await client

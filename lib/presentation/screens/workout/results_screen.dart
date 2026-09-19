@@ -240,7 +240,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                                   ],
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    dateFormat.format(result.createdAt),
+                                                    dateFormat.format(result.createdAt.toLocal()),
                                                     style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
                                                   ),
                                                 ],

@@ -41,7 +41,7 @@ class UserProfileModel {
       email: email,
       fullName: fullName,
       role: UserRole.fromString(role),
-      createdAt: DateTime.tryParse(createdAt) ?? DateTime.now(),
+      createdAt: (DateTime.tryParse(createdAt) ?? DateTime.now()).toLocal(),
     );
   }
 
@@ -51,7 +51,7 @@ class UserProfileModel {
       email: entity.email,
       fullName: entity.fullName,
       role: entity.role.name,
-      createdAt: entity.createdAt.toIso8601String(),
+      createdAt: entity.createdAt.toUtc().toIso8601String(),
     );
   }
 }

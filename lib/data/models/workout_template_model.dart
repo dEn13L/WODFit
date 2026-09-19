@@ -111,8 +111,8 @@ class WorkoutTemplateModel {
       coachId: coachId,
       title: title,
       description: description,
-      createdAt: DateTime.tryParse(createdAt) ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(updatedAt) ?? DateTime.now(),
+      createdAt: (DateTime.tryParse(createdAt) ?? DateTime.now()).toLocal(),
+      updatedAt: (DateTime.tryParse(updatedAt) ?? DateTime.now()).toLocal(),
       parts: parts.map((p) => p.toDomain()).toList(),
     );
   }

@@ -99,8 +99,8 @@ class PartResultModel {
       weightKg: weightKg,
       distanceM: distanceM,
       calories: calories,
-      createdAt: DateTime.tryParse(createdAt) ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(updatedAt) ?? DateTime.now(),
+      createdAt: (DateTime.tryParse(createdAt) ?? DateTime.now()).toLocal(),
+      updatedAt: (DateTime.tryParse(updatedAt) ?? DateTime.now()).toLocal(),
       userProfile: profile?.toDomain(),
     );
   }

@@ -85,7 +85,7 @@ class WorkoutDto {
       type: workout.type.name,
       durationSeconds: workout.duration.inSeconds,
       caloriesBurned: workout.caloriesBurned,
-      dateIso: workout.date.toIso8601String(),
+      dateIso: workout.date.toUtc().toIso8601String(),
       exercises: workout.exercises.map((e) => ExerciseDto.fromDomain(e)).toList(),
     );
   }
@@ -101,7 +101,7 @@ class WorkoutDto {
       ),
       duration: Duration(seconds: durationSeconds),
       caloriesBurned: caloriesBurned,
-      date: DateTime.parse(dateIso),
+      date: (DateTime.tryParse(dateIso) ?? DateTime.now()).toLocal(),
       exercises: exercises.map((e) => e.toDomain()).toList(),
     );
   }

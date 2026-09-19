@@ -434,14 +434,14 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
     final now = DateTime.now();
 
     final upcomingWorkouts = _programWorkouts
-        .where((w) => w.scheduledAt.isAfter(now) || w.scheduledAt.isAtSameMomentAs(now))
+        .where((w) => w.scheduledAt.toLocal().isAfter(now) || w.scheduledAt.toLocal().isAtSameMomentAs(now))
         .toList()
-      ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+      ..sort((a, b) => a.scheduledAt.toLocal().compareTo(b.scheduledAt.toLocal()));
 
     final pastWorkouts = _programWorkouts
-        .where((w) => w.scheduledAt.isBefore(now))
+        .where((w) => w.scheduledAt.toLocal().isBefore(now))
         .toList()
-      ..sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
+      ..sort((a, b) => b.scheduledAt.toLocal().compareTo(a.scheduledAt.toLocal()));
 
     final memberCount = _members.length;
 
@@ -672,7 +672,7 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                       final member = _members[index];
                       final name = member.userProfile?.fullName ?? 'Атлет';
                       final email = member.userProfile?.email ?? '';
-                      final joinedDate = DateFormat('dd.MM.yyyy').format(member.joinedAt);
+                      final joinedDate = DateFormat('dd.MM.yyyy').format(member.joinedAt.toLocal());
 
                       return ListTile(
                         leading: CircleAvatar(
@@ -859,7 +859,7 @@ class _ProgramWorkoutCard extends StatelessWidget {
                             const Icon(Icons.access_time, size: 13, color: AppColors.textSecondary),
                             const SizedBox(width: 4),
                             Text(
-                              dateFormat.format(workout.scheduledAt),
+                              dateFormat.format(workout.scheduledAt.toLocal()),
                               style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                             ),
                           ],

@@ -107,7 +107,7 @@ class WorkoutAssignmentModel {
     return WorkoutAssignment(
       workoutId: workoutId,
       programId: programId,
-      assignedAt: DateTime.tryParse(assignedAt) ?? DateTime.now(),
+      assignedAt: (DateTime.tryParse(assignedAt) ?? DateTime.now()).toLocal(),
       programName: programName,
     );
   }
@@ -169,10 +169,10 @@ class CrossfitWorkoutModel {
       coachId: coachId,
       title: title,
       description: description,
-      scheduledAt: DateTime.tryParse(scheduledAt) ?? DateTime.now(),
+      scheduledAt: (DateTime.tryParse(scheduledAt) ?? DateTime.now()).toLocal(),
       status: WorkoutStatus.fromString(status),
-      createdAt: DateTime.tryParse(createdAt) ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(updatedAt) ?? DateTime.now(),
+      createdAt: (DateTime.tryParse(createdAt) ?? DateTime.now()).toLocal(),
+      updatedAt: (DateTime.tryParse(updatedAt) ?? DateTime.now()).toLocal(),
       parts: parts.map((p) => p.toDomain()).toList(),
       assignments: assignments.map((a) => a.toDomain()).toList(),
     );

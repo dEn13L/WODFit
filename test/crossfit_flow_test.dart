@@ -12,6 +12,9 @@ import 'package:wod_fit/domain/repositories/crossfit_workout_repository.dart';
 import 'package:wod_fit/domain/repositories/program_repository.dart';
 import 'package:wod_fit/domain/repositories/workout_repository.dart';
 import 'package:wod_fit/domain/repositories/workout_template_repository.dart';
+import 'package:wod_fit/data/models/crossfit_workout_model.dart';
+import 'package:wod_fit/data/models/program_model.dart';
+import 'package:wod_fit/data/models/user_profile_model.dart';
 import 'package:wod_fit/main.dart';
 
 class MockCoachAuthRepository implements AuthRepository {
@@ -173,9 +176,9 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
     CrossfitWorkout(
       id: 'w-1',
       coachId: 'coach-123',
-      title: 'WOD: Fran & Heavy Snatch',
-      description: 'Интенсивный комплекс',
-      scheduledAt: DateTime.now(),
+      title: 'WOD: Morning Fran',
+      description: 'Утренний комплекс',
+      scheduledAt: DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 8, 30),
       status: WorkoutStatus.published,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -196,6 +199,32 @@ class MockWorkoutRepository implements CrossfitWorkoutRepository {
       assignments: [
         WorkoutAssignment(
           workoutId: 'w-1',
+          programId: 'p-1',
+          assignedAt: DateTime(2026, 1, 1),
+          programName: 'Утренняя группа 07:00',
+        ),
+      ],
+    ),
+    CrossfitWorkout(
+      id: 'w-2',
+      coachId: 'coach-123',
+      title: 'WOD: Evening Murph',
+      description: 'Вечерний комплекс',
+      scheduledAt: DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 19, 0),
+      status: WorkoutStatus.published,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      parts: const [
+        WorkoutPart(
+          id: 'p-3',
+          workoutId: 'w-2',
+          type: WorkoutPartType.crossfitComplex,
+          title: 'Murph',
+        ),
+      ],
+      assignments: [
+        WorkoutAssignment(
+          workoutId: 'w-2',
           programId: 'p-1',
           assignedAt: DateTime(2026, 1, 1),
           programName: 'Утренняя группа 07:00',
@@ -491,10 +520,17 @@ void main() {
     expect(find.text('Шаблоны'), findsWidgets);
     expect(find.text('Программы'), findsWidgets);
     expect(find.text('Все тренировки'), findsWidgets);
-    expect(find.text('WOD: Fran & Heavy Snatch'), findsWidgets);
+    expect(find.text('WOD: Evening Murph'), findsWidgets);
+    expect(find.text('WOD: Morning Fran'), findsWidgets);
+
+    // Verify descending order: Evening Murph (19:00) is placed above Morning Fran (08:30)
+    final murphOffset = tester.getTopLeft(find.text('WOD: Evening Murph').first);
+    final franOffset = tester.getTopLeft(find.text('WOD: Morning Fran').first);
+    expect(murphOffset.dy < franOffset.dy, isTrue);
+
     expect(find.text('Утренняя группа 07:00'), findsOneWidget);
     expect(find.text('5 участников'), findsOneWidget);
-    expect(find.text('1 тренировок'), findsOneWidget);
+    expect(find.text('2 тренировок'), findsOneWidget);
 
     // Tap "Новая программа" -> opens CreateProgramScreen
     await tester.tap(find.text('Новая программа'));
@@ -518,7 +554,7 @@ void main() {
     expect(find.text('Из шаблона'), findsOneWidget);
     expect(find.text('Участники (1)'), findsOneWidget);
     expect(find.text('Иван Атлетов'), findsOneWidget);
-    expect(find.text('Заполнено 1/1'), findsOneWidget);
+    expect(find.text('Заполнено 1/1'), findsWidgets);
 
     // Go back
     await tester.pageBack();
@@ -760,6 +796,63 @@ void main() {
     expect(noneResult.formattedScore, 'Выполнено');
   });
 
+  test('Dates are parsed as local time in models and serialized as UTC', () {
+    // 1. CrossfitWorkoutModel parses UTC ISO string to local DateTime
+    final workoutModel = CrossfitWorkoutModel.fromJson({
+      'id': 'w-utc',
+      'coach_id': 'c-1',
+      'title': 'UTC Test Workout',
+      'description': 'Testing dates',
+      'scheduled_at': '2026-09-19T18:00:00Z',
+      'status': 'published',
+      'created_at': '2026-09-19T12:00:00Z',
+      'updated_at': '2026-09-19T12:30:00Z',
+      'workout_parts': [],
+      'workout_assignments': [],
+    });
+
+    final domainWorkout = workoutModel.toDomain();
+    expect(domainWorkout.scheduledAt.isUtc, isFalse);
+    expect(domainWorkout.createdAt.isUtc, isFalse);
+    expect(domainWorkout.updatedAt.isUtc, isFalse);
+    // Scheduled instant matches 2026-09-19 18:00:00 UTC
+    expect(domainWorkout.scheduledAt.toUtc(), DateTime.utc(2026, 9, 19, 18, 0, 0));
+
+    // 2. TrainingProgramModel & ProgramMemberModel parse to local
+    final programModel = TrainingProgramModel.fromJson({
+      'id': 'p-utc',
+      'coach_id': 'c-1',
+      'name': 'UTC Program',
+      'kind': 'group',
+      'invite_code': 'ABCDEF',
+      'created_at': '2026-09-19T10:00:00Z',
+      'updated_at': '2026-09-19T10:15:00Z',
+    });
+    final domainProgram = programModel.toDomain();
+    expect(domainProgram.createdAt.isUtc, isFalse);
+    expect(domainProgram.updatedAt?.isUtc, isFalse);
+
+    final memberModel = ProgramMemberModel.fromJson({
+      'program_id': 'p-utc',
+      'user_id': 'u-1',
+      'joined_at': '2026-09-19T11:00:00Z',
+    });
+    final domainMember = memberModel.toDomain();
+    expect(domainMember.joinedAt.isUtc, isFalse);
+
+    // 3. UserProfileModel serialization to UTC and deserialization to local
+    final profile = UserProfile(
+      id: 'u-1',
+      email: 'user@test.com',
+      fullName: 'Test User',
+      role: UserRole.client,
+      createdAt: DateTime(2026, 9, 19, 15, 30), // Local DateTime
+    );
+    final profileModel = UserProfileModel.fromDomain(profile);
+    expect(profileModel.createdAt.endsWith('Z') || profileModel.createdAt.contains('+00:00') || DateTime.parse(profileModel.createdAt).isUtc, isTrue);
+    expect(profileModel.toDomain().createdAt.isUtc, isFalse);
+  });
+
   testWidgets('Client Home Screen displays recent results and history button', (WidgetTester tester) async {
     final authRepo = MockClientAuthRepository();
     final programRepo = MockProgramRepository();
@@ -784,7 +877,7 @@ void main() {
     expect(find.text('История и результаты тренировок'), findsOneWidget);
     expect(find.text('Последние результаты'), findsOneWidget);
     expect(find.text('Назначенные тренировки (WOD)'), findsOneWidget);
-    expect(find.text('WOD: Fran & Heavy Snatch'), findsWidgets);
+    expect(find.text('WOD: Morning Fran'), findsWidgets);
     expect(find.text('2 повт • 85.0 кг'), findsOneWidget);
 
     // Tap History button to navigate to ClientHistoryScreen

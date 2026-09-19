@@ -38,9 +38,13 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
     final workoutState = context.watch<CrossfitWorkoutCubit>().state;
     final programState = context.watch<ProgramCubit>().state;
 
-    final isLoading = workoutState is CrossfitWorkoutLoading && programState is ProgramLoading;
+    final isLoading = workoutState is CrossfitWorkoutLoading || programState is ProgramLoading;
 
-    final allWorkouts = workoutState is CrossfitWorkoutListLoaded ? workoutState.workouts : <CrossfitWorkout>[];
+    final allWorkouts = workoutState is CrossfitWorkoutListLoaded
+        ? workoutState.workouts
+        : (workoutState is CrossfitWorkoutDetailLoaded
+            ? [workoutState.workout]
+            : <CrossfitWorkout>[]);
     final allPrograms = programState is ProgramLoaded ? programState.programs : <TrainingProgram>[];
 
     final now = DateTime.now();
@@ -50,7 +54,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
           scheduled.month == now.month &&
           scheduled.day == now.day;
     }).toList()
-      ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+      ..sort((a, b) => b.scheduledAt.toLocal().compareTo(a.scheduledAt.toLocal()));
 
     return Scaffold(
       appBar: AppBar(
@@ -366,9 +370,9 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                               .toList();
 
                           final upcoming = programWorkouts
-                              .where((w) => w.scheduledAt.isAfter(now) || w.scheduledAt.isAtSameMomentAs(now))
+                              .where((w) => w.scheduledAt.toLocal().isAfter(now) || w.scheduledAt.toLocal().isAtSameMomentAs(now))
                               .toList()
-                            ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+                            ..sort((a, b) => a.scheduledAt.toLocal().compareTo(b.scheduledAt.toLocal()));
 
                           final DateTime? nearestDate = upcoming.isNotEmpty ? upcoming.first.scheduledAt : null;
 
@@ -430,7 +434,7 @@ class _TodayWorkoutCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  timeFormat.format(workout.scheduledAt),
+                  timeFormat.format(workout.scheduledAt.toLocal()),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -506,7 +510,7 @@ class _CoachProgramDashboardCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPersonal = program.kind == ProgramKind.personal;
     final nearestDateText = nearestWorkoutDate != null
-        ? DateFormat('dd.MM HH:mm').format(nearestWorkoutDate!)
+        ? DateFormat('dd.MM HH:mm').format(nearestWorkoutDate!.toLocal())
         : 'Нет запланированных';
 
     return Card(

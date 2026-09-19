@@ -384,7 +384,7 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Создана: ${dateFormat.format(program.createdAt)}',
+                                      'Создана: ${dateFormat.format(program.createdAt.toLocal())}',
                                       style: const TextStyle(
                                         fontSize: 12,
                                         color: AppColors.textSecondary,
@@ -689,7 +689,7 @@ class _ProgramMembersSheetState extends State<_ProgramMembersSheet> {
                                 final profile = member.profile;
                                 final name = profile?.fullName ?? 'Атлет';
                                 final email = profile?.email ?? member.userId;
-                                final joinedStr = DateFormat('dd.MM.yyyy').format(member.joinedAt);
+                                final joinedStr = DateFormat('dd.MM.yyyy').format(member.joinedAt.toLocal());
 
                                 return ListTile(
                                   contentPadding: EdgeInsets.zero,

@@ -518,7 +518,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                             ),
                           ),
                           Text(
-                            dateFormat.format(workout.scheduledAt),
+                            dateFormat.format(workout.scheduledAt.toLocal()),
                             style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
                           ),
                         ],
@@ -584,7 +584,7 @@ class _WorkoutClientCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd.MM.yyyy, HH:mm');
-    final dateStr = dateFormat.format(workout.scheduledAt);
+    final dateStr = dateFormat.format(workout.scheduledAt.toLocal());
     final completedCount = workout.parts.where((p) {
       final res = userResults.where((r) => r.partId == p.id);
       return res.isNotEmpty && res.first.status == ResultStatus.done;

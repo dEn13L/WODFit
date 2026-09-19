@@ -100,8 +100,8 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
             final now = DateTime.now();
 
             // Split into past and future
-            final pastWorkouts = allWorkouts.where((w) => w.scheduledAt.isBefore(now)).toList();
-            final futureWorkouts = allWorkouts.where((w) => !w.scheduledAt.isBefore(now)).toList();
+            final pastWorkouts = allWorkouts.where((w) => w.scheduledAt.toLocal().isBefore(now)).toList();
+            final futureWorkouts = allWorkouts.where((w) => !w.scheduledAt.toLocal().isBefore(now)).toList();
 
             return Column(
               children: [
@@ -241,7 +241,9 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
 
     // Sort by date
     filtered.sort((a, b) {
-      return _sortAscending ? a.scheduledAt.compareTo(b.scheduledAt) : b.scheduledAt.compareTo(a.scheduledAt);
+      return _sortAscending
+          ? a.scheduledAt.toLocal().compareTo(b.scheduledAt.toLocal())
+          : b.scheduledAt.toLocal().compareTo(a.scheduledAt.toLocal());
     });
 
     if (filtered.isEmpty) {
@@ -323,7 +325,7 @@ class _HistoryWorkoutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd.MM.yyyy, HH:mm');
-    final dateStr = dateFormat.format(workout.scheduledAt);
+    final dateStr = dateFormat.format(workout.scheduledAt.toLocal());
 
     final completedCount = workout.parts.where((p) {
       final res = userResults.where((r) => r.partId == p.id);

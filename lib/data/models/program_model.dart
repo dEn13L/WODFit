@@ -68,8 +68,8 @@ class TrainingProgramModel {
       kind: ProgramKind.fromString(kind),
       description: description,
       inviteCode: inviteCode,
-      createdAt: DateTime.tryParse(createdAt) ?? DateTime.now(),
-      updatedAt: updatedAt != null ? DateTime.tryParse(updatedAt!) : null,
+      createdAt: (DateTime.tryParse(createdAt) ?? DateTime.now()).toLocal(),
+      updatedAt: updatedAt != null ? (DateTime.tryParse(updatedAt!) ?? DateTime.now()).toLocal() : null,
       memberCount: memberCount,
     );
   }
@@ -108,7 +108,7 @@ class ProgramMemberModel {
     return ProgramMember(
       programId: programId,
       userId: userId,
-      joinedAt: DateTime.tryParse(joinedAt) ?? DateTime.now(),
+      joinedAt: (DateTime.tryParse(joinedAt) ?? DateTime.now()).toLocal(),
       userProfile: profile?.toDomain(),
     );
   }
