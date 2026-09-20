@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/workout_date_formatter.dart';
-import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
 
@@ -69,7 +68,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Результаты участников по блокам тренировки:',
+                      'Результаты участников по заданиям тренировки:',
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                     ),
                     const SizedBox(height: 16),
@@ -84,6 +83,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         itemBuilder: (context, index) {
                           final part = workout.parts[index];
                           final partResults = resultsByPart[part.id] ?? [];
+                          final taskTitle = part.title.trim().isNotEmpty
+                              ? part.title.trim()
+                              : (part.type?.displayName ?? 'Задание');
 
                           return Card(
                             child: Padding(
@@ -91,56 +93,19 @@ class _ResultsScreenState extends State<ResultsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      if (part.type != null) ...[
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.surfaceLight,
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            part.type!.displayName,
-                                            style: const TextStyle(
-                                              color: AppColors.primaryNeon,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                      ],
-                                      if (part.scoreType != null) ...[
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primaryNeon.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            part.scoreType!.displayName,
-                                            style: const TextStyle(
-                                              color: AppColors.primaryNeon,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                      const Spacer(),
-                                      Text(
-                                        'Блок ${index + 1}',
-                                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                                      ),
-                                    ],
+                                  Text(
+                                    taskTitle,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
                                   ),
-                                  if (part.description.isNotEmpty) ...[
+                                  if (part.description.trim().isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     Text(
-                                      part.description,
-                                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                      part.description.trim(),
+                                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
                                     ),
                                   ],
                                   const SizedBox(height: 12),
@@ -149,7 +114,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                       padding: EdgeInsets.symmetric(vertical: 12.0),
                                       child: Center(
                                         child: Text(
-                                          'Пока никто не внес результат по этому блоку',
+                                          'Пока никто не внес результат по этому заданию',
                                           style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                         ),
                                       ),
@@ -214,32 +179,14 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                                     ],
                                                   ),
                                                   const SizedBox(height: 4),
-                                                  if ((part.scoreType ?? WorkoutScoreType.text) != WorkoutScoreType.none || result.scoreText.isNotEmpty)
-                                                    Text(
-                                                      'Результат: ${result.formattedScore}',
-                                                      style: const TextStyle(
-                                                        color: AppColors.textPrimary,
-                                                        fontWeight: FontWeight.w600,
-                                                        fontSize: 14,
-                                                      ),
+                                                  Text(
+                                                    'Результат: ${result.formattedScore}',
+                                                    style: const TextStyle(
+                                                      color: AppColors.textPrimary,
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 14,
                                                     ),
-                                                  if (result.weightKg != null ||
-                                                      result.rounds != null ||
-                                                      result.reps != null ||
-                                                      result.distanceM != null ||
-                                                      result.calories != null) ...[
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      [
-                                                        if (result.weightKg != null) 'Вес: ${result.weightKg} кг',
-                                                        if (result.rounds != null) 'Раунды: ${result.rounds}',
-                                                        if (result.reps != null) 'Повторы: ${result.reps}',
-                                                        if (result.distanceM != null) 'Дистанция: ${result.distanceM!.truncateToDouble() == result.distanceM ? result.distanceM!.toInt() : result.distanceM} м',
-                                                        if (result.calories != null) 'Калории: ${result.calories} кал',
-                                                      ].join(' • '),
-                                                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                                                    ),
-                                                  ],
+                                                  ),
                                                   if (result.note.isNotEmpty) ...[
                                                     const SizedBox(height: 2),
                                                     Text(

@@ -65,38 +65,59 @@ class PartResult extends Equatable {
     this.userProfile,
   });
 
-  /// Человекочитаемое представление результата с обратной совместимостью
+  /// Человекочитаемое представление результата с форматированием по score_type (fallback: text)
   String get formattedScore {
-    if (scoreText.isNotEmpty) {
-      return scoreText;
+    final type = scoreType ?? WorkoutScoreType.text;
+    switch (type) {
+      case WorkoutScoreType.none:
+        return status == ResultStatus.done ? 'Выполнено' : status.displayName;
+      case WorkoutScoreType.time:
+        if (timeMs != null) {
+          final totalSec = timeMs! ~/ 1000;
+          final m = totalSec ~/ 60;
+          final s = totalSec % 60;
+          return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+        }
+        return scoreText.isNotEmpty ? scoreText : (status == ResultStatus.done ? 'Выполнено' : status.displayName);
+      case WorkoutScoreType.roundsReps:
+        if (rounds != null) {
+          if (reps != null && reps! > 0) {
+            return '$rounds рд + $reps повт';
+          }
+          return '$rounds рд';
+        }
+        return scoreText.isNotEmpty ? scoreText : (status == ResultStatus.done ? 'Выполнено' : status.displayName);
+      case WorkoutScoreType.weight:
+        if (weightKg != null) {
+          final wStr = weightKg!.truncateToDouble() == weightKg! ? weightKg!.toInt().toString() : weightKg!.toString();
+          if (reps != null && reps! > 0) {
+            return '$wStr кг ($reps повт)';
+          }
+          return '$wStr кг';
+        }
+        return scoreText.isNotEmpty ? scoreText : (status == ResultStatus.done ? 'Выполнено' : status.displayName);
+      case WorkoutScoreType.reps:
+        if (reps != null) {
+          return '$reps повт';
+        }
+        return scoreText.isNotEmpty ? scoreText : (status == ResultStatus.done ? 'Выполнено' : status.displayName);
+      case WorkoutScoreType.distance:
+        if (distanceM != null) {
+          final dStr = distanceM!.truncateToDouble() == distanceM! ? distanceM!.toInt().toString() : distanceM!.toString();
+          return '$dStr м';
+        }
+        return scoreText.isNotEmpty ? scoreText : (status == ResultStatus.done ? 'Выполнено' : status.displayName);
+      case WorkoutScoreType.calories:
+        if (calories != null) {
+          return '$calories кал';
+        }
+        return scoreText.isNotEmpty ? scoreText : (status == ResultStatus.done ? 'Выполнено' : status.displayName);
+      case WorkoutScoreType.text:
+        if (scoreText.isNotEmpty) {
+          return scoreText;
+        }
+        return status == ResultStatus.done ? 'Выполнено' : status.displayName;
     }
-    final items = <String>[];
-    if (timeMs != null) {
-      final totalSec = timeMs! ~/ 1000;
-      final m = totalSec ~/ 60;
-      final s = totalSec % 60;
-      items.add('${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}');
-    }
-    if (rounds != null) {
-      items.add('$rounds рд');
-    }
-    if (reps != null) {
-      items.add('$reps повт');
-    }
-    if (weightKg != null) {
-      items.add('$weightKg кг');
-    }
-    if (distanceM != null) {
-      final isInt = distanceM!.truncateToDouble() == distanceM;
-      items.add('${isInt ? distanceM!.toInt() : distanceM} м');
-    }
-    if (calories != null) {
-      items.add('$calories кал');
-    }
-    if (items.isEmpty) {
-      return status == ResultStatus.done ? 'Выполнено' : status.displayName;
-    }
-    return items.join(' • ');
   }
 
   PartResult copyWith({

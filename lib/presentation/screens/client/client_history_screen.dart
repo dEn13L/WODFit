@@ -453,7 +453,7 @@ class _HistoryWorkoutCard extends StatelessWidget {
 
             // Workout Parts with User Results
             const Text(
-              'Задания и комплексы:',
+              'Задания:',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
@@ -472,6 +472,9 @@ class _HistoryWorkoutCard extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final part = workout.parts[index];
                   final result = userResults.where((r) => r.partId == part.id).firstOrNull;
+                  final taskTitle = part.title.trim().isNotEmpty
+                      ? part.title.trim()
+                      : (part.type?.displayName ?? 'Задание');
 
                   return Container(
                     padding: const EdgeInsets.all(10),
@@ -485,42 +488,18 @@ class _HistoryWorkoutCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            if (part.type != null) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  part.type!.displayName,
-                                  style: const TextStyle(fontSize: 11, color: AppColors.primaryNeon, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                            ],
-                            if (part.scoreType != null) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  part.scoreType!.displayName,
-                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                                ),
-                              ),
-                            ],
-                          ],
+                        Text(
+                          taskTitle,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
-                        if (part.description.isNotEmpty) ...[
+                        if (part.description.trim().isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
-                            part.description,
+                            part.description.trim(),
                             style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                           ),
                         ],

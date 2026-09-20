@@ -221,12 +221,11 @@ class CrossfitWorkout extends Equatable {
 
   String get workoutTypesSummary {
     if (parts.isEmpty) return 'Тренировка';
-    final nonNullTypes = parts.map((p) => p.type).whereType<WorkoutPartType>().toList();
-    if (nonNullTypes.isEmpty) {
-      final titles = parts.map((p) => p.title.trim()).where((t) => t.isNotEmpty).toSet().toList();
-      return titles.isNotEmpty ? titles.join(', ') : 'Тренировка';
-    }
-    return nonNullTypes.map((t) => t.displayName).toSet().join(', ');
+    final firstTitle = parts.first.title.trim().isNotEmpty
+        ? parts.first.title.trim()
+        : (parts.first.type?.displayName ?? 'Задание');
+    if (parts.length == 1) return firstTitle;
+    return '$firstTitle и ещё ${parts.length - 1}';
   }
 
   List<String> get assignedProgramIds => assignments.map((a) => a.programId).toList();

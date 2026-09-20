@@ -520,6 +520,10 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                           final res = results.where((r) => r.partId == p.id).firstOrNull;
                           if (res == null) return const SizedBox.shrink();
 
+                          final taskTitle = p.title.trim().isNotEmpty
+                              ? p.title.trim()
+                              : (p.type?.displayName ?? 'Задание');
+
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
@@ -530,7 +534,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  '${p.type?.displayName ?? p.title}: ',
+                                  '$taskTitle: ',
                                   style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                                 ),
                                 Text(

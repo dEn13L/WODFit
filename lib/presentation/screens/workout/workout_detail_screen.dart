@@ -209,36 +209,27 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                                       ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: workout.isPublished
-                                      ? AppColors.success.withValues(alpha: 0.2)
-                                      : AppColors.accentOrange.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: workout.isPublished ? AppColors.success : AppColors.accentOrange,
+                              if (workout.status == WorkoutStatus.draft) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accentOrange.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.accentOrange),
+                                  ),
+                                  child: const Text(
+                                    'Черновик',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.accentOrange,
+                                    ),
                                   ),
                                 ),
-                                child: Text(
-                                  workout.status.displayName,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: workout.isPublished ? AppColors.success : AppColors.accentOrange,
-                                  ),
-                                ),
-                              ),
+                              ],
                             ],
                           ),
-                          if (workout.description.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              workout.description,
-                              style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
-                            ),
-                          ],
                           if (workout.assignments.isNotEmpty) ...[
                             const SizedBox(height: 14),
                             const Text(
@@ -279,7 +270,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Блоки тренировки (${workout.parts.length})',
+                        'Задания тренировки (${workout.parts.length})',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       OutlinedButton.icon(
@@ -313,6 +304,9 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                       itemBuilder: (context, index) {
                         final part = workout.parts[index];
                         final userResult = userResultsMap[part.id];
+                        final taskTitle = part.title.trim().isNotEmpty
+                            ? part.title.trim()
+                            : (part.type?.displayName ?? 'Задание');
 
                         return Card(
                           child: Padding(
@@ -320,61 +314,22 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    if (part.type != null) ...[
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.surfaceLight,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          part.type!.displayName,
-                                          style: const TextStyle(
-                                            color: AppColors.primaryNeon,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                    if (part.scoreType != null) ...[
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primaryNeon.withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          part.scoreType!.displayName,
-                                          style: const TextStyle(
-                                            color: AppColors.primaryNeon,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                    const Spacer(),
-                                    Text(
-                                      'Блок ${index + 1}',
-                                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                                    ),
-                                  ],
+                                Text(
+                                  taskTitle,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary,
+                                  ),
                                 ),
-                                if (part.description.isNotEmpty) ...[
+                                if (part.description.trim().isNotEmpty) ...[
                                   const SizedBox(height: 8),
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.background,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      part.description,
-                                      style: const TextStyle(fontSize: 14, height: 1.4),
+                                  Text(
+                                    part.description.trim(),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textSecondary,
+                                      height: 1.4,
                                     ),
                                   ),
                                 ],
@@ -507,6 +462,7 @@ class _PartResultInputModal extends StatefulWidget {
 class _PartResultInputModalState extends State<_PartResultInputModal> {
   final _formKey = GlobalKey<FormState>();
   late ResultStatus _status;
+  late WorkoutScoreType _selectedScoreType;
   late TextEditingController _scoreController;
   late TextEditingController _noteController;
   late TextEditingController _weightController;
@@ -523,6 +479,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
     super.initState();
     final res = widget.initialResult;
     _status = res?.status ?? ResultStatus.done;
+    _selectedScoreType = res?.scoreType ?? WorkoutScoreType.text;
     _scoreController = TextEditingController(text: res?.scoreText ?? '');
     _noteController = TextEditingController(text: res?.note ?? '');
     _weightController = TextEditingController(
@@ -603,7 +560,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
     if (_status == ResultStatus.notDone) {
       scoreText = 'Не выполнено';
     } else {
-      switch (widget.part.scoreType ?? WorkoutScoreType.text) {
+      switch (_selectedScoreType) {
         case WorkoutScoreType.time:
           final min = int.tryParse(_minutesController.text.trim()) ?? 0;
           final sec = int.tryParse(_secondsController.text.trim()) ?? 0;
@@ -656,7 +613,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
           partId: widget.part.id,
           status: _status,
           scoreText: scoreText,
-          scoreType: widget.part.scoreType,
+          scoreType: _selectedScoreType,
           note: _noteController.text.trim(),
           timeMs: timeMs,
           rounds: rounds,
@@ -753,7 +710,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
       );
     }
 
-    switch (widget.part.scoreType ?? WorkoutScoreType.text) {
+    switch (_selectedScoreType) {
       case WorkoutScoreType.time:
         return Row(
           children: [
@@ -902,7 +859,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
           controller: _distanceController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Дистанция (метры) *',
+            labelText: 'Диста��ция (метры) *',
             hintText: 'например: 2000 или 5000',
             filled: true,
             fillColor: AppColors.surfaceLight,
@@ -959,7 +916,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'В этом блоке не требуется ввод очков. Выберите статус и при желании добавьте заметку.',
+                  'В этом задании не требуется ввод очков. Выберите статус и при желании добавьте заметку.',
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                 ),
               ),
@@ -972,6 +929,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.initialResult != null;
+    final taskTitle = widget.part.title.trim().isNotEmpty ? widget.part.title.trim() : 'Задание';
 
     return Padding(
       padding: EdgeInsets.only(
@@ -999,8 +957,8 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          '${widget.part.type?.displayName ?? widget.part.title} (${(widget.part.scoreType ?? WorkoutScoreType.text).displayName})',
-                          style: const TextStyle(color: AppColors.primaryNeon, fontSize: 13),
+                          taskTitle,
+                          style: const TextStyle(color: AppColors.primaryNeon, fontSize: 13, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -1023,6 +981,34 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                   setState(() {
                     _status = newSelection.first;
                   });
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<WorkoutScoreType>(
+                initialValue: _selectedScoreType,
+                decoration: InputDecoration(
+                  labelText: 'Формат записи',
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                dropdownColor: AppColors.surface,
+                items: const [
+                  DropdownMenuItem(value: WorkoutScoreType.none, child: Text('Только статус')),
+                  DropdownMenuItem(value: WorkoutScoreType.text, child: Text('Текст')),
+                  DropdownMenuItem(value: WorkoutScoreType.time, child: Text('Время')),
+                  DropdownMenuItem(value: WorkoutScoreType.roundsReps, child: Text('Раунды + повторы')),
+                  DropdownMenuItem(value: WorkoutScoreType.weight, child: Text('Вес')),
+                  DropdownMenuItem(value: WorkoutScoreType.reps, child: Text('Повторы')),
+                  DropdownMenuItem(value: WorkoutScoreType.distance, child: Text('Дистанция')),
+                  DropdownMenuItem(value: WorkoutScoreType.calories, child: Text('Калории')),
+                ],
+                onChanged: (newType) {
+                  if (newType != null) {
+                    setState(() {
+                      _selectedScoreType = newType;
+                    });
+                  }
                 },
               ),
               const SizedBox(height: 16),
