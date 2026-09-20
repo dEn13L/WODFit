@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/workout_date_formatter.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../bloc/workout/crossfit_workout_cubit.dart';
 
@@ -306,7 +306,6 @@ class _CoachWorkoutItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
     final isDraft = workout.status == WorkoutStatus.draft;
 
     return Card(
@@ -331,29 +330,13 @@ class _CoachWorkoutItemCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          workout.title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.event, size: 14, color: AppColors.textSecondary),
-                            const SizedBox(width: 4),
-                            Text(
-                              dateFormat.format(workout.scheduledAt.toLocal()),
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                            ),
-                          ],
-                        ),
-                      ],
+                    child: Text(
+                      WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                   Container(

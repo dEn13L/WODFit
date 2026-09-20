@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/workout_date_formatter.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../../domain/entities/training_program.dart';
 import '../../../../domain/entities/workout_template.dart';
@@ -15,20 +15,16 @@ class _EditablePart {
   final String id;
   WorkoutPartType type;
   WorkoutScoreType scoreType;
-  final TextEditingController titleController;
   final TextEditingController descriptionController;
 
   _EditablePart({
     required this.id,
     this.type = WorkoutPartType.crossfitComplex,
     this.scoreType = WorkoutScoreType.text,
-    String initialTitle = '',
     String initialDescription = '',
-  })  : titleController = TextEditingController(text: initialTitle),
-        descriptionController = TextEditingController(text: initialDescription);
+  }) : descriptionController = TextEditingController(text: initialDescription);
 
   void dispose() {
-    titleController.dispose();
     descriptionController.dispose();
   }
 }
@@ -81,37 +77,39 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
       if (w.parts.isNotEmpty) {
         for (final p in w.parts) {
-          _addPart(p.type, p.scoreType, p.title, p.description, p.id);
+          _addPart(p.type, p.scoreType, p.description, p.id);
         }
       } else {
-        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'WOD: Главный комплекс', '');
+        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, '', null);
       }
     } else if (widget.initialTemplate != null) {
       final t = widget.initialTemplate!;
-      _titleController = TextEditingController(text: t.title);
+      // Deployment from template creates workout with empty label
+      _titleController = TextEditingController(text: '');
       _descriptionController = TextEditingController(text: t.description);
       _scheduledAt = DateTime.now();
 
       if (t.parts.isNotEmpty) {
         for (final p in t.parts) {
-          _addPart(p.type, p.scoreType, p.title, p.description);
+          _addPart(p.type, p.scoreType, p.description);
         }
       } else {
-        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'WOD: Главный комплекс', '');
+        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, t.description);
       }
     } else {
       _titleController = TextEditingController();
       _descriptionController = TextEditingController();
       _scheduledAt = DateTime.now();
       // Pre-populate with default parts
-      _addPart(WorkoutPartType.warmup, WorkoutScoreType.none, 'Разминка', 'Суставная гимнастика, 3 раунда...');
-      _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'WOD: Главный комплекс', 'For Time: 21-15-9...');
+      _addPart(WorkoutPartType.warmup, WorkoutScoreType.none, 'Суставная гимнастика, 3 раунда...');
+      _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'For Time: 21-15-9...');
     }
   }
 
   void _applyTemplate(WorkoutTemplate template) {
     setState(() {
-      _titleController.text = template.title;
+      // Deployment from template creates workout with empty label
+      _titleController.text = '';
       _descriptionController.text = template.description;
       for (final p in _parts) {
         p.dispose();
@@ -124,12 +122,11 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
             id: const Uuid().v4(),
             type: p.type,
             scoreType: p.scoreType,
-            initialTitle: p.title,
             initialDescription: p.description,
           ));
         }
       } else {
-        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, template.title, template.description);
+        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, template.description);
       }
     });
 
@@ -246,7 +243,6 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   void _addPart([
     WorkoutPartType type = WorkoutPartType.crossfitComplex,
     WorkoutScoreType scoreType = WorkoutScoreType.text,
-    String title = '',
     String description = '',
     String? id,
   ]) {
@@ -255,7 +251,6 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
         id: id ?? const Uuid().v4(),
         type: type,
         scoreType: scoreType,
-        initialTitle: title,
         initialDescription: description,
       ));
     });
@@ -336,10 +331,10 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       return;
     }
 
-    if (_selectedProgramIds.isEmpty) {
+    if (publish && _selectedProgramIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Пожалуйста, выберите хотя бы одну программу для тренировки'),
+          content: Text('Пожалуйста, выберите хотя бы одну программу для публикации тренировки'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -358,7 +353,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
         workoutId: widget.workoutToEdit?.id ?? '',
         type: part.type,
         scoreType: part.scoreType,
-        title: part.titleController.text.trim().isEmpty ? part.type.displayName : part.titleController.text.trim(),
+        title: part.type.displayName,
         description: part.descriptionController.text.trim(),
         sortOrder: idx,
       );
@@ -399,8 +394,6 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd.MM.yyyy, HH:mm');
-
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.workoutToEdit != null ? 'Редактирование тренировки' : 'Создание тренировки'),
@@ -417,81 +410,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (widget.workoutToEdit == null) ...[
-                  OutlinedButton.icon(
-                    onPressed: _showTemplatePicker,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.primaryNeon),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    icon: const Icon(Icons.bookmark_border, color: AppColors.primaryNeon),
-                    label: const Text(
-                      'Заполнить из шаблона',
-                      style: TextStyle(color: AppColors.primaryNeon, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                Text(
-                  'Основная информация',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _titleController,
-                  decoration: InputDecoration(
-                    labelText: 'Название тренировки / WOD *',
-                    hintText: 'например: WOD "FRAN" & Силовой блок',
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  ),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Введите название' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _descriptionController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    labelText: 'Общее описание / задачи (опционально)',
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                InkWell(
-                  onTap: _pickDateTime,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today, color: AppColors.primaryNeon),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Дата и время проведения', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                const SizedBox(height: 2),
-                                Text(dateFormat.format(_scheduledAt.toLocal()), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const Icon(Icons.edit, size: 18, color: AppColors.textSecondary),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
+                // 1. Секция — "Назначить программам"
                 Text(
                   'Назначить программам',
                   style: Theme.of(context).textTheme.titleLarge,
@@ -550,22 +469,107 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                     return const SizedBox.shrink();
                   },
                 ),
+                const SizedBox(height: 24),
+
+                // 2. Секци�� — "Основная информация"
+                Text(
+                  'Основная информация',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                // а) Плитка "Дата и время проведения"
+                InkWell(
+                  onTap: _pickDateTime,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_today, color: AppColors.primaryNeon),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Дата и время проведения', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  WorkoutDateFormatter.formatDetail(_scheduledAt),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const Icon(Icons.edit, size: 18, color: AppColors.textSecondary),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // б) Поле "Уточнение (опционально)"
+                TextFormField(
+                  controller: _titleController,
+                  maxLength: 40,
+                  decoration: InputDecoration(
+                    labelText: 'Уточнение (опционально)',
+                    hintText: 'Утро, Вечер, Сессия 1…',
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    counterText: '',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // в) Поле "Описание / задачи (опционально)"
+                TextFormField(
+                  controller: _descriptionController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'Описание / задачи (опционально)',
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
                 const SizedBox(height: 28),
+
+                // 3. Секция — "Блоки тренировки"
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Блоки тренировки (${_parts.length})',
+                      'Блоки тренировки',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     TextButton.icon(
                       onPressed: () => _addPart(),
                       icon: const Icon(Icons.add, color: AppColors.primaryNeon),
-                      label: const Text('Добавить блок', style: TextStyle(color: AppColors.primaryNeon, fontWeight: FontWeight.bold)),
+                      label: const Text('＋ Добавить блок', style: TextStyle(color: AppColors.primaryNeon, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _showTemplatePicker,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primaryNeon),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.bookmark_border, color: AppColors.primaryNeon),
+                  label: const Text(
+                    'Заполнить из шаблона',
+                    style: TextStyle(color: AppColors.primaryNeon, fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 ReorderableListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -594,9 +598,21 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                               children: [
                                 const Icon(Icons.drag_handle, color: AppColors.textSecondary),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'Блок ${index + 1}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryNeon.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.primaryNeon.withValues(alpha: 0.4)),
+                                  ),
+                                  child: Text(
+                                    part.type.displayName,
+                                    style: const TextStyle(
+                                      color: AppColors.primaryNeon,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ),
                                 const Spacer(),
                                 IconButton(
@@ -664,18 +680,6 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
-                              controller: part.titleController,
-                              decoration: InputDecoration(
-                                labelText: 'Название блока / упражнения',
-                                hintText: 'например: Snatch Complex 5x2',
-                                filled: true,
-                                fillColor: AppColors.surfaceLight,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                              ),
-                              validator: (v) => (v == null || v.trim().isEmpty) ? 'Введите название' : null,
-                            ),
-                            const SizedBox(height: 12),
-                            TextFormField(
                               controller: part.descriptionController,
                               maxLines: 3,
                               decoration: InputDecoration(
@@ -693,6 +697,8 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
+
+                // 4. Sticky-низ с действиями
                 ElevatedButton(
                   onPressed: _isLoading ? null : () => _submit(publish: true),
                   child: _isLoading

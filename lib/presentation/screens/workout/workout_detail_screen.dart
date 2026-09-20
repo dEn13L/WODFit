@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
 import '../../bloc/auth/auth_bloc.dart';
@@ -51,7 +51,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
     final isCoach = authState is Authenticated && authState.user.isCoach;
-    final dateFormat = DateFormat('dd.MM.yyyy, HH:mm');
 
     return Scaffold(
       appBar: AppBar(
@@ -103,7 +102,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                       backgroundColor: AppColors.surface,
                       title: const Text('Удалить тренировку?'),
                       content: Text(
-                        'Вы действительно хотите удалить тренировку "${workout.title}"?\n\n'
+                        'Вы действительно хотите удалить тренировку "${WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title)}"?\n\n'
                         'Все данные тренировки, назначения и внесенные результаты участников будут безвозвратно удалены.',
                       ),
                       actions: [
@@ -203,13 +202,14 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  workout.title,
-                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  WorkoutDateFormatter.formatDetail(workout.scheduledAt, workout.title),
+                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                         color: AppColors.primaryNeon,
                                         fontWeight: FontWeight.bold,
                                       ),
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
@@ -229,17 +229,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                                     color: workout.isPublished ? AppColors.success : AppColors.accentOrange,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              const Icon(Icons.event, size: 16, color: AppColors.textSecondary),
-                              const SizedBox(width: 6),
-                              Text(
-                                dateFormat.format(workout.scheduledAt),
-                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
                               ),
                             ],
                           ),
@@ -369,14 +358,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                                       style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                                     ),
                                   ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  part.title,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
                                 ),
                                 if (part.description.isNotEmpty) ...[
                                   const SizedBox(height: 8),
@@ -1013,7 +994,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          '${widget.part.title} (${widget.part.scoreType.displayName})',
+                          '${widget.part.type.displayName} (${widget.part.scoreType.displayName})',
                           style: const TextStyle(color: AppColors.primaryNeon, fontSize: 13),
                         ),
                       ],

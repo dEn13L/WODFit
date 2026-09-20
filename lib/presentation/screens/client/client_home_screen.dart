@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
 import '../../bloc/auth/auth_bloc.dart';
@@ -490,7 +490,6 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             itemBuilder: (context, index) {
               final workout = workoutsWithResults[index];
               final results = userResults.where((r) => r.workoutId == workout.id).toList();
-              final dateFormat = DateFormat('dd.MM.yyyy');
 
               return InkWell(
                 onTap: () async {
@@ -508,20 +507,9 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              workout.title,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                          ),
-                          Text(
-                            dateFormat.format(workout.scheduledAt.toLocal()),
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                          ),
-                        ],
+                      Text(
+                        WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       const SizedBox(height: 6),
                       // Parts results summary
@@ -542,7 +530,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  '${p.title}: ',
+                                  '${p.type.displayName}: ',
                                   style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                                 ),
                                 Text(
@@ -583,8 +571,6 @@ class _WorkoutClientCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd.MM.yyyy, HH:mm');
-    final dateStr = dateFormat.format(workout.scheduledAt.toLocal());
     final completedCount = workout.parts.where((p) {
       final res = userResults.where((r) => r.partId == p.id);
       return res.isNotEmpty && res.first.status == ResultStatus.done;
@@ -604,9 +590,9 @@ class _WorkoutClientCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      workout.title,
+                      WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
@@ -627,13 +613,6 @@ class _WorkoutClientCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Icon(Icons.event, size: 16, color: AppColors.primaryNeon),
-                  const SizedBox(width: 6),
-                  Text(
-                    dateStr,
-                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                  const Spacer(),
                   if (workout.parts.isNotEmpty && userResults.isNotEmpty) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -652,7 +631,7 @@ class _WorkoutClientCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                   ],
                   Flexible(
                     child: Container(

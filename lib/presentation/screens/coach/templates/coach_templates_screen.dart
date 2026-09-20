@@ -352,7 +352,7 @@ class _CoachTemplatesScreenState extends State<CoachTemplatesScreen> {
                     border: Border.all(color: AppColors.primaryNeon.withValues(alpha: 0.3)),
                   ),
                   child: Text(
-                    part.title.isNotEmpty ? part.title : part.type.displayName,
+                    part.type.displayName,
                     style: const TextStyle(fontSize: 11, color: AppColors.textPrimary),
                   ),
                 );

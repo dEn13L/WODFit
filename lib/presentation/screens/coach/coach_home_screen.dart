@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/training_program.dart';
 import '../../bloc/auth/auth_bloc.dart';
@@ -407,8 +408,8 @@ class _TodayWorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeFormat = DateFormat('HH:mm');
     final isDraft = workout.status == WorkoutStatus.draft;
+    final timeStr = WorkoutDateFormatter.formatTime(workout.scheduledAt);
 
     return Card(
       color: AppColors.surface,
@@ -434,7 +435,7 @@ class _TodayWorkoutCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  timeFormat.format(workout.scheduledAt.toLocal()),
+                  timeStr,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -448,7 +449,7 @@ class _TodayWorkoutCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      workout.title,
+                      WorkoutDateFormatter.formatTodayTomorrow(workout.scheduledAt, workout.title),
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/training_program.dart';
 import '../../../domain/entities/part_result.dart';
@@ -324,9 +324,6 @@ class _HistoryWorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd.MM.yyyy, HH:mm');
-    final dateStr = dateFormat.format(workout.scheduledAt.toLocal());
-
     final completedCount = workout.parts.where((p) {
       final res = userResults.where((r) => r.partId == p.id);
       return res.isNotEmpty && res.first.status == ResultStatus.done;
@@ -346,35 +343,16 @@ class _HistoryWorkoutCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        workout.title,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.event, size: 14, color: AppColors.primaryNeon),
-                          const SizedBox(width: 4),
-                          Text(
-                            dateStr,
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                  child: Text(
+                    WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 // Status badge
                 if (isPast) ...[
                   Container(
@@ -518,14 +496,19 @@ class _HistoryWorkoutCard extends StatelessWidget {
                               ),
                               child: Text(
                                 part.type.displayName,
-                                style: const TextStyle(fontSize: 10, color: AppColors.primaryNeon, fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontSize: 11, color: AppColors.primaryNeon, fontWeight: FontWeight.bold),
                               ),
                             ),
                             const SizedBox(width: 6),
-                            Expanded(
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                               child: Text(
-                                part.title,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                part.scoreType.displayName,
+                                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                               ),
                             ),
                           ],

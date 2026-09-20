@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
@@ -63,7 +64,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      workout.title,
+                      WorkoutDateFormatter.formatDetail(workout.scheduledAt, workout.title),
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
@@ -122,18 +123,22 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          part.title,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
+                                      const Spacer(),
+                                      Text(
+                                        'Блок ${index + 1}',
+                                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                                       ),
                                     ],
                                   ),
+                                  if (part.description.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      part.description,
+                                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                   const SizedBox(height: 12),
                                   if (partResults.isEmpty)
                                     const Padding(

@@ -137,7 +137,6 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
             'workout_id': workoutId,
             'type': part.type.name,
             'score_type': part.scoreType.dbValue,
-            'title': part.title.trim(),
             'description': part.description.trim(),
             'sort_order': index,
           };
@@ -219,7 +218,6 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
             'workout_id': id,
             'type': part.type.name,
             'score_type': part.scoreType.dbValue,
-            'title': part.title.trim(),
             'description': part.description.trim(),
             'sort_order': index,
           };
@@ -263,9 +261,9 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       final original = await getWorkoutById(workoutId);
 
       final duplicated = await createWorkout(
-        title: '${original.title} (Копия)',
+        title: original.title,
         description: original.description,
-        scheduledAt: DateTime.now().add(const Duration(days: 1)),
+        scheduledAt: DateTime.now(),
         parts: original.parts,
         programIds: original.assignedProgramIds,
         publish: false,

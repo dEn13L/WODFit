@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/workout_date_formatter.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../../domain/entities/training_program.dart';
 import '../../../../domain/entities/workout_template.dart';
@@ -817,7 +818,6 @@ class _ProgramWorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
     final isDraft = workout.status == WorkoutStatus.draft;
 
     return Card(
@@ -842,29 +842,13 @@ class _ProgramWorkoutCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          workout.title,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.access_time, size: 13, color: AppColors.textSecondary),
-                            const SizedBox(width: 4),
-                            Text(
-                              dateFormat.format(workout.scheduledAt.toLocal()),
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                            ),
-                          ],
-                        ),
-                      ],
+                    child: Text(
+                      WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                   if (isDraft)

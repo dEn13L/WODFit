@@ -11,20 +11,16 @@ class _EditableTemplatePart {
   final String id;
   WorkoutPartType type;
   WorkoutScoreType scoreType;
-  final TextEditingController titleController;
   final TextEditingController descriptionController;
 
   _EditableTemplatePart({
     required this.id,
     this.type = WorkoutPartType.crossfitComplex,
     this.scoreType = WorkoutScoreType.text,
-    String initialTitle = '',
     String initialDescription = '',
-  })  : titleController = TextEditingController(text: initialTitle),
-        descriptionController = TextEditingController(text: initialDescription);
+  }) : descriptionController = TextEditingController(text: initialDescription);
 
   void dispose() {
-    titleController.dispose();
     descriptionController.dispose();
   }
 }
@@ -57,16 +53,16 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
       _descriptionController = TextEditingController(text: t.description);
       if (t.parts.isNotEmpty) {
         for (final p in t.parts) {
-          _addPart(p.type, p.scoreType, p.title, p.description, p.id);
+          _addPart(p.type, p.scoreType, p.description, p.id);
         }
       } else {
-        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'WOD: Главный комплекс', '');
+        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, '');
       }
     } else {
       _titleController = TextEditingController();
       _descriptionController = TextEditingController();
-      _addPart(WorkoutPartType.warmup, WorkoutScoreType.none, 'Разминка', 'Суставная гимнастика, 3 раунда...');
-      _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'WOD: Главный комплекс', 'For Time: 21-15-9...');
+      _addPart(WorkoutPartType.warmup, WorkoutScoreType.none, 'Суставная гимнастика, 3 раунда...');
+      _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'For Time: 21-15-9...');
     }
   }
 
@@ -83,7 +79,6 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
   void _addPart([
     WorkoutPartType type = WorkoutPartType.crossfitComplex,
     WorkoutScoreType scoreType = WorkoutScoreType.text,
-    String title = '',
     String description = '',
     String? id,
   ]) {
@@ -92,7 +87,6 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
         id: id ?? const Uuid().v4(),
         type: type,
         scoreType: scoreType,
-        initialTitle: title,
         initialDescription: description,
       ));
     });
@@ -156,7 +150,7 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
         templateId: widget.templateToEdit?.id ?? '',
         type: p.type,
         scoreType: p.scoreType,
-        title: p.titleController.text.trim().isEmpty ? p.type.displayName : p.titleController.text.trim(),
+        title: p.type.displayName,
         description: p.descriptionController.text.trim(),
         sortOrder: idx,
       );
@@ -319,58 +313,36 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: AppColors.primaryNeon.withValues(alpha: 0.2),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryNeon.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.primaryNeon.withValues(alpha: 0.4)),
+                  ),
                   child: Text(
-                    '${index + 1}',
+                    part.type.displayName,
                     style: const TextStyle(
                       color: AppColors.primaryNeon,
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontSize: 13,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: DropdownButtonFormField<WorkoutPartType>(
-                    initialValue: part.type,
-                    decoration: const InputDecoration(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      isDense: true,
-                    ),
-                    items: WorkoutPartType.values.map((type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(type.displayName, style: const TextStyle(fontSize: 14)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          part.type = val;
-                          if (part.titleController.text.isEmpty ||
-                              WorkoutPartType.values.any((t) => t.displayName == part.titleController.text)) {
-                            part.titleController.text = val.displayName;
-                          }
-                        });
-                      }
-                    },
-                  ),
-                ),
+                const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.arrow_upward, size: 18),
+                  icon: const Icon(Icons.arrow_upward, size: 20),
                   tooltip: 'Переместить выше',
                   onPressed: index > 0 ? () => _movePartUp(index) : null,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.arrow_downward, size: 18),
+                  icon: const Icon(Icons.arrow_downward, size: 20),
                   tooltip: 'Переместить ниже',
                   onPressed: index < _parts.length - 1 ? () => _movePartDown(index) : null,
                 ),
@@ -382,16 +354,41 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
               ],
             ),
             const SizedBox(height: 12),
+            DropdownButtonFormField<WorkoutPartType>(
+              initialValue: part.type,
+              decoration: InputDecoration(
+                labelText: 'Тип тренировки',
+                filled: true,
+                fillColor: AppColors.surfaceLight,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+              items: WorkoutPartType.values.map((type) {
+                return DropdownMenuItem(
+                  value: type,
+                  child: Text(type.displayName),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    part.type = val;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 12),
             DropdownButtonFormField<WorkoutScoreType>(
               initialValue: part.scoreType,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Тип результата (Score Type)',
-                isDense: true,
+                filled: true,
+                fillColor: AppColors.surfaceLight,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
               items: WorkoutScoreType.values.map((st) {
                 return DropdownMenuItem(
                   value: st,
-                  child: Text(st.displayName, style: const TextStyle(fontSize: 14)),
+                  child: Text(st.displayName),
                 );
               }).toList(),
               onChanged: (val) {
@@ -402,30 +399,17 @@ class _CreateTemplateScreenState extends State<CreateTemplateScreen> {
                 }
               },
             ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: part.titleController,
-              decoration: const InputDecoration(
-                labelText: 'Название задания / упражнения',
-                hintText: 'Например: Комплекс 1 / Взятия на грудь',
-                isDense: true,
-              ),
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return 'Укажите название';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             TextFormField(
               controller: part.descriptionController,
               maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Описание и задание',
+              decoration: InputDecoration(
+                labelText: 'Задание / Описание / Схема',
                 hintText: '5 раундов на время:\n- 10 бурпи\n- 15 махов гирей 24 кг\n- 20 приседаний',
                 alignLabelWithHint: true,
-                isDense: true,
+                filled: true,
+                fillColor: AppColors.surfaceLight,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
           ],
