@@ -7,10 +7,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/workout_date_formatter.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../../domain/entities/training_program.dart';
-import '../../../../domain/entities/workout_template.dart';
 import '../../../../domain/repositories/crossfit_workout_repository.dart';
 import '../../../../domain/repositories/program_repository.dart';
-import '../../../../domain/repositories/workout_template_repository.dart';
 import '../../../bloc/program/program_cubit.dart';
 
 class ProgramDetailScreen extends StatefulWidget {
@@ -294,104 +292,6 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
     }
   }
 
-  Future<void> _selectTemplateAndCreateWorkout() async {
-    try {
-      final templateRepo = context.read<WorkoutTemplateRepository>();
-      final templates = await templateRepo.getCoachTemplates();
-
-      if (!mounted) return;
-
-      if (templates.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('У вас пока нет шаблонов. Создайте шаблон в разделе «Шаблоны».'),
-            backgroundColor: AppColors.surface,
-          ),
-        );
-        return;
-      }
-
-      final selectedTemplate = await showModalBottomSheet<WorkoutTemplate>(
-        context: context,
-        backgroundColor: AppColors.surface,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        builder: (bottomSheetCtx) {
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Выберите шаблон',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(bottomSheetCtx).pop(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.5,
-                    ),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: templates.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1),
-                      itemBuilder: (ctx, idx) {
-                        final t = templates[idx];
-                        return ListTile(
-                          title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text(
-                            '${t.workoutTypesSummary}${t.description.isNotEmpty ? ' • ${t.description}' : ''}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                          onTap: () => Navigator.of(bottomSheetCtx).pop(t),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-
-      if (selectedTemplate != null && mounted) {
-        await context.push(
-          '/coach/workouts/create',
-          extra: {
-            'initialTemplate': selectedTemplate,
-            'initialProgramId': widget.programId,
-          },
-        );
-        if (mounted) _loadData();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка при загрузке шаблонов: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -592,43 +492,26 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
 
               const SizedBox(height: 16),
 
-              // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        await context.push(
-                          '/coach/workouts/create',
-                          extra: {'initialProgramId': widget.programId},
-                        );
-                        if (mounted) _loadData();
-                      },
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Тренировка'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryNeon,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
+              // Action Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    await context.push(
+                      '/coach/workouts/create',
+                      extra: {'initialProgramId': widget.programId},
+                    );
+                    if (mounted) _loadData();
+                  },
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Новая тренировка'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryNeon,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _selectTemplateAndCreateWorkout,
-                      icon: const Icon(Icons.bookmark_outline, size: 18),
-                      label: const Text('Из шаблона'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textPrimary,
-                        side: const BorderSide(color: Colors.white24),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
 
               const SizedBox(height: 24),

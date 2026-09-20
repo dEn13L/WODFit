@@ -82,11 +82,6 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
             },
           ),
           IconButton(
-            tooltip: 'Шаблоны',
-            icon: const Icon(Icons.bookmark_outline),
-            onPressed: () => context.push('/coach/templates'),
-          ),
-          IconButton(
             tooltip: 'Выйти',
             icon: const Icon(Icons.logout),
             onPressed: () {
@@ -123,7 +118,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: _QuickActionButton(
                             icon: Icons.group_add_outlined,
@@ -134,16 +129,6 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                               await context.push('/coach/programs/create');
                               if (mounted) _loadData();
                             },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _QuickActionButton(
-                            icon: Icons.bookmark_outline,
-                            label: 'Шаблоны',
-                            color: AppColors.surface,
-                            textColor: AppColors.textPrimary,
-                            onTap: () => context.push('/coach/templates'),
                           ),
                         ),
                       ],
