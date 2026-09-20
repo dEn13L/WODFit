@@ -322,36 +322,40 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surfaceLight,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        part.type.displayName,
-                                        style: const TextStyle(
-                                          color: AppColors.primaryNeon,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
+                                    if (part.type != null) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surfaceLight,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          part.type!.displayName,
+                                          style: const TextStyle(
+                                            color: AppColors.primaryNeon,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primaryNeon.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        part.scoreType.displayName,
-                                        style: const TextStyle(
-                                          color: AppColors.primaryNeon,
-                                          fontSize: 11,
+                                      const SizedBox(width: 8),
+                                    ],
+                                    if (part.scoreType != null) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryNeon.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          part.scoreType!.displayName,
+                                          style: const TextStyle(
+                                            color: AppColors.primaryNeon,
+                                            fontSize: 11,
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                     const Spacer(),
                                     Text(
                                       'Блок ${index + 1}',
@@ -599,7 +603,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
     if (_status == ResultStatus.notDone) {
       scoreText = 'Не выполнено';
     } else {
-      switch (widget.part.scoreType) {
+      switch (widget.part.scoreType ?? WorkoutScoreType.text) {
         case WorkoutScoreType.time:
           final min = int.tryParse(_minutesController.text.trim()) ?? 0;
           final sec = int.tryParse(_secondsController.text.trim()) ?? 0;
@@ -652,6 +656,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
           partId: widget.part.id,
           status: _status,
           scoreText: scoreText,
+          scoreType: widget.part.scoreType,
           note: _noteController.text.trim(),
           timeMs: timeMs,
           rounds: rounds,
@@ -748,7 +753,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
       );
     }
 
-    switch (widget.part.scoreType) {
+    switch (widget.part.scoreType ?? WorkoutScoreType.text) {
       case WorkoutScoreType.time:
         return Row(
           children: [
@@ -994,7 +999,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          '${widget.part.type.displayName} (${widget.part.scoreType.displayName})',
+                          '${widget.part.type?.displayName ?? widget.part.title} (${(widget.part.scoreType ?? WorkoutScoreType.text).displayName})',
                           style: const TextStyle(color: AppColors.primaryNeon, fontSize: 13),
                         ),
                       ],

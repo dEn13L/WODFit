@@ -33,6 +33,7 @@ abstract class CrossfitWorkoutRepository {
     required String partId,
     required ResultStatus status,
     required String scoreText,
+    WorkoutScoreType? scoreType,
     String note = '',
     int? timeMs,
     int? rounds,

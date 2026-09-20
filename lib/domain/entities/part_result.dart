@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'crossfit_workout.dart';
 import 'user_profile.dart';
 
 enum ResultStatus {
@@ -30,6 +31,7 @@ class PartResult extends Equatable {
   final String workoutId;
   final String partId;
   final String userId;
+  final WorkoutScoreType? scoreType;
   final ResultStatus status;
   final String scoreText;
   final String note;
@@ -48,6 +50,7 @@ class PartResult extends Equatable {
     required this.workoutId,
     required this.partId,
     required this.userId,
+    this.scoreType,
     this.status = ResultStatus.done,
     this.scoreText = '',
     this.note = '',
@@ -101,6 +104,7 @@ class PartResult extends Equatable {
     String? workoutId,
     String? partId,
     String? userId,
+    WorkoutScoreType? scoreType,
     ResultStatus? status,
     String? scoreText,
     String? note,
@@ -119,6 +123,7 @@ class PartResult extends Equatable {
       workoutId: workoutId ?? this.workoutId,
       partId: partId ?? this.partId,
       userId: userId ?? this.userId,
+      scoreType: scoreType ?? this.scoreType,
       status: status ?? this.status,
       scoreText: scoreText ?? this.scoreText,
       note: note ?? this.note,
@@ -140,6 +145,7 @@ class PartResult extends Equatable {
         workoutId,
         partId,
         userId,
+        scoreType,
         status,
         scoreText,
         note,

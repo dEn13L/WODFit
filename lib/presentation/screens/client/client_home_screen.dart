@@ -530,7 +530,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  '${p.type.displayName}: ',
+                                  '${p.type?.displayName ?? p.title}: ',
                                   style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                                 ),
                                 Text(

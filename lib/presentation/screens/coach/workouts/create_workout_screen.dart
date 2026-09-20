@@ -77,7 +77,12 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
       if (w.parts.isNotEmpty) {
         for (final p in w.parts) {
-          _addPart(p.type, p.scoreType, p.description, p.id);
+          _addPart(
+            p.type ?? WorkoutPartType.crossfitComplex,
+            p.scoreType ?? WorkoutScoreType.text,
+            p.description,
+            p.id,
+          );
         }
       } else {
         _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, '', null);

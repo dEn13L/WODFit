@@ -3,8 +3,8 @@ import '../../domain/entities/crossfit_workout.dart';
 class WorkoutPartModel {
   final String id;
   final String workoutId;
-  final String type;
-  final String scoreType;
+  final String? type;
+  final String? scoreType;
   final String title;
   final String description;
   final int sortOrder;
@@ -12,8 +12,8 @@ class WorkoutPartModel {
   const WorkoutPartModel({
     required this.id,
     required this.workoutId,
-    required this.type,
-    this.scoreType = 'text',
+    this.type,
+    this.scoreType,
     required this.title,
     this.description = '',
     this.sortOrder = 0,
@@ -23,9 +23,9 @@ class WorkoutPartModel {
     return WorkoutPartModel(
       id: json['id'] as String,
       workoutId: json['workout_id'] as String,
-      type: json['type'] as String,
-      scoreType: (json['score_type'] as String?) ?? 'text',
-      title: json['title'] as String,
+      type: json['type'] as String?,
+      scoreType: json['score_type'] as String?,
+      title: (json['title'] as String?) ?? '',
       description: (json['description'] as String?) ?? '',
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
     );
@@ -35,8 +35,8 @@ class WorkoutPartModel {
     return {
       'id': id,
       'workout_id': workoutId,
-      'type': type,
-      'score_type': scoreType,
+      if (type != null) 'type': type,
+      if (scoreType != null) 'score_type': scoreType,
       'title': title,
       'description': description,
       'sort_order': sortOrder,
@@ -47,8 +47,8 @@ class WorkoutPartModel {
     return WorkoutPart(
       id: id,
       workoutId: workoutId,
-      type: WorkoutPartType.fromString(type),
-      scoreType: WorkoutScoreType.fromString(scoreType),
+      type: type != null ? WorkoutPartType.fromString(type!) : null,
+      scoreType: scoreType != null ? WorkoutScoreType.fromString(scoreType) : null,
       title: title,
       description: description,
       sortOrder: sortOrder,
@@ -59,8 +59,8 @@ class WorkoutPartModel {
     return WorkoutPartModel(
       id: entity.id,
       workoutId: entity.workoutId,
-      type: entity.type.name,
-      scoreType: entity.scoreType.dbValue,
+      type: entity.type?.name,
+      scoreType: entity.scoreType?.dbValue,
       title: entity.title,
       description: entity.description,
       sortOrder: entity.sortOrder,

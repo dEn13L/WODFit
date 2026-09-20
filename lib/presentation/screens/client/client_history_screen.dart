@@ -488,29 +488,33 @@ class _HistoryWorkoutCard extends StatelessWidget {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(4),
+                            if (part.type != null) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  part.type!.displayName,
+                                  style: const TextStyle(fontSize: 11, color: AppColors.primaryNeon, fontWeight: FontWeight.bold),
+                                ),
                               ),
-                              child: Text(
-                                part.type.displayName,
-                                style: const TextStyle(fontSize: 11, color: AppColors.primaryNeon, fontWeight: FontWeight.bold),
+                              const SizedBox(width: 6),
+                            ],
+                            if (part.scoreType != null) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  part.scoreType!.displayName,
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                part.scoreType.displayName,
-                                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                              ),
-                            ),
+                            ],
                           ],
                         ),
                         if (part.description.isNotEmpty) ...[

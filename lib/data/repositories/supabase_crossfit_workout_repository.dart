@@ -135,8 +135,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
           final part = entry.value;
           return {
             'workout_id': workoutId,
-            'type': part.type.name,
-            'score_type': part.scoreType.dbValue,
+            'title': part.title.trim(),
             'description': part.description.trim(),
             'sort_order': index,
           };
@@ -216,8 +215,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
           final part = entry.value;
           final data = <String, dynamic>{
             'workout_id': id,
-            'type': part.type.name,
-            'score_type': part.scoreType.dbValue,
+            'title': part.title.trim(),
             'description': part.description.trim(),
             'sort_order': index,
           };
@@ -379,6 +377,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     required String partId,
     required ResultStatus status,
     required String scoreText,
+    WorkoutScoreType? scoreType,
     String note = '',
     int? timeMs,
     int? rounds,
@@ -398,6 +397,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
         'part_id': partId,
         'user_id': userId,
         'status': status.name,
+        'score_type': (scoreType ?? WorkoutScoreType.text).dbValue,
         'score_text': scoreText.trim(),
         'note': note.trim(),
         'time_ms': timeMs,

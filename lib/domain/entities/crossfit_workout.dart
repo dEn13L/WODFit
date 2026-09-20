@@ -131,8 +131,8 @@ enum WorkoutStatus {
 class WorkoutPart extends Equatable {
   final String id;
   final String workoutId;
-  final WorkoutPartType type;
-  final WorkoutScoreType scoreType;
+  final WorkoutPartType? type;
+  final WorkoutScoreType? scoreType;
   final String title;
   final String description;
   final int sortOrder;
@@ -140,8 +140,8 @@ class WorkoutPart extends Equatable {
   const WorkoutPart({
     required this.id,
     required this.workoutId,
-    required this.type,
-    this.scoreType = WorkoutScoreType.text,
+    this.type,
+    this.scoreType,
     required this.title,
     this.description = '',
     this.sortOrder = 0,
@@ -221,7 +221,12 @@ class CrossfitWorkout extends Equatable {
 
   String get workoutTypesSummary {
     if (parts.isEmpty) return 'Тренировка';
-    return parts.map((p) => p.type.displayName).toSet().join(', ');
+    final nonNullTypes = parts.map((p) => p.type).whereType<WorkoutPartType>().toList();
+    if (nonNullTypes.isEmpty) {
+      final titles = parts.map((p) => p.title.trim()).where((t) => t.isNotEmpty).toSet().toList();
+      return titles.isNotEmpty ? titles.join(', ') : 'Тренировка';
+    }
+    return nonNullTypes.map((t) => t.displayName).toSet().join(', ');
   }
 
   List<String> get assignedProgramIds => assignments.map((a) => a.programId).toList();

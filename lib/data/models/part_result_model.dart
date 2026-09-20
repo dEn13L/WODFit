@@ -1,3 +1,4 @@
+import '../../domain/entities/crossfit_workout.dart';
 import '../../domain/entities/part_result.dart';
 import 'user_profile_model.dart';
 
@@ -6,6 +7,7 @@ class PartResultModel {
   final String workoutId;
   final String partId;
   final String userId;
+  final String? scoreType;
   final String status;
   final String scoreText;
   final String note;
@@ -24,6 +26,7 @@ class PartResultModel {
     required this.workoutId,
     required this.partId,
     required this.userId,
+    this.scoreType,
     this.status = 'done',
     this.scoreText = '',
     this.note = '',
@@ -49,6 +52,7 @@ class PartResultModel {
       workoutId: json['workout_id'] as String,
       partId: json['part_id'] as String,
       userId: json['user_id'] as String,
+      scoreType: json['score_type'] as String?,
       status: (json['status'] as String?) ?? 'done',
       scoreText: (json['score_text'] as String?) ?? '',
       note: (json['note'] as String?) ?? '',
@@ -70,6 +74,7 @@ class PartResultModel {
       'workout_id': workoutId,
       'part_id': partId,
       'user_id': userId,
+      'score_type': scoreType,
       'status': status,
       'score_text': scoreText,
       'note': note,
@@ -90,6 +95,7 @@ class PartResultModel {
       workoutId: workoutId,
       partId: partId,
       userId: userId,
+      scoreType: scoreType != null ? WorkoutScoreType.fromString(scoreType) : WorkoutScoreType.text,
       status: ResultStatus.fromString(status),
       scoreText: scoreText,
       note: note,
@@ -102,6 +108,28 @@ class PartResultModel {
       createdAt: (DateTime.tryParse(createdAt) ?? DateTime.now()).toLocal(),
       updatedAt: (DateTime.tryParse(updatedAt) ?? DateTime.now()).toLocal(),
       userProfile: profile?.toDomain(),
+    );
+  }
+
+  factory PartResultModel.fromDomain(PartResult entity) {
+    return PartResultModel(
+      id: entity.id,
+      workoutId: entity.workoutId,
+      partId: entity.partId,
+      userId: entity.userId,
+      scoreType: entity.scoreType?.dbValue,
+      status: entity.status.name,
+      scoreText: entity.scoreText,
+      note: entity.note,
+      timeMs: entity.timeMs,
+      rounds: entity.rounds,
+      reps: entity.reps,
+      weightKg: entity.weightKg,
+      distanceM: entity.distanceM,
+      calories: entity.calories,
+      createdAt: entity.createdAt.toUtc().toIso8601String(),
+      updatedAt: entity.updatedAt.toUtc().toIso8601String(),
+      profile: entity.userProfile != null ? UserProfileModel.fromDomain(entity.userProfile!) : null,
     );
   }
 }

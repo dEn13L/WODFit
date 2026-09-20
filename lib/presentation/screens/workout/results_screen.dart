@@ -93,36 +93,40 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.surfaceLight,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          part.type.displayName,
-                                          style: const TextStyle(
-                                            color: AppColors.primaryNeon,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
+                                      if (part.type != null) ...[
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surfaceLight,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            part.type!.displayName,
+                                            style: const TextStyle(
+                                              color: AppColors.primaryNeon,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primaryNeon.withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          part.scoreType.displayName,
-                                          style: const TextStyle(
-                                            color: AppColors.primaryNeon,
-                                            fontSize: 11,
+                                        const SizedBox(width: 8),
+                                      ],
+                                      if (part.scoreType != null) ...[
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primaryNeon.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            part.scoreType!.displayName,
+                                            style: const TextStyle(
+                                              color: AppColors.primaryNeon,
+                                              fontSize: 11,
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                      ],
                                       const Spacer(),
                                       Text(
                                         'Блок ${index + 1}',
@@ -210,7 +214,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                                     ],
                                                   ),
                                                   const SizedBox(height: 4),
-                                                  if (part.scoreType != WorkoutScoreType.none || result.scoreText.isNotEmpty)
+                                                  if ((part.scoreType ?? WorkoutScoreType.text) != WorkoutScoreType.none || result.scoreText.isNotEmpty)
                                                     Text(
                                                       'Результат: ${result.formattedScore}',
                                                       style: const TextStyle(
