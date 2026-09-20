@@ -1,33 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/workout_date_formatter.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/theme/workout_form_theme.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../../domain/entities/training_program.dart';
+import '../../../../domain/repositories/crossfit_workout_repository.dart';
 import '../../../bloc/program/program_cubit.dart';
 import '../../../bloc/workout/crossfit_workout_cubit.dart';
+import '../../../bloc/workout_form/workout_form_cubit.dart';
+import 'widgets/dashed_rrect.dart';
+import 'widgets/workout_task_card.dart';
 
-class _EditablePart {
-  final String id;
-  WorkoutPartType type;
-  WorkoutScoreType scoreType;
-  final TextEditingController descriptionController;
-
-  _EditablePart({
-    required this.id,
-    this.type = WorkoutPartType.crossfitComplex,
-    this.scoreType = WorkoutScoreType.text,
-    String initialDescription = '',
-  }) : descriptionController = TextEditingController(text: initialDescription);
-
-  void dispose() {
-    descriptionController.dispose();
-  }
-}
-
-class CreateWorkoutScreen extends StatefulWidget {
+class CreateWorkoutScreen extends StatelessWidget {
   final CrossfitWorkout? workoutToEdit;
   final String? initialProgramId;
   final List<String>? initialProgramIds;
@@ -40,537 +25,623 @@ class CreateWorkoutScreen extends StatefulWidget {
   });
 
   @override
-  State<CreateWorkoutScreen> createState() => _CreateWorkoutScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider<WorkoutFormCubit>(
+      create: (ctx) => WorkoutFormCubit(
+        workoutRepository: ctx.read<CrossfitWorkoutRepository>(),
+        workoutToEdit: workoutToEdit,
+        initialProgramId: initialProgramId,
+        initialProgramIds: initialProgramIds,
+      ),
+      child: Theme(
+        data: workoutFormTheme,
+        child: const _CreateWorkoutView(),
+      ),
+    );
+  }
 }
 
-class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _titleController;
-  late final TextEditingController _descriptionController;
-  late DateTime _scheduledAt;
-  final Set<String> _selectedProgramIds = {};
-  final List<_EditablePart> _parts = [];
-  bool _isLoading = false;
+class _CreateWorkoutView extends StatefulWidget {
+  const _CreateWorkoutView();
+
+  @override
+  State<_CreateWorkoutView> createState() => _CreateWorkoutViewState();
+}
+
+class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
+  late final TextEditingController _sessionNameController;
+  bool _bannerShown = false;
 
   @override
   void initState() {
     super.initState();
+    _sessionNameController = TextEditingController();
     context.read<ProgramCubit>().loadCoachPrograms();
-
-    if (widget.initialProgramId != null) {
-      _selectedProgramIds.add(widget.initialProgramId!);
-    }
-    if (widget.initialProgramIds != null) {
-      _selectedProgramIds.addAll(widget.initialProgramIds!);
-    }
-
-    if (widget.workoutToEdit != null) {
-      final w = widget.workoutToEdit!;
-      _titleController = TextEditingController(text: w.title);
-      _descriptionController = TextEditingController(text: w.description);
-      _scheduledAt = w.scheduledAt.toLocal();
-      _selectedProgramIds.addAll(w.assignedProgramIds);
-
-      if (w.parts.isNotEmpty) {
-        for (final p in w.parts) {
-          _addPart(
-            p.type ?? WorkoutPartType.crossfitComplex,
-            p.scoreType ?? WorkoutScoreType.text,
-            p.description,
-            p.id,
-          );
-        }
-      } else {
-        _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, '', null);
-      }
-    } else {
-      _titleController = TextEditingController();
-      _descriptionController = TextEditingController();
-      _scheduledAt = DateTime.now();
-      // Pre-populate with default parts
-      _addPart(WorkoutPartType.warmup, WorkoutScoreType.none, 'Суставная гимнастика, 3 раунда...');
-      _addPart(WorkoutPartType.crossfitComplex, WorkoutScoreType.time, 'For Time: 21-15-9...');
-    }
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    for (final part in _parts) {
-      part.dispose();
-    }
+    _sessionNameController.dispose();
     super.dispose();
   }
 
-  void _addPart([
-    WorkoutPartType type = WorkoutPartType.crossfitComplex,
-    WorkoutScoreType scoreType = WorkoutScoreType.text,
-    String description = '',
-    String? id,
-  ]) {
-    setState(() {
-      _parts.add(_EditablePart(
-        id: id ?? const Uuid().v4(),
-        type: type,
-        scoreType: scoreType,
-        initialDescription: description,
-      ));
-    });
-  }
-
-  void _movePartUp(int index) {
-    if (index > 0) {
-      setState(() {
-        final item = _parts.removeAt(index);
-        _parts.insert(index - 1, item);
-      });
-    }
-  }
-
-  void _movePartDown(int index) {
-    if (index < _parts.length - 1) {
-      setState(() {
-        final item = _parts.removeAt(index);
-        _parts.insert(index + 1, item);
-      });
-    }
-  }
-
-  void _removePart(int index) {
-    if (_parts.length <= 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Тренировка должна содержать хотя бы один блок'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-    setState(() {
-      final removed = _parts.removeAt(index);
-      removed.dispose();
-    });
-  }
-
-  Future<void> _pickDateTime() async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _scheduledAt,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-
-    if (pickedDate == null || !mounted) return;
-
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_scheduledAt),
-    );
-
-    if (pickedTime == null || !mounted) return;
-
-    setState(() {
-      _scheduledAt = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-        pickedTime.hour,
-        pickedTime.minute,
-      );
-    });
-  }
-
-  Future<void> _submit({required bool publish}) async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    if (_parts.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Добавьте хотя бы одно задание или блок тренировки'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
-    if (publish && _selectedProgramIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Пожалуйста, выберите хотя бы одну программу для публикации тренировки'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    final workoutParts = _parts.asMap().entries.map((entry) {
-      final idx = entry.key;
-      final part = entry.value;
-      return WorkoutPart(
-        id: part.id,
-        workoutId: widget.workoutToEdit?.id ?? '',
-        type: part.type,
-        scoreType: part.scoreType,
-        title: part.type.displayName,
-        description: part.descriptionController.text.trim(),
-        sortOrder: idx,
-      );
-    }).toList();
-
-    bool success;
-    if (widget.workoutToEdit != null) {
-      final status = publish ? WorkoutStatus.published : widget.workoutToEdit!.status;
-      success = await context.read<CrossfitWorkoutCubit>().updateWorkout(
-            id: widget.workoutToEdit!.id,
-            title: _titleController.text.trim(),
-            description: _descriptionController.text.trim(),
-            scheduledAt: _scheduledAt,
-            parts: workoutParts,
-            programIds: _selectedProgramIds.toList(),
-            status: status,
-          );
+  String _formatPluralTasks(int count) {
+    final mod10 = count % 10;
+    final mod100 = count % 100;
+    if (mod10 == 1 && mod100 != 11) {
+      return '$count задание';
+    } else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+      return '$count задания';
     } else {
-      success = await context.read<CrossfitWorkoutCubit>().createWorkout(
-            title: _titleController.text.trim(),
-            description: _descriptionController.text.trim(),
-            scheduledAt: _scheduledAt,
-            parts: workoutParts,
-            programIds: _selectedProgramIds.toList(),
-            publish: publish,
-          );
+      return '$count заданий';
     }
+  }
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (success) {
-        context.pop();
-      }
+  Future<void> _pickDate(BuildContext context, WorkoutFormCubit cubit, DateTime initialDate) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+      builder: (context, child) {
+        return Theme(
+          data: workoutFormTheme,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+    );
+
+    if (picked != null) {
+      final updated = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        initialDate.hour,
+        initialDate.minute,
+      );
+      cubit.setDateTime(updated);
+    }
+  }
+
+  Future<void> _pickTime(BuildContext context, WorkoutFormCubit cubit, DateTime initialDate) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initialDate),
+      builder: (context, child) {
+        return Theme(
+          data: workoutFormTheme,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+    );
+
+    if (picked != null) {
+      final updated = DateTime(
+        initialDate.year,
+        initialDate.month,
+        initialDate.day,
+        picked.hour,
+        picked.minute,
+      );
+      cubit.setDateTime(updated);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.workoutToEdit != null ? 'Редактирование тренировки' : 'Создание тренировки'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Секция — "Назначить программам"
-                Text(
-                  'Назначить программам',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                BlocBuilder<ProgramCubit, ProgramState>(
-                  builder: (context, state) {
-                    if (state is ProgramLoaded) {
-                      if (state.programs.isEmpty) {
-                        return Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            'У вас пока нет программ. Вы сможете назначить тренировку позже или создать программу в разделе "Программы".',
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                          ),
-                        );
-                      }
+    return BlocConsumer<WorkoutFormCubit, WorkoutFormState>(
+      listenWhen: (previous, current) =>
+          previous.submitStatus != current.submitStatus ||
+          (!previous.hasCachedDraft && current.hasCachedDraft),
+      listener: (context, state) {
+        if (state.hasCachedDraft && !_bannerShown && !state.isEditMode) {
+          _bannerShown = true;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: WorkoutFormColors.text,
+              content: const Text(
+                'Найден сохранённый черновик тренировки.',
+                style: TextStyle(color: Colors.white),
+              ),
+              action: SnackBarAction(
+                label: 'Восстановить',
+                textColor: WorkoutFormColors.primary,
+                onPressed: () {
+                  context.read<WorkoutFormCubit>().restoreCachedDraft();
+                  _sessionNameController.text =
+                      context.read<WorkoutFormCubit>().state.sessionName;
+                },
+              ),
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
 
-                      return Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: state.programs.map((program) {
-                          final isSelected = _selectedProgramIds.contains(program.id);
-                          return FilterChip(
-                            avatar: Icon(
-                              program.kind == ProgramKind.personal ? Icons.person : Icons.groups,
-                              size: 16,
-                              color: isSelected ? Colors.black : AppColors.primaryNeon,
-                            ),
-                            label: Text('${program.name} (${program.kind.displayName})'),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  _selectedProgramIds.add(program.id);
-                                } else {
-                                  _selectedProgramIds.remove(program.id);
-                                }
-                              });
-                            },
-                            selectedColor: AppColors.primaryNeon,
-                            checkmarkColor: Colors.black,
-                            labelStyle: TextStyle(
-                              color: isSelected ? Colors.black : AppColors.textPrimary,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            ),
-                            backgroundColor: AppColors.surface,
-                          );
-                        }).toList(),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-                const SizedBox(height: 24),
+        if (state.submitStatus == WorkoutFormSubmitStatus.error &&
+            state.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage!),
+              backgroundColor: WorkoutFormColors.publishButton,
+            ),
+          );
+        } else if (state.submitStatus == WorkoutFormSubmitStatus.success) {
+          context.read<CrossfitWorkoutCubit>().loadCoachWorkouts();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.successMessage ?? 'Успешно сохранено'),
+              backgroundColor: const Color(0xFF10B981),
+            ),
+          );
+          context.pop();
+        }
+      },
+      builder: (context, formState) {
+        if (_sessionNameController.text != formState.sessionName &&
+            _sessionNameController.text.isEmpty &&
+            formState.sessionName.isNotEmpty) {
+          _sessionNameController.text = formState.sessionName;
+        }
 
-                // 2. Секци�� — "Основная информация"
-                Text(
-                  'Основная информация',
-                  style: Theme.of(context).textTheme.titleLarge,
+        final cubit = context.read<WorkoutFormCubit>();
+        final isSubmitting =
+            formState.submitStatus == WorkoutFormSubmitStatus.loading;
+
+        return Scaffold(
+          backgroundColor: WorkoutFormColors.background,
+          appBar: AppBar(
+            backgroundColor: WorkoutFormColors.background,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leading: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                size: 20,
+                color: WorkoutFormColors.text,
+              ),
+              onPressed: () => context.pop(),
+            ),
+            actions: [
+              // Text button "Черновик"
+              TextButton.icon(
+                onPressed: isSubmitting ? null : () => cubit.saveDraft(),
+                icon: const Icon(
+                  Icons.folder_outlined,
+                  size: 18,
+                  color: WorkoutFormColors.draftButton,
                 ),
-                const SizedBox(height: 12),
-                // а) Плитка "Дата и время проведения"
-                InkWell(
-                  onTap: _pickDateTime,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
+                label: const Text(
+                  'Черновик',
+                  style: TextStyle(
+                    color: WorkoutFormColors.draftButton,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Capsule button "Опубликовать"
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: ElevatedButton(
+                  onPressed: isSubmitting ? null : () => cubit.publishWorkout(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: WorkoutFormColors.publishButton,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 8,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today, color: AppColors.primaryNeon),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Дата и время проведения', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                const SizedBox(height: 2),
-                                Text(
-                                  WorkoutDateFormatter.formatDetail(_scheduledAt),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                              ],
-                            ),
-                          ],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Опубликовать',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        const Icon(Icons.edit, size: 18, color: AppColors.textSecondary),
-                      ],
-                    ),
-                  ),
                 ),
-                const SizedBox(height: 12),
-                // б) Поле "Уточнение (опционально)"
-                TextFormField(
-                  controller: _titleController,
-                  maxLength: 40,
-                  decoration: InputDecoration(
-                    labelText: 'Уточнение (опционально)',
-                    hintText: 'Утро, Вечер, Сессия 1…',
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    counterText: '',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // в) Поле "Описание / задачи (опционально)"
-                TextFormField(
-                  controller: _descriptionController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    labelText: 'Описание / задачи (опционально)',
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  ),
-                ),
-                const SizedBox(height: 28),
+              ),
+            ],
+          ),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: CustomScrollView(
+                slivers: [
+                  // Top section (Title, Programs, Date/Time, Session name, Tasks header)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 4. Header title
+                          Text(
+                            formState.isEditMode
+                                ? 'Редактирование\nтренировки'
+                                : 'Создание\nтренировки',
+                            style: const TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
+                              color: WorkoutFormColors.text,
+                              height: 1.15,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
 
-                // 3. Секция — "Блоки тренировки"
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Блоки тренировки',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    TextButton.icon(
-                      onPressed: () => _addPart(),
-                      icon: const Icon(Icons.add, color: AppColors.primaryNeon),
-                      label: const Text('＋ Добавить блок', style: TextStyle(color: AppColors.primaryNeon, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ReorderableListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _parts.length,
-                  // ignore: deprecated_member_use
-                  onReorder: (oldIndex, newIndex) {
-                    setState(() {
-                      if (oldIndex < newIndex) {
-                        newIndex -= 1;
-                      }
-                      final item = _parts.removeAt(oldIndex);
-                      _parts.insert(newIndex, item);
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    final part = _parts[index];
-                    return Card(
-                      key: ValueKey(part.id),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.drag_handle, color: AppColors.textSecondary),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          // 5. Section "НАЗНАЧИТЬ ПРОГРАММАМ"
+                          const Text(
+                            'НАЗНАЧИТЬ ПРОГРАММАМ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: WorkoutFormColors.textMuted,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          BlocBuilder<ProgramCubit, ProgramState>(
+                            builder: (context, programState) {
+                              final programs = programState is ProgramLoaded
+                                  ? programState.programs
+                                  : <TrainingProgram>[];
+
+                              if (programs.isEmpty) {
+                                return Container(
+                                  padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primaryNeon.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppColors.primaryNeon.withValues(alpha: 0.4)),
-                                  ),
-                                  child: Text(
-                                    part.type.displayName,
-                                    style: const TextStyle(
-                                      color: AppColors.primaryNeon,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: WorkoutFormColors.border,
                                     ),
                                   ),
+                                  child: const Text(
+                                    'У вас пока нет созданных программ. Тренировка сохранится в черновик.',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: WorkoutFormColors.hint,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              return Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: programs.map((program) {
+                                  final isSelected = formState
+                                      .selectedProgramIds
+                                      .contains(program.id);
+
+                                  return InkWell(
+                                    onTap: () => cubit.toggleProgram(program.id),
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? WorkoutFormColors.primary
+                                            : Colors.white,
+                                        borderRadius:
+                                            BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? WorkoutFormColors.primary
+                                              : WorkoutFormColors.border,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            program.name,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : WorkoutFormColors.text,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+
+                          // 6. Row 50/50: Date & Time
+                          Row(
+                            children: [
+                              // Date field
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'ДАТА',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: WorkoutFormColors.textMuted,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    InkWell(
+                                      onTap: () => _pickDate(
+                                        context,
+                                        cubit,
+                                        formState.scheduledAt,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: WorkoutFormColors.border,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              DateFormat('dd.MM.yyyy')
+                                                  .format(formState.scheduledAt),
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: WorkoutFormColors.text,
+                                              ),
+                                            ),
+                                            const Icon(
+                                              Icons.calendar_today_outlined,
+                                              size: 18,
+                                              color: WorkoutFormColors.hint,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const Spacer(),
-                                IconButton(
-                                  icon: const Icon(Icons.arrow_upward, size: 20),
-                                  tooltip: 'Переместить выше',
-                                  onPressed: index > 0 ? () => _movePartUp(index) : null,
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Time field
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'ВРЕМЯ',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: WorkoutFormColors.textMuted,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    InkWell(
+                                      onTap: () => _pickTime(
+                                        context,
+                                        cubit,
+                                        formState.scheduledAt,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: WorkoutFormColors.border,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              DateFormat('HH:mm')
+                                                  .format(formState.scheduledAt),
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: WorkoutFormColors.text,
+                                              ),
+                                            ),
+                                            const Icon(
+                                              Icons.access_time,
+                                              size: 18,
+                                              color: WorkoutFormColors.hint,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.arrow_downward, size: 20),
-                                  tooltip: 'Переместить ниже',
-                                  onPressed: index < _parts.length - 1 ? () => _movePartDown(index) : null,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Session Name field
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'УТОЧНЕНИЕ (НЕОБЯЗАТЕЛЬНО)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: WorkoutFormColors.textMuted,
+                                  letterSpacing: 0.8,
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                                  tooltip: 'Удалить блок',
-                                  onPressed: () => _removePart(index),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _sessionNameController,
+                                maxLength: 40,
+                                onChanged: (value) =>
+                                    cubit.setSessionName(value),
+                                decoration: const InputDecoration(
+                                  hintText: 'например: Утро, Вечер, Сессия 1',
+                                  counterText: '',
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 28),
+
+                          // 7. Section header: "ЗАДАНИЯ ТРЕНИРОВКИ" + Pill counter
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'ЗАДАНИЯ ТРЕНИРОВКИ',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: WorkoutFormColors.textMuted,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE2E8F0),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _formatPluralTasks(formState.tasks.length),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF475569),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // 8. SliverReorderableList for Task Cards
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverReorderableList(
+                      itemCount: formState.tasks.length,
+                      onReorderItem: (oldIndex, newIndex) {
+                        cubit.reorderTasks(oldIndex, newIndex);
+                      },
+                      itemBuilder: (context, index) {
+                        final task = formState.tasks[index];
+                        return WorkoutTaskCard(
+                          key: ValueKey(task.id),
+                          task: task,
+                          index: index,
+                          onDelete: () => cubit.removeTask(task.id),
+                          onTitleChanged: (title) =>
+                              cubit.setTaskTitle(task.id, title),
+                          onDescriptionChanged: (desc) =>
+                              cubit.setTaskDescription(task.id, desc),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // 11. Add Task Button (Dashed border)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
+                      child: InkWell(
+                        onTap: () => cubit.addTask(),
+                        borderRadius: BorderRadius.circular(16),
+                        child: CustomPaint(
+                          painter: const DashedRRectPainter(
+                            color: WorkoutFormColors.border,
+                            strokeWidth: 1.5,
+                            radius: 16,
+                          ),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.add_circle_outline,
+                                  size: 24,
+                                  color: WorkoutFormColors.textMuted,
+                                ),
+                                SizedBox(height: 6),
+                                Text(
+                                  'ДОБАВИТЬ ЗАДАНИЕ',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: WorkoutFormColors.textMuted,
+                                    letterSpacing: 0.8,
+                                  ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<WorkoutPartType>(
-                              initialValue: part.type,
-                              decoration: InputDecoration(
-                                labelText: 'Тип тренировки',
-                                filled: true,
-                                fillColor: AppColors.surfaceLight,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                              ),
-                              items: WorkoutPartType.values.map((type) {
-                                return DropdownMenuItem(
-                                  value: type,
-                                  child: Text(type.displayName),
-                                );
-                              }).toList(),
-                              onChanged: (newType) {
-                                if (newType != null) {
-                                  setState(() {
-                                    part.type = newType;
-                                  });
-                                }
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<WorkoutScoreType>(
-                              initialValue: part.scoreType,
-                              decoration: InputDecoration(
-                                labelText: 'Тип результата (Score Type)',
-                                filled: true,
-                                fillColor: AppColors.surfaceLight,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                              ),
-                              items: WorkoutScoreType.values.map((st) {
-                                return DropdownMenuItem(
-                                  value: st,
-                                  child: Text(st.displayName),
-                                );
-                              }).toList(),
-                              onChanged: (newScoreType) {
-                                if (newScoreType != null) {
-                                  setState(() {
-                                    part.scoreType = newScoreType;
-                                  });
-                                }
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            TextFormField(
-                              controller: part.descriptionController,
-                              maxLines: 3,
-                              decoration: InputDecoration(
-                                labelText: 'Задание / Описание / Схема',
-                                hintText: 'например: EMOM 10 min:\n- 3 Power Snatch\n- 5 Overhead Squat',
-                                filled: true,
-                                fillColor: AppColors.surfaceLight,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // 4. Sticky-низ с действиями
-                ElevatedButton(
-                  onPressed: _isLoading ? null : () => _submit(publish: true),
-                  child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                      : const Text('Опубликовать тренировку'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: _isLoading ? null : () => _submit(publish: false),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: const BorderSide(color: AppColors.surfaceLight),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
                   ),
-                  child: const Text('Сохранить как черновик'),
-                ),
-                const SizedBox(height: 32),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
