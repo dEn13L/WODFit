@@ -52,6 +52,18 @@ class WorkoutDateFormatter {
     return '$base (${label.trim()})';
   }
 
+  /// Формат дня без времени:
+  /// "Четверг, 23 сентября 2026"
+  static String formatDay(DateTime dateTime, [String? label]) {
+    final local = dateTime.toLocal();
+    final weekday = _weekdaysFull[local.weekday];
+    final day = local.day;
+    final month = _monthsGenitive[local.month];
+    final year = local.year;
+    final base = '$weekday, $day $month $year';
+    return _appendLabel(base, label);
+  }
+
   /// Формат для деталей:
   /// "Вторник, 22 сентября, 07:00" или "Вторник, 22 сентября, 07:00 (Сессия 1)"
   static String formatDetail(DateTime dateTime, [String? label]) {

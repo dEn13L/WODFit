@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/workout_form_theme.dart';
 import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
@@ -52,6 +53,382 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     final authState = context.watch<AuthBloc>().state;
     final isCoach = authState is Authenticated && authState.user.isCoach;
 
+    if (isCoach) {
+      return Theme(
+        data: workoutFormTheme,
+        child: _CoachWorkoutDetailView(workoutId: widget.workoutId),
+      );
+    }
+
+    return _ClientWorkoutDetailView(
+      workoutId: widget.workoutId,
+      showResultDialog: _showResultDialog,
+    );
+  }
+}
+
+class _CoachWorkoutDetailView extends StatelessWidget {
+  final String workoutId;
+
+  const _CoachWorkoutDetailView({required this.workoutId});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<CrossfitWorkoutCubit, CrossfitWorkoutState>(
+      listener: (context, state) {
+        if (state is CrossfitWorkoutError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: WorkoutFormColors.publishButton,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        if (state is CrossfitWorkoutLoading) {
+          return const Scaffold(
+            backgroundColor: WorkoutFormColors.background,
+            body: Center(
+              child: CircularProgressIndicator(color: WorkoutFormColors.primary),
+            ),
+          );
+        }
+
+        if (state is CrossfitWorkoutDetailLoaded) {
+          final workout = state.workout;
+
+          return Scaffold(
+            backgroundColor: WorkoutFormColors.background,
+            appBar: AppBar(
+              backgroundColor: WorkoutFormColors.background,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: WorkoutFormColors.text),
+                onPressed: () => context.pop(),
+              ),
+              actions: [
+                IconButton(
+                  tooltip: 'Редактировать',
+                  icon: const Icon(Icons.edit_outlined, color: WorkoutFormColors.text),
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (ctx) => CreateWorkoutScreen(workoutToEdit: workout),
+                      ),
+                    );
+                    if (context.mounted) {
+                      context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(workout.id);
+                    }
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Дублировать',
+                  icon: const Icon(Icons.copy_outlined, color: WorkoutFormColors.text),
+                  onPressed: () async {
+                    final cubit = context.read<CrossfitWorkoutCubit>();
+                    final messenger = ScaffoldMessenger.of(context);
+                    final ok = await cubit.duplicateWorkout(workout.id);
+                    if (ok && context.mounted) {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Тренировка продублирована'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Удалить',
+                  icon: const Icon(Icons.delete_outline, color: WorkoutFormColors.publishButton),
+                  onPressed: () async {
+                    final cubit = context.read<CrossfitWorkoutCubit>();
+                    final messenger = ScaffoldMessenger.of(context);
+                    final router = GoRouter.of(context);
+
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (dCtx) => Theme(
+                        data: workoutFormTheme,
+                        child: AlertDialog(
+                          backgroundColor: WorkoutFormColors.card,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          title: const Text(
+                            'Удалить тренировку?',
+                            style: TextStyle(
+                              color: WorkoutFormColors.text,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          content: Text(
+                            'Вы действительно хотите удалить тренировку "${WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title)}"?\n\n'
+                            'Все данные тренировки, назначения и внесенные результаты участников будут безвозвратно удалены.',
+                            style: const TextStyle(color: WorkoutFormColors.text),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(dCtx).pop(false),
+                              child: const Text('Отмена', style: TextStyle(color: WorkoutFormColors.textMuted)),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: WorkoutFormColors.publishButton,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () => Navigator.of(dCtx).pop(true),
+                              child: const Text('Удалить'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      final ok = await cubit.deleteWorkout(workout.id);
+                      if (ok && context.mounted) {
+                        router.pop();
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Тренировка удалена'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Row 1: Date + Draft badge
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          WorkoutDateFormatter.formatDay(workout.scheduledAt),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: WorkoutFormColors.text,
+                          ),
+                        ),
+                      ),
+                      if (workout.status == WorkoutStatus.draft) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFF59E0B)),
+                          ),
+                          child: const Text(
+                            'Черновик',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFD97706),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  // Row 2: Time
+                  Text(
+                    WorkoutDateFormatter.formatTime(workout.scheduledAt),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: WorkoutFormColors.text,
+                    ),
+                  ),
+                  // Row 3: Session note / title
+                  if (workout.title.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      workout.title.trim(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: WorkoutFormColors.textMuted,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+
+                  // Label: ЗАДАНИЯ ТРЕНИРОВКИ
+                  const Text(
+                    'ЗАДАНИЯ ТРЕНИРОВКИ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: WorkoutFormColors.textMuted,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  // Assigned programs chips under label
+                  if (workout.assignments.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: workout.assignments.map((a) {
+                        final programTitle = a.programName ?? 'Программа';
+                        return InkWell(
+                          onTap: () => context.push('/coach/programs/${a.programId}'),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: WorkoutFormColors.border),
+                            ),
+                            child: Text(
+                              programTitle,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: WorkoutFormColors.text,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+
+                  // Tasks list
+                  if (workout.parts.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: WorkoutFormColors.card,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: WorkoutFormColors.border),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'В этой тренировке пока нет заданий',
+                          style: TextStyle(color: WorkoutFormColors.textMuted, fontSize: 14),
+                        ),
+                      ),
+                    )
+                  else
+                    ...workout.parts.map((part) {
+                      final taskTitle = part.title.trim().isNotEmpty
+                          ? part.title.trim()
+                          : (part.type?.displayName ?? 'Задание');
+
+                      return Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: WorkoutFormColors.card,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: WorkoutFormColors.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              taskTitle,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: WorkoutFormColors.text,
+                              ),
+                            ),
+                            if (part.description.trim().isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                part.description.trim(),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: WorkoutFormColors.text,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
+
+                  const SizedBox(height: 20),
+                  // Button: Результаты участников
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: WorkoutFormColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      onPressed: () => context.push('/workout/${workout.id}/results'),
+                      child: const Text(
+                        'Результаты участников',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: WorkoutFormColors.background,
+          appBar: AppBar(
+            backgroundColor: WorkoutFormColors.background,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: WorkoutFormColors.text),
+              onPressed: () => context.pop(),
+            ),
+          ),
+          body: const Center(
+            child: Text('Тренировка не найдена', style: TextStyle(color: WorkoutFormColors.textMuted)),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ClientWorkoutDetailView extends StatelessWidget {
+  final String workoutId;
+  final void Function(WorkoutPart part, PartResult? existingResult) showResultDialog;
+
+  const _ClientWorkoutDetailView({
+    required this.workoutId,
+    required this.showResultDialog,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Тренировка'),
@@ -63,103 +440,8 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
           IconButton(
             tooltip: 'Результаты атлетов',
             icon: const Icon(Icons.leaderboard_outlined, color: AppColors.primaryNeon),
-            onPressed: () => context.push('/workout/${widget.workoutId}/results'),
+            onPressed: () => context.push('/workout/$workoutId/results'),
           ),
-          if (isCoach)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) async {
-                final cubit = context.read<CrossfitWorkoutCubit>();
-                final messenger = ScaffoldMessenger.of(context);
-                final router = GoRouter.of(context);
-                final state = cubit.state;
-                if (state is! CrossfitWorkoutDetailLoaded) return;
-                final workout = state.workout;
-
-                if (value == 'edit') {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (ctx) => CreateWorkoutScreen(workoutToEdit: workout),
-                    ),
-                  );
-                  if (mounted) {
-                    cubit.loadWorkoutDetails(widget.workoutId);
-                  }
-                } else if (value == 'duplicate') {
-                  final ok = await cubit.duplicateWorkout(workout.id);
-                  if (ok) {
-                    messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Копия тренировки успешно создана в черновиках'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  }
-                } else if (value == 'delete') {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (dCtx) => AlertDialog(
-                      backgroundColor: AppColors.surface,
-                      title: const Text('Удалить тренировку?'),
-                      content: Text(
-                        'Вы действительно хотите удалить тренировку "${WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title)}"?\n\n'
-                        'Все данные тренировки, назначения и внесенные результаты участников будут безвозвратно удалены.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(dCtx).pop(false),
-                          child: const Text('Отмена'),
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                          onPressed: () => Navigator.of(dCtx).pop(true),
-                          child: const Text('Удалить'),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (confirm == true) {
-                    final ok = await cubit.deleteWorkout(workout.id);
-                    if (ok) {
-                      router.pop();
-                    }
-                  }
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit_outlined, size: 18),
-                      SizedBox(width: 8),
-                      Text('Редактировать'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'duplicate',
-                  child: Row(
-                    children: [
-                      Icon(Icons.copy_outlined, size: 18),
-                      SizedBox(width: 8),
-                      Text('Дублировать'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                      SizedBox(width: 8),
-                      Text('Удалить тренировку', style: TextStyle(color: AppColors.error)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
         ],
       ),
       body: BlocConsumer<CrossfitWorkoutCubit, CrossfitWorkoutState>(
@@ -246,19 +528,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                                   visualDensity: VisualDensity.compact,
                                 );
                               }).toList(),
-                            ),
-                          ],
-                          if (isCoach && !workout.isPublished) ...[
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                icon: const Icon(Icons.publish),
-                                label: const Text('Опубликовать для атлетов'),
-                                onPressed: () {
-                                  context.read<CrossfitWorkoutCubit>().publishWorkout(workout.id);
-                                },
-                              ),
                             ),
                           ],
                         ],
@@ -375,7 +644,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                                       TextButton.icon(
                                         icon: const Icon(Icons.edit, size: 16),
                                         label: const Text('Изменить'),
-                                        onPressed: () => _showResultDialog(part, userResult),
+                                        onPressed: () => showResultDialog(part, userResult),
                                       ),
                                     ],
                                   ),
@@ -394,7 +663,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                           textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                                         ),
-                                        onPressed: () => _showResultDialog(part, null),
+                                        onPressed: () => showResultDialog(part, null),
                                       ),
                                     ],
                                   ),
@@ -429,7 +698,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                     ElevatedButton.icon(
                       icon: const Icon(Icons.refresh),
                       label: const Text('Повторить попытку'),
-                      onPressed: () => context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(widget.workoutId),
+                      onPressed: () => context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(workoutId),
                     ),
                   ],
                 ),
