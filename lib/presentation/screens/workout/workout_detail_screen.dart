@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/theme/workout_form_theme.dart';
+import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
@@ -34,7 +33,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -54,10 +52,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     final isCoach = authState is Authenticated && authState.user.isCoach;
 
     if (isCoach) {
-      return Theme(
-        data: workoutFormTheme,
-        child: _CoachWorkoutDetailView(workoutId: widget.workoutId),
-      );
+      return _CoachWorkoutDetailView(workoutId: widget.workoutId);
     }
 
     return _ClientWorkoutDetailView(
@@ -74,23 +69,26 @@ class _CoachWorkoutDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     return BlocConsumer<CrossfitWorkoutCubit, CrossfitWorkoutState>(
       listener: (context, state) {
         if (state is CrossfitWorkoutError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: WorkoutFormColors.publishButton,
+              backgroundColor: appTheme.destructive,
             ),
           );
         }
       },
       builder: (context, state) {
         if (state is CrossfitWorkoutLoading) {
-          return const Scaffold(
-            backgroundColor: WorkoutFormColors.background,
+          return Scaffold(
             body: Center(
-              child: CircularProgressIndicator(color: WorkoutFormColors.primary),
+              child: CircularProgressIndicator(color: colorScheme.primary),
             ),
           );
         }
@@ -99,19 +97,15 @@ class _CoachWorkoutDetailView extends StatelessWidget {
           final workout = state.workout;
 
           return Scaffold(
-            backgroundColor: WorkoutFormColors.background,
             appBar: AppBar(
-              backgroundColor: WorkoutFormColors.background,
-              elevation: 0,
-              scrolledUnderElevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: WorkoutFormColors.text),
+                icon: Icon(Icons.arrow_back_ios_new, size: 20, color: colorScheme.onSurface),
                 onPressed: () => context.pop(),
               ),
               actions: [
                 IconButton(
                   tooltip: 'Редактировать',
-                  icon: const Icon(Icons.edit_outlined, color: WorkoutFormColors.text),
+                  icon: Icon(Icons.edit_outlined, color: colorScheme.onSurface),
                   onPressed: () async {
                     await Navigator.of(context).push(
                       MaterialPageRoute(
@@ -125,16 +119,16 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                 ),
                 IconButton(
                   tooltip: 'Дублировать',
-                  icon: const Icon(Icons.copy_outlined, color: WorkoutFormColors.text),
+                  icon: Icon(Icons.copy_outlined, color: colorScheme.onSurface),
                   onPressed: () async {
                     final cubit = context.read<CrossfitWorkoutCubit>();
                     final messenger = ScaffoldMessenger.of(context);
                     final ok = await cubit.duplicateWorkout(workout.id);
                     if (ok && context.mounted) {
                       messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Тренировка продублирована'),
-                          backgroundColor: AppColors.success,
+                        SnackBar(
+                          content: const Text('Тренировка продублирована'),
+                          backgroundColor: appTheme.success,
                         ),
                       );
                     }
@@ -142,7 +136,7 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                 ),
                 IconButton(
                   tooltip: 'Удалить',
-                  icon: const Icon(Icons.delete_outline, color: WorkoutFormColors.publishButton),
+                  icon: Icon(Icons.delete_outline, color: appTheme.destructive),
                   onPressed: () async {
                     final cubit = context.read<CrossfitWorkoutCubit>();
                     final messenger = ScaffoldMessenger.of(context);
@@ -150,39 +144,36 @@ class _CoachWorkoutDetailView extends StatelessWidget {
 
                     final confirm = await showDialog<bool>(
                       context: context,
-                      builder: (dCtx) => Theme(
-                        data: workoutFormTheme,
-                        child: AlertDialog(
-                          backgroundColor: WorkoutFormColors.card,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          title: const Text(
-                            'Удалить тренировку?',
-                            style: TextStyle(
-                              color: WorkoutFormColors.text,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      builder: (dCtx) => AlertDialog(
+                        backgroundColor: colorScheme.surface,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: Text(
+                          'Удалить тренировку?',
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
                           ),
-                          content: Text(
-                            'Вы действительно хотите удалить тренировку "${WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title)}"?\n\n'
-                            'Все данные тренировки, назначения и внесенные результаты участников будут безвозвратно удалены.',
-                            style: const TextStyle(color: WorkoutFormColors.text),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(dCtx).pop(false),
-                              child: const Text('Отмена', style: TextStyle(color: WorkoutFormColors.textMuted)),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: WorkoutFormColors.publishButton,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
-                              onPressed: () => Navigator.of(dCtx).pop(true),
-                              child: const Text('Удалить'),
-                            ),
-                          ],
                         ),
+                        content: Text(
+                          'Вы действительно хотите удалить тренировку "${WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title)}"?\n\n'
+                          'Все данные тренировки, назначения и внесенные результаты участников будут безвозвратно удалены.',
+                          style: TextStyle(color: colorScheme.onSurface),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dCtx).pop(false),
+                            child: Text('Отмена', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: appTheme.destructive,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () => Navigator.of(dCtx).pop(true),
+                            child: const Text('Удалить'),
+                          ),
+                        ],
                       ),
                     );
 
@@ -191,9 +182,9 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                       if (ok && context.mounted) {
                         router.pop();
                         messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Тренировка удалена'),
-                            backgroundColor: AppColors.success,
+                          SnackBar(
+                            content: const Text('Тренировка удалена'),
+                            backgroundColor: appTheme.success,
                           ),
                         );
                       }
@@ -214,11 +205,15 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                       Expanded(
                         child: Text(
                           WorkoutDateFormatter.formatDay(workout.scheduledAt),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: WorkoutFormColors.text,
-                          ),
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ) ??
+                              TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
                         ),
                       ),
                       if (workout.status == WorkoutStatus.draft) ...[
@@ -226,16 +221,16 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFEF3C7),
+                            color: appTheme.draft.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFF59E0B)),
+                            border: Border.all(color: appTheme.draft),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Черновик',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFFD97706),
+                              color: appTheme.draft,
                             ),
                           ),
                         ),
@@ -246,10 +241,10 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                   // Row 2: Time
                   Text(
                     WorkoutDateFormatter.formatTime(workout.scheduledAt),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: WorkoutFormColors.text,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   // Row 3: Session note / title
@@ -257,21 +252,21 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       workout.title.trim(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: WorkoutFormColors.textMuted,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                   const SizedBox(height: 24),
 
                   // Label: ЗАДАНИЯ ТРЕНИРОВКИ
-                  const Text(
+                  Text(
                     'ЗАДАНИЯ ТРЕНИРОВКИ',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: WorkoutFormColors.textMuted,
+                      color: colorScheme.onSurfaceVariant,
                       letterSpacing: 0.8,
                     ),
                   ),
@@ -289,16 +284,16 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: WorkoutFormColors.border),
+                              border: Border.all(color: colorScheme.outlineVariant),
                             ),
                             child: Text(
                               programTitle,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
-                                color: WorkoutFormColors.text,
+                                color: colorScheme.primary,
                               ),
                             ),
                           ),
@@ -314,14 +309,14 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: WorkoutFormColors.card,
+                        color: theme.cardTheme.color ?? colorScheme.surface,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: WorkoutFormColors.border),
+                        border: Border.all(color: colorScheme.outlineVariant),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
                           'В этой тренировке пока нет заданий',
-                          style: TextStyle(color: WorkoutFormColors.textMuted, fontSize: 14),
+                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
                         ),
                       ),
                     )
@@ -336,28 +331,28 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: WorkoutFormColors.card,
+                          color: theme.cardTheme.color ?? colorScheme.surface,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: WorkoutFormColors.border),
+                          border: Border.all(color: colorScheme.outlineVariant),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               taskTitle,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: WorkoutFormColors.text,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             if (part.description.trim().isNotEmpty) ...[
                               const SizedBox(height: 8),
                               Text(
                                 part.description.trim(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
-                                  color: WorkoutFormColors.text,
+                                  color: colorScheme.onSurfaceVariant,
                                   height: 1.45,
                                 ),
                               ),
@@ -374,9 +369,6 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                     height: 50,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: WorkoutFormColors.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(999),
                         ),
@@ -387,7 +379,6 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -400,17 +391,14 @@ class _CoachWorkoutDetailView extends StatelessWidget {
         }
 
         return Scaffold(
-          backgroundColor: WorkoutFormColors.background,
           appBar: AppBar(
-            backgroundColor: WorkoutFormColors.background,
-            elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: WorkoutFormColors.text),
+              icon: Icon(Icons.arrow_back_ios_new, size: 20, color: colorScheme.onSurface),
               onPressed: () => context.pop(),
             ),
           ),
-          body: const Center(
-            child: Text('Тренировка не найдена', style: TextStyle(color: WorkoutFormColors.textMuted)),
+          body: Center(
+            child: Text('Тренировка не найдена', style: TextStyle(color: colorScheme.onSurfaceVariant)),
           ),
         );
       },
@@ -429,6 +417,10 @@ class _ClientWorkoutDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Тренировка'),
@@ -439,7 +431,7 @@ class _ClientWorkoutDetailView extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Результаты атлетов',
-            icon: const Icon(Icons.leaderboard_outlined, color: AppColors.primaryNeon),
+            icon: Icon(Icons.leaderboard_outlined, color: colorScheme.primary),
             onPressed: () => context.push('/workout/$workoutId/results'),
           ),
         ],
@@ -450,14 +442,14 @@ class _ClientWorkoutDetailView extends StatelessWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: AppColors.error,
+                backgroundColor: appTheme.destructive,
               ),
             );
           }
         },
         builder: (context, state) {
           if (state is CrossfitWorkoutLoading) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primaryNeon));
+            return Center(child: CircularProgressIndicator(color: colorScheme.primary));
           }
 
           if (state is CrossfitWorkoutDetailLoaded) {
@@ -486,7 +478,7 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                                 child: Text(
                                   WorkoutDateFormatter.formatDetail(workout.scheduledAt, workout.title),
                                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                        color: AppColors.primaryNeon,
+                                        color: colorScheme.primary,
                                         fontWeight: FontWeight.bold,
                                       ),
                                 ),
@@ -496,16 +488,16 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppColors.accentOrange.withValues(alpha: 0.2),
+                                    color: appTheme.draft.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppColors.accentOrange),
+                                    border: Border.all(color: appTheme.draft),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     'Черновик',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
-                                      color: AppColors.accentOrange,
+                                      color: appTheme.draft,
                                     ),
                                   ),
                                 ),
@@ -514,9 +506,9 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                           ),
                           if (workout.assignments.isNotEmpty) ...[
                             const SizedBox(height: 14),
-                            const Text(
+                            Text(
                               'Назначено программам:',
-                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold),
+                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 6),
                             Wrap(
@@ -524,7 +516,7 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                               children: workout.assignments.map((a) {
                                 return Chip(
                                   label: Text(a.programName ?? 'Программа', style: const TextStyle(fontSize: 11)),
-                                  backgroundColor: AppColors.surfaceLight,
+                                  backgroundColor: colorScheme.surfaceContainerHighest,
                                   visualDensity: VisualDensity.compact,
                                 );
                               }).toList(),
@@ -546,8 +538,8 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                         icon: const Icon(Icons.people_outline, size: 18),
                         label: const Text('Результаты'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primaryNeon,
-                          side: const BorderSide(color: AppColors.primaryNeon),
+                          foregroundColor: colorScheme.primary,
+                          side: BorderSide(color: colorScheme.primary),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           visualDensity: VisualDensity.compact,
                         ),
@@ -585,25 +577,25 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                               children: [
                                 Text(
                                   taskTitle,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary,
+                                    color: colorScheme.onSurface,
                                   ),
                                 ),
                                 if (part.description.trim().isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   Text(
                                     part.description.trim(),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
-                                      color: AppColors.textSecondary,
+                                      color: colorScheme.onSurfaceVariant,
                                       height: 1.4,
                                     ),
                                   ),
                                 ],
                                 const SizedBox(height: 12),
-                                const Divider(color: AppColors.surfaceLight),
+                                const Divider(),
                                 const SizedBox(height: 8),
                                 // Athlete's result section
                                 if (userResult != null) ...[
@@ -616,7 +608,7 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                                           children: [
                                             Row(
                                               children: [
-                                                const Icon(Icons.check_circle, size: 16, color: AppColors.success),
+                                                Icon(Icons.check_circle, size: 16, color: appTheme.success),
                                                 const SizedBox(width: 6),
                                                 Expanded(
                                                   child: Text(
@@ -629,13 +621,13 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                                             const SizedBox(height: 2),
                                             Text(
                                               'Режим: ${userResult.status.displayName}',
-                                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                              style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
                                             ),
                                             if (userResult.note.isNotEmpty) ...[
                                               const SizedBox(height: 2),
                                               Text(
                                                 'Заметка: ${userResult.note}',
-                                                style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontStyle: FontStyle.italic),
+                                                style: TextStyle(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8), fontSize: 12, fontStyle: FontStyle.italic),
                                               ),
                                             ],
                                           ],
@@ -652,9 +644,9 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      const Text(
+                                      Text(
                                         'Результат не внесен',
-                                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                                       ),
                                       ElevatedButton.icon(
                                         icon: const Icon(Icons.add_task, size: 16),
@@ -687,7 +679,7 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 56, color: AppColors.error),
+                    Icon(Icons.error_outline, size: 56, color: appTheme.destructive),
                     const SizedBox(height: 16),
                     Text(
                       state.message,
@@ -899,9 +891,9 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
       if (success) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Результат сохранен!'),
-            backgroundColor: AppColors.success,
+          SnackBar(
+            content: const Text('Результат сохранен!'),
+            backgroundColor: context.appTheme.success,
           ),
         );
       }
@@ -909,10 +901,14 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
   }
 
   Future<void> _deleteResult() async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dCtx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: colorScheme.surface,
         title: const Text('Удалить результат?'),
         content: const Text('Вы действительно хотите удалить ваш результат по этому заданию?'),
         actions: [
@@ -921,7 +917,10 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
             child: const Text('Отмена'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: appTheme.destructive,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.of(dCtx).pop(true),
             child: const Text('Удалить'),
           ),
@@ -946,9 +945,9 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
         if (success) {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Результат удален'),
-              backgroundColor: AppColors.success,
+            SnackBar(
+              content: const Text('Результат удален'),
+              backgroundColor: context.appTheme.success,
             ),
           );
         }
@@ -957,21 +956,25 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
   }
 
   Widget _buildScoreInputs() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     if (_status == ResultStatus.notDone) {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.error.withValues(alpha: 0.1),
+          color: appTheme.destructive.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(Icons.info_outline, color: AppColors.error, size: 20),
-            SizedBox(width: 8),
+            Icon(Icons.info_outline, color: appTheme.destructive, size: 20),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Статус «Не выполнено». Ввод очков не требуется.',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
               ),
             ),
           ],
@@ -991,7 +994,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                   labelText: 'Минуты *',
                   hintText: 'например: 12',
                   filled: true,
-                  fillColor: AppColors.surfaceLight,
+                  fillColor: colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   suffixText: 'мин',
                 ),
@@ -1013,7 +1016,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                   labelText: 'Секунды *',
                   hintText: 'например: 45',
                   filled: true,
-                  fillColor: AppColors.surfaceLight,
+                  fillColor: colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   suffixText: 'сек',
                 ),
@@ -1041,7 +1044,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                   labelText: 'Раунды *',
                   hintText: 'например: 5',
                   filled: true,
-                  fillColor: AppColors.surfaceLight,
+                  fillColor: colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   suffixText: 'рд',
                 ),
@@ -1059,7 +1062,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                   labelText: 'Доп. повторы',
                   hintText: 'например: 12',
                   filled: true,
-                  fillColor: AppColors.surfaceLight,
+                  fillColor: colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   suffixText: 'повт',
                 ),
@@ -1079,7 +1082,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                   labelText: 'Вес (кг) *',
                   hintText: 'например: 100',
                   filled: true,
-                  fillColor: AppColors.surfaceLight,
+                  fillColor: colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   suffixText: 'кг',
                 ),
@@ -1097,7 +1100,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                   labelText: 'Повторы',
                   hintText: 'например: 3',
                   filled: true,
-                  fillColor: AppColors.surfaceLight,
+                  fillColor: colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   suffixText: 'повт',
                 ),
@@ -1114,7 +1117,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
             labelText: 'Количество повторов *',
             hintText: 'например: 150',
             filled: true,
-            fillColor: AppColors.surfaceLight,
+            fillColor: colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             suffixText: 'повт',
           ),
@@ -1131,7 +1134,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
             labelText: 'Диста��ция (метры) *',
             hintText: 'например: 2000 или 5000',
             filled: true,
-            fillColor: AppColors.surfaceLight,
+            fillColor: colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             suffixText: 'м',
           ),
@@ -1148,7 +1151,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
             labelText: 'Калории *',
             hintText: 'например: 350',
             filled: true,
-            fillColor: AppColors.surfaceLight,
+            fillColor: colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             suffixText: 'ккал',
           ),
@@ -1164,7 +1167,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
             labelText: 'Результат *',
             hintText: 'например: 5 раундов + 12 берпи или 80 кг',
             filled: true,
-            fillColor: AppColors.surfaceLight,
+            fillColor: colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
           ),
           validator: (v) => (_status != ResultStatus.notDone && (v == null || v.trim().isEmpty))
@@ -1176,17 +1179,17 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.surfaceLight,
+            color: colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.check_circle_outline, color: AppColors.primaryNeon, size: 20),
-              SizedBox(width: 8),
+              Icon(Icons.check_circle_outline, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'В этом задании не требуется ввод очков. Выберите статус и при желании добавьте заметку.',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                 ),
               ),
             ],
@@ -1197,6 +1200,9 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
     final isEditing = widget.initialResult != null;
     final taskTitle = widget.part.title.trim().isNotEmpty ? widget.part.title.trim() : 'Задание';
 
@@ -1223,17 +1229,21 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                       children: [
                         Text(
                           isEditing ? 'Редактирование результата' : 'Ввод результата',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
                         ),
                         Text(
                           taskTitle,
-                          style: const TextStyle(color: AppColors.primaryNeon, fontSize: 13, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(Icons.close, color: colorScheme.onSurfaceVariant),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -1258,10 +1268,10 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                 decoration: InputDecoration(
                   labelText: 'Формат записи',
                   filled: true,
-                  fillColor: AppColors.surfaceLight,
+                  fillColor: colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
-                dropdownColor: AppColors.surface,
+                dropdownColor: colorScheme.surface,
                 items: const [
                   DropdownMenuItem(value: WorkoutScoreType.none, child: Text('Только статус')),
                   DropdownMenuItem(value: WorkoutScoreType.text, child: Text('Текст')),
@@ -1290,7 +1300,7 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
                   labelText: 'Заметка к результату (опционально)',
                   hintText: 'например: разбивал подтягивания 15+6',
                   filled: true,
-                  fillColor: AppColors.surfaceLight,
+                  fillColor: colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
               ),
@@ -1298,14 +1308,14 @@ class _PartResultInputModalState extends State<_PartResultInputModal> {
               ElevatedButton(
                 onPressed: _isLoading ? null : _submit,
                 child: _isLoading
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onPrimary))
                     : Text(isEditing ? 'Сохранить изменения' : 'Сохранить результат'),
               ),
               if (isEditing) ...[
                 const SizedBox(height: 10),
                 TextButton.icon(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                  label: const Text('Удалить результат', style: TextStyle(color: AppColors.error)),
+                  icon: Icon(Icons.delete_outline, color: appTheme.destructive),
+                  label: Text('Удалить результат', style: TextStyle(color: appTheme.destructive)),
                   onPressed: _isLoading ? null : _deleteResult,
                 ),
               ],

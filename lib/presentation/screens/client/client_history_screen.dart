@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/training_program.dart';
@@ -46,14 +46,18 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('История тренировок'),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppColors.primaryNeon,
-          labelColor: AppColors.primaryNeon,
-          unselectedLabelColor: AppColors.textSecondary,
+          indicatorColor: colorScheme.primary,
+          labelColor: colorScheme.primary,
+          unselectedLabelColor: colorScheme.onSurfaceVariant,
           tabs: const [
             Tab(icon: Icon(Icons.history), text: 'Прошедшие'),
             Tab(icon: Icon(Icons.upcoming), text: 'Будущие'),
@@ -66,8 +70,8 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
           final programs = programState is ProgramLoaded ? programState.programs : <TrainingProgram>[];
 
           if (workoutState is CrossfitWorkoutLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryNeon),
+            return Center(
+              child: CircularProgressIndicator(color: colorScheme.primary),
             );
           }
 
@@ -81,7 +85,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
                     Text(
                       workoutState.message,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.error),
+                      style: TextStyle(color: appTheme.destructive),
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton(
@@ -134,12 +138,15 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
   }
 
   Widget _buildFiltersBar(List<TrainingProgram> programs) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
         border: Border(
-          bottom: BorderSide(color: AppColors.surfaceLight, width: 1),
+          bottom: BorderSide(color: colorScheme.outlineVariant, width: 1),
         ),
       ),
       child: Column(
@@ -152,19 +159,19 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceLight,
+                    color: colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String?>(
                       isExpanded: true,
                       value: _selectedProgramId,
-                      hint: const Text(
+                      hint: Text(
                         'Все программы',
-                        style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                        style: TextStyle(color: colorScheme.onSurface, fontSize: 13),
                       ),
-                      dropdownColor: AppColors.surface,
-                      icon: const Icon(Icons.arrow_drop_down, color: AppColors.primaryNeon),
+                      dropdownColor: colorScheme.surface,
+                      icon: Icon(Icons.arrow_drop_down, color: colorScheme.primary),
                       items: [
                         const DropdownMenuItem<String?>(
                           value: null,
@@ -202,7 +209,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceLight,
+                    color: colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -210,12 +217,12 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
                       Icon(
                         _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
                         size: 16,
-                        color: AppColors.primaryNeon,
+                        color: colorScheme.primary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         _sortAscending ? 'Сначала старые' : 'Сначала новые',
-                        style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                        style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
                       ),
                     ],
                   ),
@@ -233,6 +240,9 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
     required List<PartResult> userResults,
     required bool isPast,
   }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     // Filter by program if selected
     var filtered = workouts;
     if (_selectedProgramId != null) {
@@ -249,7 +259,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
     if (filtered.isEmpty) {
       return RefreshIndicator(
         onRefresh: () async => _loadData(),
-        color: AppColors.primaryNeon,
+        color: colorScheme.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Container(
@@ -261,7 +271,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
                 Icon(
                   isPast ? Icons.history_toggle_off : Icons.event_available,
                   size: 64,
-                  color: AppColors.textSecondary.withValues(alpha: 0.5),
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -277,7 +287,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
                       ? 'Здесь будут отображаться завершенные тренировки и ваши результаты.'
                       : 'Когда тренер назначит новую тренировку, она появится здесь.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                 ),
               ],
             ),
@@ -288,7 +298,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
 
     return RefreshIndicator(
       onRefresh: () async => _loadData(),
-      color: AppColors.primaryNeon,
+      color: colorScheme.primary,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: filtered.length,
@@ -324,6 +334,10 @@ class _HistoryWorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     final completedCount = workout.parts.where((p) {
       final res = userResults.where((r) => r.partId == p.id);
       return res.isNotEmpty && res.first.status == ResultStatus.done;
@@ -332,7 +346,7 @@ class _HistoryWorkoutCard extends StatelessWidget {
     final hasAnyResult = userResults.isNotEmpty;
 
     return Card(
-      elevation: 2,
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -345,10 +359,10 @@ class _HistoryWorkoutCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -359,17 +373,17 @@ class _HistoryWorkoutCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: completedCount == totalParts && totalParts > 0
-                          ? AppColors.success.withValues(alpha: 0.15)
+                          ? appTheme.success.withValues(alpha: 0.15)
                           : hasAnyResult
-                              ? AppColors.primaryNeon.withValues(alpha: 0.15)
-                              : AppColors.surfaceLight,
+                              ? colorScheme.primary.withValues(alpha: 0.15)
+                              : colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: completedCount == totalParts && totalParts > 0
-                            ? AppColors.success
+                            ? appTheme.success
                             : hasAnyResult
-                                ? AppColors.primaryNeon
-                                : AppColors.surfaceLight,
+                                ? colorScheme.primary
+                                : colorScheme.outlineVariant,
                         width: 1,
                       ),
                     ),
@@ -383,10 +397,10 @@ class _HistoryWorkoutCard extends StatelessWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: completedCount == totalParts && totalParts > 0
-                            ? AppColors.success
+                            ? appTheme.success
                             : hasAnyResult
-                                ? AppColors.primaryNeon
-                                : AppColors.textSecondary,
+                                ? colorScheme.primary
+                                : colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -394,16 +408,16 @@ class _HistoryWorkoutCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryNeon.withValues(alpha: 0.15),
+                      color: colorScheme.primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.primaryNeon, width: 1),
+                      border: Border.all(color: colorScheme.primary, width: 1),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Предстоящая',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.primaryNeon,
+                        color: colorScheme.primary,
                       ),
                     ),
                   ),
@@ -415,7 +429,7 @@ class _HistoryWorkoutCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 workout.description,
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
               ),
             ],
 
@@ -428,17 +442,17 @@ class _HistoryWorkoutCard extends StatelessWidget {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceLight,
+                      color: colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.groups, size: 12, color: AppColors.textSecondary),
+                        Icon(Icons.fitness_center, size: 12, color: colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(
                           a.programName ?? 'Программа',
-                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -448,20 +462,20 @@ class _HistoryWorkoutCard extends StatelessWidget {
             ],
 
             const SizedBox(height: 12),
-            const Divider(color: AppColors.surfaceLight, height: 1),
+            Divider(color: colorScheme.outlineVariant, height: 1),
             const SizedBox(height: 12),
 
             // Workout Parts with User Results
-            const Text(
+            Text(
               'Задания:',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
 
             if (workout.parts.isEmpty)
-              const Text(
+              Text(
                 'В тренировке пока нет заданий',
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
               )
             else
               ListView.separated(
@@ -479,10 +493,10 @@ class _HistoryWorkoutCard extends StatelessWidget {
                   return Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceLight.withValues(alpha: 0.5),
+                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: result != null ? AppColors.primaryNeon.withValues(alpha: 0.3) : Colors.transparent,
+                        color: result != null ? colorScheme.primary.withValues(alpha: 0.3) : Colors.transparent,
                       ),
                     ),
                     child: Column(
@@ -490,17 +504,17 @@ class _HistoryWorkoutCard extends StatelessWidget {
                       children: [
                         Text(
                           taskTitle,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                         if (part.description.trim().isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
                             part.description.trim(),
-                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                         const SizedBox(height: 6),
@@ -512,10 +526,10 @@ class _HistoryWorkoutCard extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: result.status == ResultStatus.done
-                                      ? AppColors.success.withValues(alpha: 0.2)
+                                      ? appTheme.success.withValues(alpha: 0.2)
                                       : result.status == ResultStatus.scaled
-                                          ? Colors.orange.withValues(alpha: 0.2)
-                                          : AppColors.error.withValues(alpha: 0.2),
+                                          ? appTheme.warning.withValues(alpha: 0.2)
+                                          : appTheme.destructive.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -524,10 +538,10 @@ class _HistoryWorkoutCard extends StatelessWidget {
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: result.status == ResultStatus.done
-                                        ? AppColors.success
+                                        ? appTheme.success
                                         : result.status == ResultStatus.scaled
-                                            ? Colors.orange
-                                            : AppColors.error,
+                                            ? appTheme.warning
+                                            : appTheme.destructive,
                                   ),
                                 ),
                               ),
@@ -535,10 +549,10 @@ class _HistoryWorkoutCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   'Результат: ${result.formattedScore}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryNeon,
+                                    color: colorScheme.primary,
                                   ),
                                 ),
                               ),
@@ -548,25 +562,25 @@ class _HistoryWorkoutCard extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               'Заметка: ${result.note}',
-                              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                              style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant, fontStyle: FontStyle.italic),
                             ),
                           ],
                         ] else ...[
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'Результат не внесен',
-                                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
                               ),
                               InkWell(
                                 onTap: () async {
                                   await context.push('/workout/${workout.id}');
                                   onRefreshNeeded();
                                 },
-                                child: const Text(
+                                child: Text(
                                   'Внести результат →',
-                                  style: TextStyle(fontSize: 11, color: AppColors.primaryNeon, fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ],
@@ -586,11 +600,11 @@ class _HistoryWorkoutCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.people_outline, size: 16),
-                    label: const Text('Результаты группы', style: TextStyle(fontSize: 12)),
+                    label: const Text('Результаты участников', style: TextStyle(fontSize: 12)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      side: const BorderSide(color: AppColors.primaryNeon),
-                      foregroundColor: AppColors.primaryNeon,
+                      side: BorderSide(color: colorScheme.primary),
+                      foregroundColor: colorScheme.primary,
                     ),
                     onPressed: () {
                       context.push('/workout/${workout.id}/results');

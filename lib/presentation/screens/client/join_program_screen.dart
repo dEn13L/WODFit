@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../bloc/program/program_cubit.dart';
 
 class JoinProgramScreen extends StatefulWidget {
@@ -43,6 +42,9 @@ class _JoinProgramScreenState extends State<JoinProgramScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Вступление в программу'),
@@ -59,41 +61,35 @@ class _JoinProgramScreenState extends State<JoinProgramScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(Icons.fitness_center, size: 64, color: AppColors.primaryNeon),
+                Icon(Icons.fitness_center, size: 64, color: colorScheme.primary),
                 const SizedBox(height: 16),
                 Text(
                   'Ввести код программы',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: theme.textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Введите 6-значный код приглашения, который вам передал тренер.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _codeController,
                   textCapitalization: TextCapitalization.characters,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     letterSpacing: 6,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primaryNeon,
+                    color: colorScheme.primary,
                   ),
                   decoration: InputDecoration(
                     hintText: 'PROGXX',
                     hintStyle: TextStyle(
-                      color: AppColors.textSecondary.withValues(alpha: 0.4),
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                       letterSpacing: 4,
-                    ),
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
                     ),
                   ),
                   validator: (value) {
@@ -110,10 +106,10 @@ class _JoinProgramScreenState extends State<JoinProgramScreen> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _onJoin,
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onPrimary),
                         )
                       : const Text('Присоединиться к программе'),
                 ),

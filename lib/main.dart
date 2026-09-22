@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/config/supabase_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_service.dart';
 import 'data/datasources/local/workout_local_datasource.dart';
 import 'data/datasources/sensors/sensor_datasource.dart';
 import 'data/repositories/supabase_auth_repository.dart';
@@ -18,6 +19,7 @@ import 'domain/repositories/workout_repository.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/bloc/auth/auth_event.dart';
 import 'presentation/bloc/program/program_cubit.dart';
+import 'presentation/bloc/theme/theme_cubit.dart';
 import 'presentation/bloc/workout/crossfit_workout_cubit.dart';
 import 'presentation/bloc/workout_bloc.dart';
 
@@ -28,6 +30,9 @@ Future<void> main() async {
   await Hive.initFlutter();
   final WorkoutLocalDataSource localDataSource = WorkoutLocalDataSourceImpl();
   await localDataSource.init();
+
+  final ThemeService themeService = ThemeService();
+  await themeService.init();
 
   final SensorDataSource sensorDataSource = SensorDataSourceImpl();
 
@@ -49,6 +54,7 @@ Future<void> main() async {
       programRepository: programRepository,
       crossfitWorkoutRepository: crossfitWorkoutRepository,
       legacyWorkoutRepository: legacyWorkoutRepository,
+      themeService: themeService,
     ),
   );
 }
@@ -58,6 +64,7 @@ class WodFitApp extends StatefulWidget {
   final ProgramRepository programRepository;
   final CrossfitWorkoutRepository crossfitWorkoutRepository;
   final WorkoutRepository legacyWorkoutRepository;
+  final ThemeService themeService;
 
   const WodFitApp({
     super.key,
@@ -65,6 +72,7 @@ class WodFitApp extends StatefulWidget {
     required this.programRepository,
     required this.crossfitWorkoutRepository,
     required this.legacyWorkoutRepository,
+    required this.themeService,
   });
 
   @override
@@ -96,10 +104,14 @@ class _WodFitAppState extends State<WodFitApp> {
         RepositoryProvider<ProgramRepository>.value(value: widget.programRepository),
         RepositoryProvider<CrossfitWorkoutRepository>.value(value: widget.crossfitWorkoutRepository),
         RepositoryProvider<WorkoutRepository>.value(value: widget.legacyWorkoutRepository),
+        RepositoryProvider<ThemeService>.value(value: widget.themeService),
       ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider<AuthBloc>.value(value: _authBloc),
+          BlocProvider<ThemeCubit>(
+            create: (context) => ThemeCubit(themeService: widget.themeService),
+          ),
           BlocProvider<ProgramCubit>(
             create: (context) => ProgramCubit(programRepository: widget.programRepository),
           ),
@@ -110,11 +122,17 @@ class _WodFitAppState extends State<WodFitApp> {
             create: (context) => WorkoutBloc(repository: widget.legacyWorkoutRepository),
           ),
         ],
-        child: MaterialApp.router(
-          title: 'WOD Fit',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.darkTheme,
-          routerConfig: router,
+        child: BlocBuilder<ThemeCubit, ThemeMode>(
+          builder: (context, themeMode) {
+            return MaterialApp.router(
+              title: 'WOD Fit',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: themeMode,
+              routerConfig: router,
+            );
+          },
         ),
       ),
     );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
@@ -9,6 +9,7 @@ import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
 import '../../bloc/program/program_cubit.dart';
+import '../../bloc/theme/theme_cubit.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
 import '../../../domain/entities/training_program.dart';
 
@@ -45,13 +46,23 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
               user?.fullName ?? 'Атлет',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const Text(
+            Text(
               'Личный кабинет атлета',
-              style: TextStyle(fontSize: 12, color: AppColors.primaryNeon),
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
             ),
           ],
         ),
         actions: [
+          BlocBuilder<ThemeCubit, ThemeMode>(
+            builder: (context, themeMode) {
+              final isLight = themeMode == ThemeMode.light;
+              return IconButton(
+                tooltip: isLight ? 'Тёмная тема' : 'Светлая тема',
+                icon: Icon(isLight ? Icons.dark_mode : Icons.light_mode),
+                onPressed: () => context.read<ThemeCubit>().toggleTheme(),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'История тренировок',
             icon: const Icon(Icons.history),
@@ -71,7 +82,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async => _loadData(),
-        color: AppColors.primaryNeon,
+        color: Theme.of(context).colorScheme.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16.0),
@@ -85,7 +96,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(state.successMessage!),
-                        backgroundColor: AppColors.success,
+                        backgroundColor: context.appTheme.success,
                       ),
                     );
                   }
@@ -93,17 +104,21 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(state.message),
-                        backgroundColor: AppColors.error,
+                        backgroundColor: context.appTheme.destructive,
                       ),
                     );
                   }
                 },
                 builder: (context, state) {
+                  final theme = Theme.of(context);
+                  final colorScheme = theme.colorScheme;
+                  final appTheme = context.appTheme;
+
                   if (state is ProgramLoading) {
-                    return const Card(
+                    return Card(
                       child: Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: Center(child: CircularProgressIndicator(color: AppColors.primaryNeon)),
+                        padding: const EdgeInsets.all(24.0),
+                        child: Center(child: CircularProgressIndicator(color: colorScheme.primary)),
                       ),
                     );
                   }
@@ -113,27 +128,27 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                       return Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: theme.cardTheme.color ?? colorScheme.surface,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.primaryNeon.withValues(alpha: 0.3)),
+                          border: Border.all(color: colorScheme.outlineVariant),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Row(
+                            Row(
                               children: [
-                                Icon(Icons.info_outline, color: AppColors.primaryNeon),
-                                SizedBox(width: 8),
-                                Text(
+                                Icon(Icons.info_outline, color: colorScheme.primary),
+                                const SizedBox(width: 8),
+                                const Text(
                                   'Вы пока не состоите ни в одной программе',
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 6),
-                            const Text(
+                            Text(
                               'Попросите у вашего тренера 6-значный код приглашения, чтобы видеть тренировки программы.',
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                              style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                             ),
                             const SizedBox(height: 12),
                             ElevatedButton.icon(
@@ -163,8 +178,8 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
                                 TextButton.icon(
-                                  icon: const Icon(Icons.add, size: 18, color: AppColors.primaryNeon),
-                                  label: const Text('Вступить еще', style: TextStyle(color: AppColors.primaryNeon)),
+                                  icon: Icon(Icons.add, size: 18, color: colorScheme.primary),
+                                  label: Text('Вступить еще', style: TextStyle(color: colorScheme.primary)),
                                   onPressed: () async {
                                     await context.push('/client/join-program');
                                     if (mounted) _loadData();
@@ -177,7 +192,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: state.programs.length,
-                              separatorBuilder: (context, index) => const Divider(color: AppColors.surfaceLight, height: 12),
+                              separatorBuilder: (context, index) => const Divider(height: 12),
                               itemBuilder: (context, index) {
                                 final program = state.programs[index];
                                 return Row(
@@ -188,7 +203,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                         Icon(
                                           program.kind == ProgramKind.personal ? Icons.person : Icons.groups,
                                           size: 20,
-                                          color: program.kind == ProgramKind.personal ? Colors.purpleAccent : AppColors.primaryNeon,
+                                          color: colorScheme.primary,
                                         ),
                                         const SizedBox(width: 10),
                                         Text(
@@ -199,16 +214,14 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                           decoration: BoxDecoration(
-                                            color: program.kind == ProgramKind.personal
-                                                ? Colors.purpleAccent.withValues(alpha: 0.2)
-                                                : AppColors.primaryNeon.withValues(alpha: 0.2),
+                                            color: colorScheme.primary.withValues(alpha: 0.15),
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: Text(
                                             program.kind.displayName,
                                             style: TextStyle(
                                               fontSize: 10,
-                                              color: program.kind == ProgramKind.personal ? Colors.purpleAccent : AppColors.primaryNeon,
+                                              color: colorScheme.primary,
                                             ),
                                           ),
                                         ),
@@ -220,7 +233,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                         final confirm = await showDialog<bool>(
                                           context: context,
                                           builder: (dCtx) => AlertDialog(
-                                            backgroundColor: AppColors.surface,
+                                            backgroundColor: colorScheme.surface,
                                             title: const Text('Выйти из программы?'),
                                             content: Text('Вы действительно хотите покинуть программу "${program.name}"?'),
                                             actions: [
@@ -229,7 +242,10 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                                 child: const Text('Отмена'),
                                               ),
                                               ElevatedButton(
-                                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: appTheme.destructive,
+                                                  foregroundColor: Colors.white,
+                                                ),
                                                 onPressed: () => Navigator.of(dCtx).pop(true),
                                                 child: const Text('Выйти'),
                                               ),
@@ -242,7 +258,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                           if (mounted) _loadData();
                                         }
                                       },
-                                      child: const Text('Выйти', style: TextStyle(color: AppColors.error, fontSize: 12)),
+                                      child: Text('Выйти', style: TextStyle(color: appTheme.destructive, fontSize: 12)),
                                     ),
                                   ],
                                 );
@@ -269,37 +285,41 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.surfaceLight),
+                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: AppColors.surfaceLight,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.history, color: AppColors.primaryNeon, size: 20),
+                        child: Icon(Icons.history, color: Theme.of(context).colorScheme.primary, size: 20),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'История и результаты тренировок',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                             ),
                             Text(
                               'Просмотр прошедших WOD и фильтрация',
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondary),
+                      Icon(Icons.arrow_forward_ios, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ],
                   ),
                 ),
@@ -332,17 +352,20 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                       await context.push('/client/history');
                       if (mounted) _loadData();
                     },
-                    child: const Text('Все →', style: TextStyle(color: AppColors.primaryNeon)),
+                    child: Text('Все →', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
                 builder: (context, state) {
+                  final colorScheme = Theme.of(context).colorScheme;
+                  final appTheme = context.appTheme;
+
                   if (state is CrossfitWorkoutLoading) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40.0),
-                      child: Center(child: CircularProgressIndicator(color: AppColors.primaryNeon)),
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40.0),
+                      child: Center(child: CircularProgressIndicator(color: colorScheme.primary)),
                     );
                   }
 
@@ -352,7 +375,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 30.0),
                         child: Column(
                           children: [
-                            Text(state.message, style: const TextStyle(color: AppColors.error)),
+                            Text(state.message, style: TextStyle(color: appTheme.destructive)),
                             const SizedBox(height: 12),
                             ElevatedButton(
                               onPressed: _loadData,
@@ -372,17 +395,17 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                           child: Center(
                             child: Column(
                               children: [
-                                const Icon(Icons.fitness_center_outlined, size: 48, color: AppColors.textSecondary),
+                                Icon(Icons.fitness_center_outlined, size: 48, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                                 const SizedBox(height: 12),
                                 const Text(
                                   'Нет назначенных тренировок',
                                   style: TextStyle(fontWeight: FontWeight.w600),
                                 ),
                                 const SizedBox(height: 4),
-                                const Text(
+                                Text(
                                   'Когда тренер опубликует тренировку для вашей программы, она появится здесь.',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                                 ),
                               ],
                             ),
@@ -423,6 +446,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
   }
 
   Widget _buildRecentResultsSection(BuildContext context, CrossfitWorkoutListLoaded state) {
+    final colorScheme = Theme.of(context).colorScheme;
     final workouts = state.workouts;
     final userResults = state.userResults;
 
@@ -448,7 +472,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                   await context.push('/client/history');
                   if (mounted) _loadData();
                 },
-                child: const Text('Вся история', style: TextStyle(color: AppColors.primaryNeon, fontSize: 13)),
+                child: Text('Вся история', style: TextStyle(color: colorScheme.primary, fontSize: 13)),
               ),
           ],
         ),
@@ -459,7 +483,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  const Icon(Icons.assignment_outlined, color: AppColors.primaryNeon, size: 32),
+                  Icon(Icons.assignment_outlined, color: colorScheme.primary, size: 32),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -470,9 +494,9 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
+                        Text(
                           'Откройте тренировку и зафиксируйте свои показатели!',
-                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
                         ),
                       ],
                     ),
@@ -500,16 +524,20 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: Theme.of(context).cardTheme.color ?? colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.surfaceLight),
+                    border: Border.all(color: colorScheme.outlineVariant),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: colorScheme.onSurface,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       // Parts results summary
@@ -527,7 +555,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceLight,
+                              color: colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
@@ -535,14 +563,14 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                               children: [
                                 Text(
                                   '$taskTitle: ',
-                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                  style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
                                 ),
                                 Text(
                                   res.formattedScore,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryNeon,
+                                    color: colorScheme.primary,
                                   ),
                                 ),
                               ],
@@ -575,6 +603,10 @@ class _WorkoutClientCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     final completedCount = workout.parts.where((p) {
       final res = userResults.where((r) => r.partId == p.id);
       return res.isNotEmpty && res.first.status == ResultStatus.done;
@@ -595,14 +627,14 @@ class _WorkoutClientCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textSecondary),
+                  Icon(Icons.arrow_forward_ios, size: 16, color: colorScheme.onSurfaceVariant),
                 ],
               ),
               if (workout.description.isNotEmpty) ...[
@@ -611,7 +643,7 @@ class _WorkoutClientCard extends StatelessWidget {
                   workout.description,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                 ),
               ],
               const SizedBox(height: 12),
@@ -621,15 +653,13 @@ class _WorkoutClientCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: completedCount == workout.parts.length
-                            ? AppColors.success.withValues(alpha: 0.15)
-                            : AppColors.primaryNeon.withValues(alpha: 0.15),
+                        color: (completedCount == workout.parts.length ? appTheme.success : colorScheme.primary).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         '$completedCount/${workout.parts.length} готово',
                         style: TextStyle(
-                          color: completedCount == workout.parts.length ? AppColors.success : AppColors.primaryNeon,
+                          color: completedCount == workout.parts.length ? appTheme.success : colorScheme.primary,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -641,12 +671,12 @@ class _WorkoutClientCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceLight,
+                        color: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         workout.workoutTypesSummary,
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

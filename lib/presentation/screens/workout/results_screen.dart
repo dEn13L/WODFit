@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/part_result.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
@@ -29,6 +29,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd.MM HH:mm');
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -41,7 +44,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
       body: BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
         builder: (context, state) {
           if (state is CrossfitWorkoutLoading) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primaryNeon));
+            return Center(child: CircularProgressIndicator(color: colorScheme.primary));
           }
 
           if (state is CrossfitWorkoutDetailLoaded) {
@@ -55,7 +58,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
             return RefreshIndicator(
               onRefresh: () async => context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(widget.workoutId),
-              color: AppColors.primaryNeon,
+              color: colorScheme.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16.0),
@@ -64,12 +67,12 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   children: [
                     Text(
                       WorkoutDateFormatter.formatDetail(workout.scheduledAt, workout.title),
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Результаты участников по заданиям тренировки:',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                     ),
                     const SizedBox(height: 16),
                     if (workout.parts.isEmpty)
@@ -88,6 +91,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                               : (part.type?.displayName ?? 'Задание');
 
                           return Card(
+                            elevation: 0,
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
                               child: Column(
@@ -95,27 +99,27 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                 children: [
                                   Text(
                                     taskTitle,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                                      color: colorScheme.onSurface,
                                     ),
                                   ),
                                   if (part.description.trim().isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     Text(
                                       part.description.trim(),
-                                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                                      style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant, height: 1.4),
                                     ),
                                   ],
                                   const SizedBox(height: 12),
                                   if (partResults.isEmpty)
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 12.0),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12.0),
                                       child: Center(
                                         child: Text(
                                           'Пока никто не внес результат по этому заданию',
-                                          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                                         ),
                                       ),
                                     )
@@ -124,7 +128,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                       shrinkWrap: true,
                                       physics: const NeverScrollableScrollPhysics(),
                                       itemCount: partResults.length,
-                                      separatorBuilder: (context, index) => const Divider(color: AppColors.surfaceLight, height: 16),
+                                      separatorBuilder: (context, index) => Divider(color: colorScheme.outlineVariant, height: 16),
                                       itemBuilder: (context, rIndex) {
                                         final result = partResults[rIndex];
                                         final athleteName = result.userProfile?.fullName ?? 'Атлет';
@@ -132,13 +136,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                         Color statusColor;
                                         switch (result.status) {
                                           case ResultStatus.done:
-                                            statusColor = AppColors.success;
+                                            statusColor = appTheme.success;
                                             break;
                                           case ResultStatus.scaled:
-                                            statusColor = AppColors.accentOrange;
+                                            statusColor = appTheme.warning;
                                             break;
                                           case ResultStatus.notDone:
-                                            statusColor = AppColors.error;
+                                            statusColor = appTheme.destructive;
                                             break;
                                         }
 
@@ -147,10 +151,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                           children: [
                                             CircleAvatar(
                                               radius: 18,
-                                              backgroundColor: AppColors.surfaceLight,
+                                              backgroundColor: colorScheme.surfaceContainerHighest,
                                               child: Text(
                                                 athleteName.isNotEmpty ? athleteName[0].toUpperCase() : 'A',
-                                                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryNeon),
+                                                style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary),
                                               ),
                                             ),
                                             const SizedBox(width: 12),
@@ -181,8 +185,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                                   const SizedBox(height: 4),
                                                   Text(
                                                     'Результат: ${result.formattedScore}',
-                                                    style: const TextStyle(
-                                                      color: AppColors.textPrimary,
+                                                    style: TextStyle(
+                                                      color: colorScheme.onSurface,
                                                       fontWeight: FontWeight.w600,
                                                       fontSize: 14,
                                                     ),
@@ -191,13 +195,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                                     const SizedBox(height: 2),
                                                     Text(
                                                       '«${result.note}»',
-                                                      style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontStyle: FontStyle.italic),
+                                                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12, fontStyle: FontStyle.italic),
                                                     ),
                                                   ],
                                                   const SizedBox(height: 4),
                                                   Text(
                                                     dateFormat.format(result.createdAt.toLocal()),
-                                                    style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
+                                                    style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 10),
                                                   ),
                                                 ],
                                               ),
@@ -226,7 +230,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 56, color: AppColors.error),
+                    Icon(Icons.error_outline, size: 56, color: appTheme.destructive),
                     const SizedBox(height: 16),
                     Text(
                       state.message,

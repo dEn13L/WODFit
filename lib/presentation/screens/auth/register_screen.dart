@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme_extension.dart';
 import '../../../domain/entities/user_profile.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
@@ -45,6 +45,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Регистрация'),
@@ -59,7 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: AppColors.error,
+                backgroundColor: appTheme.destructive,
               ),
             );
           }
@@ -77,17 +81,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     Text(
                       'Создание аккаунта',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                      style: theme.textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Выберите вашу роль в системе тренировок',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 24),
                     Text(
                       'Ваша роль:',
-                      style: Theme.of(context).textTheme.labelLarge,
+                      style: theme.textTheme.labelLarge,
                     ),
                     const SizedBox(height: 10),
                     SegmentedButton<UserRole>(
@@ -113,17 +117,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         backgroundColor: WidgetStateProperty.resolveWith<Color?>(
                           (states) {
                             if (states.contains(WidgetState.selected)) {
-                              return AppColors.primaryNeon;
+                              return colorScheme.primary;
                             }
-                            return AppColors.surface;
+                            return colorScheme.surface;
                           },
                         ),
                         foregroundColor: WidgetStateProperty.resolveWith<Color?>(
                           (states) {
                             if (states.contains(WidgetState.selected)) {
-                              return Colors.black;
+                              return colorScheme.onPrimary;
                             }
-                            return AppColors.textPrimary;
+                            return colorScheme.onSurface;
                           },
                         ),
                       ),
@@ -131,15 +135,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _nameController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Имя и фамилия',
-                        prefixIcon: const Icon(Icons.badge_outlined),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
+                        prefixIcon: Icon(Icons.badge_outlined),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -152,15 +150,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Email',
-                        prefixIcon: const Icon(Icons.email_outlined),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
+                        prefixIcon: Icon(Icons.email_outlined),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -189,12 +181,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             });
                           },
                         ),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -210,12 +196,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ElevatedButton(
                       onPressed: isLoading ? null : _onRegisterPressed,
                       child: isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.black,
+                                color: colorScheme.onPrimary,
                               ),
                             )
                           : const Text('Зарегистрироваться'),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/theme/workout_form_theme.dart';
 import '../../../../bloc/workout_form/workout_form_cubit.dart';
 import 'task_description_editor.dart';
 
@@ -60,26 +59,21 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final hasDescription = widget.task.description.trim().isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: WorkoutFormColors.card,
+        color: theme.cardTheme.color ?? colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _isCardFocused
-              ? WorkoutFormColors.borderFocused
-              : WorkoutFormColors.border,
+              ? colorScheme.primary
+              : colorScheme.outlineVariant,
           width: _isCardFocused ? 1.5 : 1.0,
         ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -97,8 +91,8 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
                     Icons.drag_indicator,
                     size: 22,
                     color: _isCardFocused
-                        ? WorkoutFormColors.primary
-                        : const Color(0xFFCBD5E1),
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -115,17 +109,17 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
                     focusNode: _titleFocusNode,
                     onChanged: widget.onTitleChanged,
                     textCapitalization: TextCapitalization.sentences,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: WorkoutFormColors.text,
+                      color: colorScheme.onSurface,
                     ),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'например: Разминка, Силовая, Комплекс',
                       hintStyle: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: WorkoutFormColors.hint,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                       ),
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
@@ -153,19 +147,19 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
                           ? Text(
                               widget.task.description,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: Color(0xFF334155),
+                                color: colorScheme.onSurfaceVariant,
                                 height: 1.4,
                               ),
                             )
-                          : const Text(
+                          : Text(
                               'Опишите движения, раунды, повторы, вес, лимиты времени и масштабирование…',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: WorkoutFormColors.hint,
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                                 height: 1.3,
                               ),
                             ),
@@ -179,10 +173,10 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
 
             // Delete task cross icon
             IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.cancel,
                 size: 20,
-                color: WorkoutFormColors.deleteIcon,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
               splashRadius: 18,
               padding: EdgeInsets.zero,

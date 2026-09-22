@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_extension.dart';
 import '../../../../domain/entities/training_program.dart';
 import '../../../bloc/program/program_cubit.dart';
 
@@ -32,23 +32,27 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Код $text скопирован в буфер обмена'),
-        backgroundColor: AppColors.success,
+        backgroundColor: context.appTheme.success,
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
   Future<void> _showSuccessDialog(TrainingProgram program) async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: colorScheme.surface,
         title: Row(
-          children: const [
-            Icon(Icons.check_circle_outline, color: AppColors.primaryNeon),
-            SizedBox(width: 8),
-            Text('Программа создана'),
+          children: [
+            Icon(Icons.check_circle_outline, color: appTheme.success),
+            const SizedBox(width: 8),
+            Text('Программа создана', style: TextStyle(color: colorScheme.onSurface)),
           ],
         ),
         content: Column(
@@ -57,35 +61,35 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
           children: [
             Text(
               'Программа "${program.name}" (${program.kind.displayName}) успешно создана.',
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: 14, color: colorScheme.onSurface),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Код для приглашения атлетов:',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
             ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.surfaceLight,
+                color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.primaryNeon.withValues(alpha: 0.3)),
+                border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     program.inviteCode,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 3,
-                      color: AppColors.primaryNeon,
+                      color: colorScheme.primary,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.copy, size: 20, color: AppColors.primaryNeon),
+                    icon: Icon(Icons.copy, size: 20, color: colorScheme.primary),
                     onPressed: () => _copyToClipboard(program.inviteCode),
                     tooltip: 'Скопировать код',
                   ),
@@ -93,9 +97,9 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Передайте этот код атлету, чтобы он мог подключиться к программе.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
         ),
@@ -139,6 +143,9 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Создание программы'),
@@ -157,22 +164,22 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
               children: [
                 Text(
                   'Новая программа',
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: theme.textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Выберите тип программы и задайте параметры. Инвайт-код для атлетов сгенерируется автоматически.',
-                  style: TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 24),
 
                 // Тип программы
-                const Text(
+                Text(
                   'Тип программы',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -209,12 +216,6 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                     prefixIcon: Icon(
                       _selectedKind == ProgramKind.group ? Icons.groups_outlined : Icons.person_outline,
                     ),
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -229,16 +230,10 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                 TextFormField(
                   controller: _descriptionController,
                   maxLines: 3,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Описание (опционально)',
                     hintText: 'Цели, график занятий, уровень подготовки...',
-                    prefixIcon: const Icon(Icons.description_outlined),
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
+                    prefixIcon: Icon(Icons.description_outlined),
                   ),
                 ),
 
@@ -246,10 +241,10 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _onSubmit,
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onPrimary),
                         )
                       : const Text('Создать программу'),
                 ),

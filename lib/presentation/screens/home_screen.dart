@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../core/theme/app_theme.dart';
 import '../../domain/entities/workout.dart';
 import '../bloc/workout_bloc.dart';
 import '../bloc/workout_event.dart';
@@ -25,9 +24,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showStartWorkoutModal(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -45,18 +47,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceLight,
+                        color: colorScheme.outlineVariant,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
+                  Text(
                     'Выберите тип тренировки',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -68,10 +70,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       return ChoiceChip(
                         label: Text(_getWorkoutTypeName(type)),
                         selected: isSelected,
-                        selectedColor: AppColors.primaryNeon,
-                        backgroundColor: AppColors.surfaceLight,
+                        selectedColor: colorScheme.primary,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.black : AppColors.textPrimary,
+                          color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
                         ),
                         onSelected: (selected) {
@@ -100,11 +102,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            backgroundColor: AppColors.surfaceLight,
+                            backgroundColor: colorScheme.surfaceContainerHighest,
                             content: Text(
                               'Тренировка "${_getWorkoutTypeName(_selectedType)}" начата! 🔥',
-                              style: const TextStyle(
-                                color: AppColors.primaryNeon,
+                              style: TextStyle(
+                                color: colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -152,8 +154,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: SafeArea(
         child: BlocBuilder<WorkoutBloc, WorkoutState>(
           builder: (context, state) {
@@ -173,17 +177,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               'С ВОЗВРАЩЕНИЕМ,',
                               style: TextStyle(
-                                color: AppColors.primaryNeon.withValues(alpha: 0.9),
+                                color: colorScheme.primary.withValues(alpha: 0.9),
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 1.2,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'Привет, Атлет! ⚡',
                               style: TextStyle(
-                                color: AppColors.textPrimary,
+                                color: colorScheme.onSurface,
                                 fontSize: 26,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -194,16 +198,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: colorScheme.surface,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: AppColors.surfaceLight,
+                              color: colorScheme.outlineVariant,
                               width: 1.5,
                             ),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.person_outline_rounded,
-                            color: AppColors.textPrimary,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -220,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryNeon.withValues(alpha: 0.25),
+                            color: colorScheme.primary.withValues(alpha: 0.25),
                             blurRadius: 20,
                             offset: const Offset(0, 4),
                           ),
@@ -237,14 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               vertical: 20,
                             ),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  AppColors.primaryNeon,
-                                  Color(0xFFA6E600),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                              color: colorScheme.primary,
                               borderRadius: BorderRadius.circular(24),
                             ),
                             child: Row(
@@ -252,17 +249,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.12),
+                                    color: colorScheme.onPrimary.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.fitness_center_rounded,
-                                    color: Colors.black,
+                                    color: colorScheme.onPrimary,
                                     size: 28,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-                                const Expanded(
+                                Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -270,17 +267,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                       Text(
                                         'Начать тренировку',
                                         style: TextStyle(
-                                          color: Colors.black,
+                                          color: colorScheme.onPrimary,
                                           fontSize: 18,
                                           fontWeight: FontWeight.w900,
                                           letterSpacing: 0.3,
                                         ),
                                       ),
-                                      SizedBox(height: 2),
+                                      const SizedBox(height: 2),
                                       Text(
                                         'Выбери режим и сожги калории',
                                         style: TextStyle(
-                                          color: Colors.black87,
+                                          color: colorScheme.onPrimary.withValues(alpha: 0.8),
                                           fontSize: 13,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -288,9 +285,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ],
                                   ),
                                 ),
-                                const Icon(
+                                Icon(
                                   Icons.arrow_forward_ios_rounded,
-                                  color: Colors.black,
+                                  color: colorScheme.onPrimary,
                                   size: 18,
                                 ),
                               ],
@@ -309,10 +306,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Активность сегодня',
                           style: TextStyle(
-                            color: AppColors.textPrimary,
+                            color: colorScheme.onSurface,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -326,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 value: '${state.todaySteps}',
                                 unit: 'шагов',
                                 icon: Icons.directions_walk_rounded,
-                                accentColor: AppColors.accentCyan,
+                                accentColor: colorScheme.primary,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -336,7 +333,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 value: '${state.todayCalories}',
                                 unit: 'ккал',
                                 icon: Icons.local_fire_department_rounded,
-                                accentColor: AppColors.accentOrange,
+                                accentColor: colorScheme.secondary,
                               ),
                             ),
                           ],
@@ -350,7 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 value: '${state.todayDurationMinutes}',
                                 unit: 'мин',
                                 icon: Icons.timer_outlined,
-                                accentColor: AppColors.primaryNeon,
+                                accentColor: colorScheme.primary,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -377,10 +374,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'История тренировок',
                           style: TextStyle(
-                            color: AppColors.textPrimary,
+                            color: colorScheme.onSurface,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -388,8 +385,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (state.workouts.isNotEmpty)
                           Text(
                             'Всего: ${state.workouts.length}',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
                               fontSize: 14,
                             ),
                           ),
@@ -409,10 +406,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           horizontal: 20,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: AppColors.surfaceLight,
+                            color: colorScheme.outlineVariant,
                             width: 1,
                           ),
                         ),
@@ -421,23 +418,23 @@ class _HomeScreenState extends State<HomeScreen> {
                             Icon(
                               Icons.sports_score_rounded,
                               size: 48,
-                              color: AppColors.primaryNeon.withValues(alpha: 0.6),
+                              color: colorScheme.primary.withValues(alpha: 0.6),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
+                            Text(
                               'Пока нет завершенных тренировок',
                               style: TextStyle(
-                                color: AppColors.textPrimary,
+                                color: colorScheme.onSurface,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 6),
-                            const Text(
+                            Text(
                               'Нажми «Начать тренировку» выше, чтобы записать первый подход!',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: AppColors.textSecondary,
+                                color: colorScheme.onSurfaceVariant,
                                 fontSize: 13,
                               ),
                             ),

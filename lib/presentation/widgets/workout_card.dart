@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/theme/app_theme_extension.dart';
 import '../../domain/entities/workout.dart';
 
 class WorkoutCard extends StatelessWidget {
@@ -9,14 +9,20 @@ class WorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
+    final typeColor = _getColorForType(workout.type, colorScheme, appTheme);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.surfaceLight,
+          color: colorScheme.outlineVariant,
           width: 1,
         ),
       ),
@@ -25,12 +31,12 @@ class WorkoutCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _getColorForType(workout.type).withValues(alpha: 0.15),
+              color: typeColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               _getIconForType(workout.type),
-              color: _getColorForType(workout.type),
+              color: typeColor,
               size: 24,
             ),
           ),
@@ -41,8 +47,8 @@ class WorkoutCard extends StatelessWidget {
               children: [
                 Text(
                   workout.title,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -50,8 +56,8 @@ class WorkoutCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   workout.description,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
                     fontSize: 13,
                   ),
                   maxLines: 1,
@@ -65,8 +71,8 @@ class WorkoutCard extends StatelessWidget {
             children: [
               Text(
                 '${workout.duration.inMinutes} мин',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -74,16 +80,16 @@ class WorkoutCard extends StatelessWidget {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.local_fire_department_rounded,
                     size: 14,
-                    color: AppColors.accentOrange,
+                    color: colorScheme.secondary,
                   ),
                   const SizedBox(width: 2),
                   Text(
                     '${workout.caloriesBurned} ккал',
-                    style: const TextStyle(
-                      color: AppColors.accentOrange,
+                    style: TextStyle(
+                      color: colorScheme.secondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -97,18 +103,18 @@ class WorkoutCard extends StatelessWidget {
     );
   }
 
-  Color _getColorForType(WorkoutType type) {
+  Color _getColorForType(WorkoutType type, ColorScheme colorScheme, AppThemeExtension appTheme) {
     switch (type) {
       case WorkoutType.crossfit:
-        return AppColors.primaryNeon;
+        return colorScheme.primary;
       case WorkoutType.strength:
-        return AppColors.accentOrange;
+        return colorScheme.secondary;
       case WorkoutType.cardio:
-        return AppColors.accentCyan;
+        return colorScheme.primary;
       case WorkoutType.hiit:
         return Colors.purpleAccent;
       case WorkoutType.mobility:
-        return AppColors.success;
+        return appTheme.success;
     }
   }
 

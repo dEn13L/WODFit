@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/training_program.dart';
@@ -10,6 +10,7 @@ import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
 import '../../bloc/program/program_cubit.dart';
+import '../../bloc/theme/theme_cubit.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
 
 class CoachHomeScreen extends StatefulWidget {
@@ -66,13 +67,23 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
               user?.fullName ?? 'Тренер',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const Text(
+            Text(
               'Панель тренера',
-              style: TextStyle(fontSize: 12, color: AppColors.primaryNeon),
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
             ),
           ],
         ),
         actions: [
+          BlocBuilder<ThemeCubit, ThemeMode>(
+            builder: (context, themeMode) {
+              final isLight = themeMode == ThemeMode.light;
+              return IconButton(
+                tooltip: isLight ? 'Тёмная тема' : 'Светлая тема',
+                icon: Icon(isLight ? Icons.dark_mode : Icons.light_mode),
+                onPressed: () => context.read<ThemeCubit>().toggleTheme(),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'Все тренировки',
             icon: const Icon(Icons.format_list_bulleted),
@@ -92,10 +103,10 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async => _loadData(),
-        color: AppColors.primaryNeon,
+        color: Theme.of(context).colorScheme.primary,
         child: isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primaryNeon),
+            ? Center(
+                child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               )
             : SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -107,12 +118,19 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: _QuickActionButton(
-                            icon: Icons.add_circle_outline,
-                            label: 'Новая тренировка',
-                            color: AppColors.primaryNeon,
-                            textColor: Colors.black,
-                            onTap: () async {
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.add_circle_outline, size: 20),
+                            label: const Text(
+                              'Новая тренировка',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            onPressed: () async {
                               await context.push('/coach/workouts/create');
                               if (mounted) _loadData();
                             },
@@ -120,12 +138,29 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _QuickActionButton(
-                            icon: Icons.group_add_outlined,
-                            label: 'Новая программа',
-                            color: AppColors.surface,
-                            textColor: AppColors.textPrimary,
-                            onTap: () async {
+                          child: OutlinedButton.icon(
+                            icon: Icon(
+                              Icons.group_add_outlined,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            label: Text(
+                              'Новая программа',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+                              side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+                              padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            onPressed: () async {
                               await context.push('/coach/programs/create');
                               if (mounted) _loadData();
                             },
@@ -139,7 +174,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                     // Block "Сегодня"
                     Row(
                       children: [
-                        const Icon(Icons.today, size: 20, color: AppColors.primaryNeon),
+                        Icon(Icons.today, size: 20, color: Theme.of(context).colorScheme.primary),
                         const SizedBox(width: 8),
                         Text(
                           'Сегодня',
@@ -150,9 +185,9 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                         const Spacer(),
                         Text(
                           DateFormat('dd.MM.yyyy').format(now),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -163,17 +198,18 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline, color: AppColors.error),
+                            Icon(Icons.error_outline, color: context.appTheme.destructive),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 workoutState.message,
-                                style: const TextStyle(color: AppColors.error, fontSize: 13),
+                                style: TextStyle(color: context.appTheme.destructive, fontSize: 13),
                               ),
                             ),
                             TextButton(
@@ -188,31 +224,31 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white10),
+                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                         child: Column(
                           children: [
                             Icon(
                               Icons.event_available,
                               size: 36,
-                              color: AppColors.textSecondary.withValues(alpha: 0.5),
+                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                             ),
                             const SizedBox(height: 10),
-                            const Text(
+                            Text(
                               'Сегодня тренировок нет',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'Запланируйте тренировку на сегодня кнопкой «Новая тренировка».',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -240,7 +276,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                     // Block "Программы"
                     Row(
                       children: [
-                        const Icon(Icons.fitness_center_outlined, size: 20, color: AppColors.primaryNeon),
+                        Icon(Icons.fitness_center_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
                         const SizedBox(width: 8),
                         Text(
                           'Программы',
@@ -251,7 +287,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                         const Spacer(),
                         IconButton(
                           tooltip: 'Создать программу',
-                          icon: const Icon(Icons.add, color: AppColors.primaryNeon),
+                          icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary),
                           onPressed: () async {
                             await context.push('/coach/programs/create');
                             if (mounted) _loadData();
@@ -265,7 +301,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                           icon: const Icon(Icons.list, size: 16),
                           label: const Text('Все тренировки'),
                           style: TextButton.styleFrom(
-                            foregroundColor: AppColors.primaryNeon,
+                            foregroundColor: Theme.of(context).colorScheme.primary,
                             textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -276,17 +312,18 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline, color: AppColors.error),
+                            Icon(Icons.error_outline, color: context.appTheme.destructive),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 programState.message,
-                                style: const TextStyle(color: AppColors.error, fontSize: 13),
+                                style: TextStyle(color: context.appTheme.destructive, fontSize: 13),
                               ),
                             ),
                             TextButton(
@@ -301,31 +338,31 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white10),
+                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                         child: Column(
                           children: [
                             Icon(
                               Icons.group_work_outlined,
                               size: 40,
-                              color: AppColors.textSecondary.withValues(alpha: 0.5),
+                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
+                            Text(
                               'У вас пока нет программ',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 6),
-                            const Text(
+                            Text(
                               'Создайте групповую или персональную программу для назначения тренировок атлетам.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                              style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton.icon(
@@ -335,10 +372,6 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                               },
                               icon: const Icon(Icons.add),
                               label: const Text('Создать программу'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primaryNeon,
-                                foregroundColor: Colors.black,
-                              ),
                             ),
                           ],
                         ),
@@ -393,22 +426,16 @@ class _TodayWorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
     final isDraft = workout.status == WorkoutStatus.draft;
     final timeStr = WorkoutDateFormatter.formatTime(workout.scheduledAt);
 
     return Card(
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: isDraft
-              ? Colors.amber.withValues(alpha: 0.3)
-              : AppColors.primaryNeon.withValues(alpha: 0.25),
-        ),
-      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14.0),
           child: Row(
@@ -416,15 +443,15 @@ class _TodayWorkoutCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryNeon.withValues(alpha: 0.15),
+                  color: appTheme.timeChipBackground,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   timeStr,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primaryNeon,
+                    color: colorScheme.primary,
                   ),
                 ),
               ),
@@ -435,16 +462,16 @@ class _TodayWorkoutCard extends StatelessWidget {
                   children: [
                     Text(
                       WorkoutDateFormatter.formatTodayTomorrow(workout.scheduledAt, workout.title),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${workout.workoutTypesSummary}${workout.assignments.isNotEmpty ? ' • ${workout.assignments.map((a) => a.programName ?? 'Программа').join(', ')}' : ''}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -456,21 +483,22 @@ class _TodayWorkoutCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.2),
+                    color: appTheme.draft.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: appTheme.draft.withValues(alpha: 0.4)),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Черновик',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Colors.amber,
+                      color: appTheme.draft,
                     ),
                   ),
                 ),
               ],
               const SizedBox(width: 4),
-              const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondary),
+              Icon(Icons.arrow_forward_ios, size: 14, color: colorScheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -494,21 +522,14 @@ class _CoachProgramDashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isPersonal = program.kind == ProgramKind.personal;
     final nearestDateText = nearestWorkoutDate != null
         ? DateFormat('dd.MM HH:mm').format(nearestWorkoutDate!.toLocal())
         : 'Нет запланированных';
 
     return Card(
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isPersonal
-              ? Colors.purpleAccent.withValues(alpha: 0.3)
-              : AppColors.primaryNeon.withValues(alpha: 0.2),
-        ),
-      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -522,14 +543,12 @@ class _CoachProgramDashboardCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isPersonal
-                          ? Colors.purpleAccent.withValues(alpha: 0.15)
-                          : AppColors.primaryNeon.withValues(alpha: 0.15),
+                      color: colorScheme.primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       isPersonal ? Icons.person : Icons.groups,
-                      color: isPersonal ? Colors.purpleAccent : AppColors.primaryNeon,
+                      color: colorScheme.primary,
                       size: 20,
                     ),
                   ),
@@ -537,19 +556,17 @@ class _CoachProgramDashboardCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       program.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: isPersonal
-                          ? Colors.purpleAccent.withValues(alpha: 0.2)
-                          : AppColors.primaryNeon.withValues(alpha: 0.2),
+                      color: colorScheme.primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -557,7 +574,7 @@ class _CoachProgramDashboardCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: isPersonal ? Colors.purpleAccent : AppColors.primaryNeon,
+                        color: colorScheme.primary,
                       ),
                     ),
                   ),
@@ -571,11 +588,11 @@ class _CoachProgramDashboardCard extends StatelessWidget {
                   // Members count
                   Row(
                     children: [
-                      const Icon(Icons.people_outline, size: 14, color: AppColors.textSecondary),
+                      Icon(Icons.people_outline, size: 14, color: colorScheme.onSurfaceVariant),
                       const SizedBox(width: 4),
                       Text(
                         '${program.memberCount} участников',
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -583,11 +600,11 @@ class _CoachProgramDashboardCard extends StatelessWidget {
                   // Workout count
                   Row(
                     children: [
-                      const Icon(Icons.fitness_center, size: 13, color: AppColors.textSecondary),
+                      Icon(Icons.fitness_center, size: 13, color: colorScheme.onSurfaceVariant),
                       const SizedBox(width: 4),
                       Text(
                         '$workoutCount тренировок',
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -596,66 +613,17 @@ class _CoachProgramDashboardCard extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.event_outlined, size: 14, color: AppColors.primaryNeon),
+                  Icon(Icons.event_outlined, size: 14, color: colorScheme.primary),
                   const SizedBox(width: 4),
                   Text(
                     'Ближайшая: $nearestDateText',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: nearestWorkoutDate != null ? FontWeight.w600 : FontWeight.normal,
-                      color: nearestWorkoutDate != null ? AppColors.primaryNeon : AppColors.textSecondary,
+                      color: nearestWorkoutDate != null ? colorScheme.primary : colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final Color textColor;
-  final VoidCallback onTap;
-
-  const _QuickActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.textColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: textColor, size: 20),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
               ),
             ],
           ),

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_extension.dart';
 import '../../../../domain/entities/training_program.dart';
 import '../../../bloc/program/program_cubit.dart';
 
@@ -26,13 +26,15 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Код приглашения $text скопирован!'),
-        backgroundColor: AppColors.success,
+        backgroundColor: context.appTheme.success,
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
   Future<void> _editProgram(TrainingProgram program) async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final nameController = TextEditingController(text: program.name);
     final descriptionController = TextEditingController(text: program.description);
     ProgramKind selectedKind = program.kind;
@@ -42,8 +44,8 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.surface,
-          title: const Text('Редактировать программу'),
+          backgroundColor: colorScheme.surface,
+          title: Text('Редактировать программу', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
           content: Form(
             key: formKey,
             child: SingleChildScrollView(
@@ -102,7 +104,7 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: const Text('Отмена'),
+              child: Text('Отмена', style: TextStyle(color: colorScheme.onSurfaceVariant)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -132,23 +134,28 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
   }
 
   Future<void> _deleteProgram(TrainingProgram program) async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Удалить программу?'),
+        backgroundColor: colorScheme.surface,
+        title: Text('Удалить программу?', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
         content: Text(
           'Вы уверены, что хотите удалить программу "${program.name}"?\n\n'
           'Все участники будут исключены из программы. '
           'Назначения тренировок для этой программы будут удалены, но сами тренировки сохранятся в вашем профиле.',
+          style: TextStyle(color: colorScheme.onSurface),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Отмена'),
+            child: Text('Отмена', style: TextStyle(color: colorScheme.onSurfaceVariant)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(backgroundColor: appTheme.destructive, foregroundColor: Colors.white),
             onPressed: () => Navigator.of(dialogCtx).pop(true),
             child: const Text('Удалить'),
           ),
@@ -165,7 +172,6 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -180,6 +186,10 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Программы'),
@@ -195,8 +205,6 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
             context.read<ProgramCubit>().loadCoachPrograms();
           }
         },
-        backgroundColor: AppColors.primaryNeon,
-        foregroundColor: Colors.black,
         icon: const Icon(Icons.add),
         label: const Text('Создать программу', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
@@ -206,22 +214,22 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.successMessage!),
-                backgroundColor: AppColors.success,
+                backgroundColor: appTheme.success,
               ),
             );
           } else if (state is ProgramError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: AppColors.error,
+                backgroundColor: appTheme.destructive,
               ),
             );
           }
         },
         builder: (context, state) {
           if (state is ProgramLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryNeon),
+            return Center(
+              child: CircularProgressIndicator(color: colorScheme.primary),
             );
           }
 
@@ -232,12 +240,12 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                    Icon(Icons.error_outline, size: 48, color: appTheme.destructive),
                     const SizedBox(height: 16),
                     Text(
                       state.message,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.error),
+                      style: TextStyle(color: appTheme.destructive),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
@@ -263,22 +271,22 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                       Icon(
                         Icons.fitness_center_outlined,
                         size: 64,
-                        color: AppColors.textSecondary.withValues(alpha: 0.5),
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         'У вас пока нет программ',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Создайте персональную или групповую программу тренировок, чтобы назначать комплексы и отслеживать результаты атлетов.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
@@ -294,7 +302,7 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
 
             return RefreshIndicator(
               onRefresh: () async => context.read<ProgramCubit>().loadCoachPrograms(),
-              color: AppColors.primaryNeon,
+              color: colorScheme.primary,
               child: ListView.separated(
                 padding: const EdgeInsets.all(16),
                 itemCount: programs.length,
@@ -304,15 +312,6 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                   final dateFormat = DateFormat('dd.MM.yyyy');
 
                   return Card(
-                    color: AppColors.surface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: program.kind == ProgramKind.personal
-                            ? Colors.purpleAccent.withValues(alpha: 0.3)
-                            : AppColors.primaryNeon.withValues(alpha: 0.2),
-                      ),
-                    ),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () async {
@@ -331,16 +330,12 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: program.kind == ProgramKind.personal
-                                      ? Colors.purpleAccent.withValues(alpha: 0.15)
-                                      : AppColors.primaryNeon.withValues(alpha: 0.15),
+                                  color: colorScheme.primary.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
                                   program.kind == ProgramKind.personal ? Icons.person : Icons.groups,
-                                  color: program.kind == ProgramKind.personal
-                                      ? Colors.purpleAccent
-                                      : AppColors.primaryNeon,
+                                  color: colorScheme.primary,
                                   size: 20,
                                 ),
                               ),
@@ -354,19 +349,17 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                                         Expanded(
                                           child: Text(
                                             program.name,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 17,
                                               fontWeight: FontWeight.bold,
-                                              color: AppColors.textPrimary,
+                                              color: colorScheme.onSurface,
                                             ),
                                           ),
                                         ),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: program.kind == ProgramKind.personal
-                                                ? Colors.purpleAccent.withValues(alpha: 0.2)
-                                                : AppColors.primaryNeon.withValues(alpha: 0.2),
+                                            color: colorScheme.primary.withValues(alpha: 0.15),
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
@@ -374,9 +367,7 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w600,
-                                              color: program.kind == ProgramKind.personal
-                                                  ? Colors.purpleAccent
-                                                  : AppColors.primaryNeon,
+                                              color: colorScheme.primary,
                                             ),
                                           ),
                                         ),
@@ -385,17 +376,16 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       'Создана: ${dateFormat.format(program.createdAt.toLocal())}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
-                                        color: AppColors.textSecondary,
+                                        color: colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
-                                color: AppColors.surfaceLight,
+                                icon: Icon(Icons.more_vert, color: colorScheme.onSurfaceVariant),
                                 onSelected: (val) {
                                   if (val == 'edit') {
                                     _editProgram(program);
@@ -406,33 +396,33 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                                   }
                                 },
                                 itemBuilder: (ctx) => [
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'members',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.people_outline, size: 18, color: AppColors.primaryNeon),
-                                        SizedBox(width: 8),
-                                        Text('Участники'),
+                                        Icon(Icons.people_outline, size: 18, color: colorScheme.primary),
+                                        const SizedBox(width: 8),
+                                        const Text('Участники'),
                                       ],
                                     ),
                                   ),
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'edit',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.edit_outlined, size: 18, color: AppColors.textPrimary),
-                                        SizedBox(width: 8),
-                                        Text('Редактировать'),
+                                        Icon(Icons.edit_outlined, size: 18, color: colorScheme.onSurface),
+                                        const SizedBox(width: 8),
+                                        const Text('Редактировать'),
                                       ],
                                     ),
                                   ),
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'delete',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                                        SizedBox(width: 8),
-                                        Text('Удалить', style: TextStyle(color: AppColors.error)),
+                                        Icon(Icons.delete_outline, size: 18, color: appTheme.destructive),
+                                        const SizedBox(width: 8),
+                                        Text('Удалить', style: TextStyle(color: appTheme.destructive)),
                                       ],
                                     ),
                                   ),
@@ -444,9 +434,9 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                             const SizedBox(height: 8),
                             Text(
                               program.description,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.textSecondary,
+                                color: colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -454,20 +444,20 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceLight,
+                              color: colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
                               children: [
-                                const Text(
+                                Text(
                                   'Инвайт-код:',
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   program.inviteCode,
-                                  style: const TextStyle(
-                                    color: AppColors.primaryNeon,
+                                  style: TextStyle(
+                                    color: colorScheme.primary,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.5,
                                     fontSize: 14,
@@ -476,15 +466,15 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                                 const Spacer(),
                                 InkWell(
                                   onTap: () => _copyToClipboard(program.inviteCode, context),
-                                  child: const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     child: Row(
                                       children: [
-                                        Icon(Icons.copy, size: 14, color: AppColors.primaryNeon),
-                                        SizedBox(width: 4),
+                                        Icon(Icons.copy, size: 14, color: colorScheme.primary),
+                                        const SizedBox(width: 4),
                                         Text(
                                           'Скопировать',
-                                          style: TextStyle(color: AppColors.primaryNeon, fontSize: 12),
+                                          style: TextStyle(color: colorScheme.primary, fontSize: 12),
                                         ),
                                       ],
                                     ),
@@ -499,8 +489,8 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                             children: [
                               Text(
                                 'Участников: ${program.memberCount}',
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -510,7 +500,7 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                                 icon: const Icon(Icons.people, size: 16),
                                 label: const Text('Список атлетов'),
                                 style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.primaryNeon,
+                                  foregroundColor: colorScheme.primary,
                                   visualDensity: VisualDensity.compact,
                                 ),
                               ),
@@ -582,20 +572,24 @@ class _ProgramMembersSheetState extends State<_ProgramMembersSheet> {
   }
 
   Future<void> _removeMember(ProgramMember member) async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
     final name = member.profile?.fullName ?? member.userId;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Исключить атлета?'),
-        content: Text('Вы действительно хотите исключить $name из программы "${widget.program.name}"?'),
+        backgroundColor: colorScheme.surface,
+        title: Text('Исключить атлета?', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
+        content: Text('Вы действительно хотите исключить $name из программы "${widget.program.name}"?', style: TextStyle(color: colorScheme.onSurface)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Отмена'),
+            child: Text('Отмена', style: TextStyle(color: colorScheme.onSurfaceVariant)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(backgroundColor: appTheme.destructive, foregroundColor: Colors.white),
             onPressed: () => Navigator.of(dialogCtx).pop(true),
             child: const Text('Исключить'),
           ),
@@ -613,7 +607,7 @@ class _ProgramMembersSheetState extends State<_ProgramMembersSheet> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Ошибка при исключении: $e'),
-              backgroundColor: AppColors.error,
+              backgroundColor: appTheme.destructive,
             ),
           );
         }
@@ -623,6 +617,10 @@ class _ProgramMembersSheetState extends State<_ProgramMembersSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       minChildSize: 0.4,
@@ -637,25 +635,25 @@ class _ProgramMembersSheetState extends State<_ProgramMembersSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textSecondary.withValues(alpha: 0.3),
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 16),
             Text(
               'Участники программы: ${widget.program.name}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
             ),
             const SizedBox(height: 12),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.primaryNeon))
+                  ? Center(child: CircularProgressIndicator(color: colorScheme.primary))
                   : _error != null
                       ? Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(_error!, style: const TextStyle(color: AppColors.error)),
+                              Text(_error!, style: TextStyle(color: appTheme.destructive)),
                               const SizedBox(height: 8),
                               ElevatedButton(onPressed: _loadMembers, child: const Text('Повторить')),
                             ],
@@ -666,14 +664,17 @@ class _ProgramMembersSheetState extends State<_ProgramMembersSheet> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.person_outline, size: 48, color: AppColors.textSecondary),
+                                  Icon(Icons.person_outline, size: 48, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                                   const SizedBox(height: 8),
-                                  const Text('В программе пока нет участников'),
+                                  Text(
+                                    'В программе пока нет участников',
+                                    style: TextStyle(color: colorScheme.onSurface),
+                                  ),
                                   const SizedBox(height: 4),
                                   Text(
                                     'Код для вступления: ${widget.program.inviteCode}',
-                                    style: const TextStyle(
-                                      color: AppColors.primaryNeon,
+                                    style: TextStyle(
+                                      color: colorScheme.primary,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -683,7 +684,7 @@ class _ProgramMembersSheetState extends State<_ProgramMembersSheet> {
                           : ListView.separated(
                               controller: scrollController,
                               itemCount: _members.length,
-                              separatorBuilder: (context, index) => const Divider(color: AppColors.surfaceLight),
+                              separatorBuilder: (context, index) => const Divider(),
                               itemBuilder: (context, index) {
                                 final member = _members[index];
                                 final profile = member.profile;
@@ -694,31 +695,31 @@ class _ProgramMembersSheetState extends State<_ProgramMembersSheet> {
                                 return ListTile(
                                   contentPadding: EdgeInsets.zero,
                                   leading: CircleAvatar(
-                                    backgroundColor: AppColors.surfaceLight,
+                                    backgroundColor: colorScheme.surfaceContainerHighest,
                                     child: Text(
                                       name.isNotEmpty ? name[0].toUpperCase() : 'A',
-                                      style: const TextStyle(
-                                        color: AppColors.primaryNeon,
+                                      style: TextStyle(
+                                        color: colorScheme.primary,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
                                   title: Text(
                                     name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
+                                      color: colorScheme.onSurface,
                                     ),
                                   ),
                                   subtitle: Text(
                                     '$email • Вступил(а) $joinedStr',
-                                    style: const TextStyle(
-                                      color: AppColors.textSecondary,
+                                    style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant,
                                       fontSize: 12,
                                     ),
                                   ),
                                   trailing: IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: AppColors.error),
+                                    icon: Icon(Icons.remove_circle_outline, color: appTheme.destructive),
                                     onPressed: () => _removeMember(member),
                                     tooltip: 'Исключить из программы',
                                   ),

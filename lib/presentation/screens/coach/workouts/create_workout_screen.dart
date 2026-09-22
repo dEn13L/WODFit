@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/workout_form_theme.dart';
+import '../../../../core/theme/app_theme_extension.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../../domain/entities/training_program.dart';
 import '../../../../domain/repositories/crossfit_workout_repository.dart';
@@ -33,10 +33,7 @@ class CreateWorkoutScreen extends StatelessWidget {
         initialProgramId: initialProgramId,
         initialProgramIds: initialProgramIds,
       ),
-      child: Theme(
-        data: workoutFormTheme,
-        child: const _CreateWorkoutView(),
-      ),
+      child: const _CreateWorkoutView(),
     );
   }
 }
@@ -83,12 +80,6 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
       initialDate: initialDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
-      builder: (context, child) {
-        return Theme(
-          data: workoutFormTheme,
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
     );
 
     if (picked != null) {
@@ -107,12 +98,6 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initialDate),
-      builder: (context, child) {
-        return Theme(
-          data: workoutFormTheme,
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
     );
 
     if (picked != null) {
@@ -129,6 +114,10 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     return BlocConsumer<WorkoutFormCubit, WorkoutFormState>(
       listenWhen: (previous, current) =>
           previous.submitStatus != current.submitStatus ||
@@ -138,14 +127,14 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
           _bannerShown = true;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              backgroundColor: WorkoutFormColors.text,
-              content: const Text(
+              backgroundColor: colorScheme.surfaceContainerHighest,
+              content: Text(
                 'Найден сохранённый черновик тренировки.',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: colorScheme.onSurface),
               ),
               action: SnackBarAction(
                 label: 'Восстановить',
-                textColor: WorkoutFormColors.primary,
+                textColor: colorScheme.primary,
                 onPressed: () {
                   context.read<WorkoutFormCubit>().restoreCachedDraft();
                   _sessionNameController.text =
@@ -162,7 +151,7 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.errorMessage!),
-              backgroundColor: WorkoutFormColors.publishButton,
+              backgroundColor: appTheme.destructive,
             ),
           );
         } else if (state.submitStatus == WorkoutFormSubmitStatus.success) {
@@ -170,7 +159,7 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.successMessage ?? 'Успешно сохранено'),
-              backgroundColor: const Color(0xFF10B981),
+              backgroundColor: appTheme.success,
             ),
           );
           context.pop();
@@ -188,16 +177,12 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
             formState.submitStatus == WorkoutFormSubmitStatus.loading;
 
         return Scaffold(
-          backgroundColor: WorkoutFormColors.background,
           appBar: AppBar(
-            backgroundColor: WorkoutFormColors.background,
-            elevation: 0,
-            scrolledUnderElevation: 0,
             leading: IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.arrow_back_ios_new,
                 size: 20,
-                color: WorkoutFormColors.text,
+                color: colorScheme.onSurface,
               ),
               onPressed: () => context.pop(),
             ),
@@ -205,15 +190,15 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
               // Text button "Черновик"
               TextButton.icon(
                 onPressed: isSubmitting ? null : () => cubit.saveDraft(),
-                icon: const Icon(
+                icon: Icon(
                   Icons.folder_outlined,
                   size: 18,
-                  color: WorkoutFormColors.draftButton,
+                  color: colorScheme.onSurfaceVariant,
                 ),
-                label: const Text(
+                label: Text(
                   'Черновик',
                   style: TextStyle(
-                    color: WorkoutFormColors.draftButton,
+                    color: colorScheme.onSurfaceVariant,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -227,7 +212,7 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                 child: ElevatedButton(
                   onPressed: isSubmitting ? null : () => cubit.publishWorkout(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: WorkoutFormColors.publishButton,
+                    backgroundColor: appTheme.publish,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(
@@ -275,22 +260,22 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                             formState.isEditMode
                                 ? 'Редактирование\nтренировки'
                                 : 'Создание\nтренировки',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 30,
                               fontWeight: FontWeight.w800,
-                              color: WorkoutFormColors.text,
+                              color: colorScheme.onSurface,
                               height: 1.15,
                             ),
                           ),
                           const SizedBox(height: 24),
 
                           // 5. Section "НАЗНАЧИТЬ ПРОГРАММАМ"
-                          const Text(
+                          Text(
                             'НАЗНАЧИТЬ ПРОГРАММАМ',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: WorkoutFormColors.textMuted,
+                              color: colorScheme.onSurfaceVariant,
                               letterSpacing: 0.8,
                             ),
                           ),
@@ -306,17 +291,17 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                 return Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: theme.cardTheme.color ?? colorScheme.surface,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: WorkoutFormColors.border,
+                                      color: colorScheme.outlineVariant,
                                     ),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     'У вас пока нет созданных программ. Тренировка сохранится в черновик.',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: WorkoutFormColors.hint,
+                                      color: colorScheme.onSurfaceVariant,
                                     ),
                                   ),
                                 );
@@ -340,14 +325,15 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: isSelected
-                                            ? WorkoutFormColors.primary
-                                            : Colors.white,
+                                            ? colorScheme.primary.withValues(alpha: 0.15)
+                                            : (theme.cardTheme.color ?? colorScheme.surface),
                                         borderRadius:
                                             BorderRadius.circular(20),
                                         border: Border.all(
                                           color: isSelected
-                                              ? WorkoutFormColors.primary
-                                              : WorkoutFormColors.border,
+                                              ? colorScheme.primary
+                                              : colorScheme.outlineVariant,
+                                          width: isSelected ? 1.5 : 1.0,
                                         ),
                                       ),
                                       child: Row(
@@ -359,8 +345,8 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
                                               color: isSelected
-                                                  ? Colors.white
-                                                  : WorkoutFormColors.text,
+                                                  ? colorScheme.primary
+                                                  : colorScheme.onSurface,
                                             ),
                                           ),
                                         ],
@@ -381,12 +367,12 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'ДАТА',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
-                                        color: WorkoutFormColors.textMuted,
+                                        color: colorScheme.onSurfaceVariant,
                                         letterSpacing: 0.8,
                                       ),
                                     ),
@@ -404,11 +390,11 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                           vertical: 12,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          color: theme.cardTheme.color ?? colorScheme.surface,
                                           borderRadius:
                                               BorderRadius.circular(12),
                                           border: Border.all(
-                                            color: WorkoutFormColors.border,
+                                            color: colorScheme.outlineVariant,
                                           ),
                                         ),
                                         child: Row(
@@ -418,16 +404,16 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                             Text(
                                               DateFormat('dd.MM.yyyy')
                                                   .format(formState.scheduledAt),
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
-                                                color: WorkoutFormColors.text,
+                                                color: colorScheme.onSurface,
                                               ),
                                             ),
-                                            const Icon(
+                                            Icon(
                                               Icons.calendar_today_outlined,
                                               size: 18,
-                                              color: WorkoutFormColors.hint,
+                                              color: colorScheme.onSurfaceVariant,
                                             ),
                                           ],
                                         ),
@@ -443,12 +429,12 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'ВРЕМЯ',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
-                                        color: WorkoutFormColors.textMuted,
+                                        color: colorScheme.onSurfaceVariant,
                                         letterSpacing: 0.8,
                                       ),
                                     ),
@@ -466,11 +452,11 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                           vertical: 12,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          color: theme.cardTheme.color ?? colorScheme.surface,
                                           borderRadius:
                                               BorderRadius.circular(12),
                                           border: Border.all(
-                                            color: WorkoutFormColors.border,
+                                            color: colorScheme.outlineVariant,
                                           ),
                                         ),
                                         child: Row(
@@ -480,16 +466,16 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                             Text(
                                               DateFormat('HH:mm')
                                                   .format(formState.scheduledAt),
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
-                                                color: WorkoutFormColors.text,
+                                                color: colorScheme.onSurface,
                                               ),
                                             ),
-                                            const Icon(
+                                            Icon(
                                               Icons.access_time,
                                               size: 18,
-                                              color: WorkoutFormColors.hint,
+                                              color: colorScheme.onSurfaceVariant,
                                             ),
                                           ],
                                         ),
@@ -506,12 +492,12 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'УТОЧНЕНИЕ (НЕОБЯЗАТЕЛЬНО)',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: WorkoutFormColors.textMuted,
+                                  color: colorScheme.onSurfaceVariant,
                                   letterSpacing: 0.8,
                                 ),
                               ),
@@ -534,12 +520,12 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'ЗАДАНИЯ ТРЕНИРОВКИ',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: WorkoutFormColors.textMuted,
+                                  color: colorScheme.onSurfaceVariant,
                                   letterSpacing: 0.8,
                                 ),
                               ),
@@ -549,15 +535,15 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE2E8F0),
+                                  color: colorScheme.surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   _formatPluralTasks(formState.tasks.length),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF475569),
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ),
@@ -600,8 +586,8 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                         onTap: () => cubit.addTask(),
                         borderRadius: BorderRadius.circular(16),
                         child: CustomPaint(
-                          painter: const DashedRRectPainter(
-                            color: WorkoutFormColors.border,
+                          painter: DashedRRectPainter(
+                            color: colorScheme.outlineVariant,
                             strokeWidth: 1.5,
                             radius: 16,
                           ),
@@ -611,21 +597,21 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Column(
+                            child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
                                   Icons.add_circle_outline,
                                   size: 24,
-                                  color: WorkoutFormColors.textMuted,
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
-                                SizedBox(height: 6),
+                                const SizedBox(height: 6),
                                 Text(
                                   'ДОБАВИТЬ ЗАДАНИЕ',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
-                                    color: WorkoutFormColors.textMuted,
+                                    color: colorScheme.onSurfaceVariant,
                                     letterSpacing: 0.8,
                                   ),
                                 ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_extension.dart';
 import '../../../../core/utils/workout_date_formatter.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../bloc/workout/crossfit_workout_cubit.dart';
@@ -32,19 +32,23 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
     await cubit.duplicateWorkout(workoutId);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Тренировка скопирована в черновики'),
-          backgroundColor: AppColors.success,
+        SnackBar(
+          content: const Text('Тренировка скопирована в черновики'),
+          backgroundColor: context.appTheme.success,
         ),
       );
     }
   }
 
   Future<void> _deleteWorkout(CrossfitWorkout workout) async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: colorScheme.surface,
         title: const Text('Удалить тренировку?'),
         content: Text(
           'Вы уверены, что хотите удалить "${workout.title}"?\n'
@@ -56,7 +60,10 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
             child: const Text('Отмена'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: appTheme.destructive,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.of(dialogCtx).pop(true),
             child: const Text('Удалить'),
           ),
@@ -69,9 +76,9 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
       await cubit.deleteWorkout(workout.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Тренировка удалена'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Тренировка удалена'),
+            backgroundColor: appTheme.destructive,
           ),
         );
       }
@@ -80,13 +87,17 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Все тренировки'),
         actions: [
           IconButton(
             tooltip: 'Создать тренировку',
-            icon: const Icon(Icons.add, color: AppColors.primaryNeon),
+            icon: Icon(Icons.add, color: colorScheme.primary),
             onPressed: () async {
               await context.push('/coach/workouts/create');
               if (mounted) _loadWorkouts();
@@ -97,8 +108,8 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
       body: BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
         builder: (context, state) {
           if (state is CrossfitWorkoutLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryNeon),
+            return Center(
+              child: CircularProgressIndicator(color: colorScheme.primary),
             );
           }
 
@@ -109,12 +120,12 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                    Icon(Icons.error_outline, color: appTheme.destructive, size: 48),
                     const SizedBox(height: 12),
                     Text(
                       state.message,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.error),
+                      style: TextStyle(color: appTheme.destructive),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
@@ -140,22 +151,22 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
                       Icon(
                         Icons.fitness_center_outlined,
                         size: 64,
-                        color: AppColors.textSecondary.withValues(alpha: 0.5),
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         'У вас пока нет тренировок',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Создайте свою первую тренировку и назначьте её программам.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
@@ -188,7 +199,7 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
 
             return RefreshIndicator(
               onRefresh: () async => _loadWorkouts(),
-              color: AppColors.primaryNeon,
+              color: colorScheme.primary,
               child: Column(
                 children: [
                   Padding(
@@ -255,10 +266,10 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
                   const SizedBox(height: 8),
                   Expanded(
                     child: workouts.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Text(
                               'Ничего не найдено',
-                              style: TextStyle(color: AppColors.textSecondary),
+                              style: TextStyle(color: colorScheme.onSurfaceVariant),
                             ),
                           )
                         : ListView.separated(
@@ -306,18 +317,12 @@ class _CoachWorkoutItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final appTheme = context.appTheme;
     final isDraft = workout.status == WorkoutStatus.draft;
 
     return Card(
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDraft
-              ? Colors.amber.withValues(alpha: 0.3)
-              : AppColors.primaryNeon.withValues(alpha: 0.2),
-        ),
-      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -332,32 +337,31 @@ class _CoachWorkoutItemCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: isDraft
-                          ? Colors.amber.withValues(alpha: 0.2)
-                          : AppColors.success.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      isDraft ? 'Черновик' : 'Опубликовано',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: isDraft ? Colors.amber : AppColors.success,
+                  if (isDraft)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: appTheme.draft.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Черновик',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: appTheme.draft,
+                        ),
                       ),
                     ),
-                  ),
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, size: 20, color: AppColors.textSecondary),
+                    icon: Icon(Icons.more_vert, size: 20, color: colorScheme.onSurfaceVariant),
                     onSelected: (val) {
                       if (val == 'duplicate') {
                         onDuplicate();
@@ -376,13 +380,13 @@ class _CoachWorkoutItemCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                            SizedBox(width: 8),
-                            Text('Удалить', style: TextStyle(color: AppColors.error)),
+                            Icon(Icons.delete_outline, size: 18, color: appTheme.destructive),
+                            const SizedBox(width: 8),
+                            Text('Удалить', style: TextStyle(color: appTheme.destructive)),
                           ],
                         ),
                       ),
@@ -396,7 +400,7 @@ class _CoachWorkoutItemCard extends StatelessWidget {
                   workout.description,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
                 ),
               ],
               const SizedBox(height: 12),
@@ -404,23 +408,23 @@ class _CoachWorkoutItemCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.fitness_center_outlined, size: 14, color: AppColors.primaryNeon.withValues(alpha: 0.8)),
+                  Icon(Icons.fitness_center_outlined, size: 14, color: colorScheme.primary),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       workout.workoutTypesSummary,
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (workout.assignments.isNotEmpty) ...[
                     const SizedBox(width: 8),
-                    const Icon(Icons.groups_outlined, size: 14, color: AppColors.primaryNeon),
+                    Icon(Icons.groups_outlined, size: 14, color: colorScheme.primary),
                     const SizedBox(width: 4),
                     Text(
                       workout.assignments.map((a) => a.programName ?? 'Программа').join(', '),
-                      style: const TextStyle(fontSize: 12, color: AppColors.primaryNeon),
+                      style: TextStyle(fontSize: 12, color: colorScheme.primary),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
