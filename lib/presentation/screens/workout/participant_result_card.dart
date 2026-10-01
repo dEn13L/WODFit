@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme_extension.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_layout.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
 import 'results_matrix.dart';
@@ -30,6 +32,8 @@ class ParticipantResultCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     _participantName,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -74,7 +78,12 @@ class _PartResultLine extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(part.title.trim().isEmpty ? 'Задание' : part.title.trim(), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            part.title.trim().isEmpty ? 'Задание' : part.title.trim(),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 3,
+            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 4),
           if (currentResult == null)
             Text(
@@ -89,7 +98,7 @@ class _PartResultLine extends StatelessWidget {
                   child: Text(
                     currentResult.formattedScore,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontFamily: 'monospace',
+                      fontFamily: AppTheme.resultFontFamily,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -122,7 +131,7 @@ class _StatusLabel extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppLayout.badgeRadius),
       ),
       child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme_extension.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/part_result.dart';
 import 'results_matrix.dart';
 
@@ -52,7 +53,7 @@ class ResultsMatrixTable extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -111,7 +112,7 @@ class _ResultCell extends StatelessWidget {
             currentResult.formattedScore,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodyMedium?.copyWith(fontFamily: 'monospace', fontWeight: FontWeight.w700),
+            style: theme.textTheme.bodyMedium?.copyWith(fontFamily: AppTheme.resultFontFamily, fontWeight: FontWeight.w700),
           ),
           Text(
             currentResult.status.displayName,

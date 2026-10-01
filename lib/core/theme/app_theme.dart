@@ -3,9 +3,9 @@ import 'app_theme_extension.dart';
 
 class AppColors {
   // Dark theme colors
-  static const Color background = Color(0xFF121418);
-  static const Color surface = Color(0xFF1E222B);
-  static const Color surfaceLight = Color(0xFF2A2F3D);
+  static const Color background = Color(0xFF0C0F12);
+  static const Color surface = Color(0xFF171C21);
+  static const Color surfaceLight = Color(0xFF252C33);
 
   // Accents (Dark)
   static const Color primaryNeon = Color(0xFFCCFF00); // Electric Lime
@@ -14,13 +14,13 @@ class AppColors {
   static const Color accentCyan = Color(0xFF00E5FF);
 
   // Text (Dark)
-  static const Color textPrimary = Color(0xFFF5F7FA);
-  static const Color textSecondary = Color(0xFF8E95A5);
-  static const Color textMuted = Color(0xFF5C6270);
+  static const Color textPrimary = Color(0xFFF2F5F7);
+  static const Color textSecondary = Color(0xFFB4BDC7);
+  static const Color textMuted = Color(0xFF98A2AD);
 
   // Status (Shared)
-  static const Color success = Color(0xFF00E676);
-  static const Color error = Color(0xFFFF3D71);
+  static const Color success = Color(0xFF34D399);
+  static const Color error = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);
 
   // Light theme tokens
@@ -38,6 +38,8 @@ class AppColors {
 }
 
 class AppTheme {
+  static const String resultFontFamily = 'monospace';
+
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
@@ -83,15 +85,28 @@ class AppTheme {
           backgroundColor: AppColors.primaryNeon,
           foregroundColor: Colors.black,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          minimumSize: const Size(64, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
           ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(64, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: const StadiumBorder(),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(64, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: const StadiumBorder(),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -122,6 +137,11 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primaryNeon, width: 1.5),
         ),
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        side: const BorderSide(color: AppColors.surfaceLight),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
@@ -208,15 +228,28 @@ class AppTheme {
           backgroundColor: AppColors.lightPrimary,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          minimumSize: const Size(64, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
           ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(64, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: const StadiumBorder(),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(64, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: const StadiumBorder(),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -247,6 +280,11 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.lightPrimary, width: 1.5),
         ),
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        side: const BorderSide(color: AppColors.lightBorder),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
       textTheme: const TextTheme(
         headlineLarge: TextStyle(

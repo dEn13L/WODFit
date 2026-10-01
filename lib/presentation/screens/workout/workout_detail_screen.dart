@@ -8,6 +8,7 @@ import '../../../domain/entities/part_result.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_state.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
+import '../../widgets/app_state_view.dart';
 import '../coach/workouts/create_workout_screen.dart';
 import 'result_input/part_result_input_modal.dart';
 
@@ -88,9 +89,7 @@ class _CoachWorkoutDetailView extends StatelessWidget {
       builder: (context, state) {
         if (state is CrossfitWorkoutLoading) {
           return Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(color: colorScheme.primary),
-            ),
+            body: const AppLoadingView(semanticLabel: 'Загрузка тренировки'),
           );
         }
 
@@ -450,7 +449,7 @@ class _ClientWorkoutDetailView extends StatelessWidget {
         },
         builder: (context, state) {
           if (state is CrossfitWorkoutLoading) {
-            return Center(child: CircularProgressIndicator(color: colorScheme.primary));
+            return const AppLoadingView(semanticLabel: 'Загрузка тренировки');
           }
 
           if (state is CrossfitWorkoutDetailLoaded) {
@@ -674,28 +673,9 @@ class _ClientWorkoutDetailView extends StatelessWidget {
           }
 
           if (state is CrossfitWorkoutError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 56, color: appTheme.destructive),
-                    const SizedBox(height: 16),
-                    Text(
-                      state.message,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Повторить попытку'),
-                      onPressed: () => context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(workoutId),
-                    ),
-                  ],
-                ),
-              ),
+            return AppErrorView(
+              message: state.message,
+              onRetry: () => context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(workoutId),
             );
           }
 

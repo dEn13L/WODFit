@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme_extension.dart';
 import '../../../../domain/entities/training_program.dart';
 import '../../../bloc/program/program_cubit.dart';
+import '../../../widgets/app_state_view.dart';
 
 class CoachProgramsScreen extends StatefulWidget {
   const CoachProgramsScreen({super.key});
@@ -228,33 +229,13 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
         },
         builder: (context, state) {
           if (state is ProgramLoading) {
-            return Center(
-              child: CircularProgressIndicator(color: colorScheme.primary),
-            );
+            return const AppLoadingView(semanticLabel: 'Загрузка программ');
           }
 
           if (state is ProgramError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline, size: 48, color: appTheme.destructive),
-                    const SizedBox(height: 16),
-                    Text(
-                      state.message,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: appTheme.destructive),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => context.read<ProgramCubit>().loadCoachPrograms(),
-                      child: const Text('Повторить'),
-                    ),
-                  ],
-                ),
-              ),
+            return AppErrorView(
+              message: state.message,
+              onRetry: () async => context.read<ProgramCubit>().loadCoachPrograms(),
             );
           }
 
@@ -262,41 +243,12 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
             final programs = state.programs;
 
             if (programs.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.fitness_center_outlined,
-                        size: 64,
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'У вас пока нет программ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Создайте персональную или групповую программу тренировок, чтобы назначать комплексы и отслеживать результаты атлетов.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: () => context.push('/coach/programs/create'),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Создать первую программу'),
-                      ),
-                    ],
-                  ),
-                ),
+              return AppEmptyView(
+                icon: Icons.fitness_center_outlined,
+                title: 'У вас пока нет программ',
+                description: 'Создайте программу, чтобы назначать тренировки и отслеживать результаты атлетов.',
+                actionLabel: 'Создать программу',
+                onAction: () async => context.push('/coach/programs/create'),
               );
             }
 
@@ -360,7 +312,7 @@ class _CoachProgramsScreenState extends State<CoachProgramsScreen> {
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
                                             color: colorScheme.primary.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius: BorderRadius.circular(10),
                                           ),
                                           child: Text(
                                             program.kind.displayName,

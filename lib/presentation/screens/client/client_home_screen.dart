@@ -198,24 +198,29 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                 return Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Row(
-                                      children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
                                         Icon(
                                           program.kind == ProgramKind.personal ? Icons.person : Icons.groups,
                                           size: 20,
                                           color: colorScheme.primary,
                                         ),
                                         const SizedBox(width: 10),
-                                        Text(
-                                          program.name,
-                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                        Expanded(
+                                          child: Text(
+                                            program.name,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                          ),
                                         ),
                                         const SizedBox(width: 6),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                           decoration: BoxDecoration(
                                             color: colorScheme.primary.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.circular(10),
                                           ),
                                           child: Text(
                                             program.kind.displayName,
@@ -225,8 +230,10 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                                             ),
                                           ),
                                         ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
+                                    const SizedBox(width: 8),
                                     TextButton(
                                       onPressed: () async {
                                         final programCubit = context.read<ProgramCubit>();
@@ -556,7 +563,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -654,7 +661,7 @@ class _WorkoutClientCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: (completedCount == workout.parts.length ? appTheme.success : colorScheme.primary).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         '$completedCount/${workout.parts.length} готово',
@@ -672,7 +679,7 @@ class _WorkoutClientCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         workout.workoutTypesSummary,
