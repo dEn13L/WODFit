@@ -444,7 +444,7 @@ class _HistoryWorkoutCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -531,7 +531,7 @@ class _HistoryWorkoutCard extends StatelessWidget {
                                       : result.status == ResultStatus.scaled
                                           ? appTheme.warning.withValues(alpha: 0.2)
                                           : appTheme.destructive.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
                                   result.status.displayName,

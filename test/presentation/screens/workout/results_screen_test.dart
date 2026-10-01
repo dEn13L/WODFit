@@ -47,8 +47,15 @@ void main() {
 
   Future<_ResultsTestCubit> pumpScreen(
     WidgetTester tester,
-    CrossfitWorkoutState state,
-  ) async {
+    CrossfitWorkoutState state, {
+    Size? size,
+  }) async {
+    if (size != null) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    }
     final cubit = _ResultsTestCubit(state);
     await tester.pumpWidget(
       MaterialApp(
@@ -130,4 +137,30 @@ void main() {
     await tester.pump();
     expect(cubit.loadCount, 2);
   });
+
+  for (final width in [320.0, 375.0, 430.0, 1000.0, 1200.0, 1440.0]) {
+    testWidgets('handles long content without overflow at ${width.toInt()} px', (tester) async {
+      final part = WorkoutPart(
+        id: 'part',
+        workoutId: 'workout',
+        title: 'Очень длинное название задания с дополнительными уточнениями для атлетов',
+        sortOrder: 0,
+      );
+      await pumpScreen(
+        tester,
+        CrossfitWorkoutDetailLoaded(
+          workout: workout(parts: [part]),
+          userResults: const [],
+          allResults: const [],
+          participants: [
+            participant('anna', 'Очень длинное имя участника программы без сокращений'),
+          ],
+        ),
+        size: Size(width, 900),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('Очень длинное имя'), findsOneWidget);
+    });
+  }
 }

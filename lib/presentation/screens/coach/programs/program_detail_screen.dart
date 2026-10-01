@@ -11,6 +11,7 @@ import '../../../../domain/entities/training_program.dart';
 import '../../../../domain/repositories/crossfit_workout_repository.dart';
 import '../../../../domain/repositories/program_repository.dart';
 import '../../../bloc/program/program_cubit.dart';
+import '../../../widgets/app_state_view.dart';
 
 class ProgramDetailScreen extends StatefulWidget {
   final String programId;
@@ -312,36 +313,16 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(title: const Text('Программа')),
-        body: Center(
-          child: CircularProgressIndicator(color: colorScheme.primary),
-        ),
+        body: const AppLoadingView(semanticLabel: 'Загрузка программы'),
       );
     }
 
     if (_error != null || _program == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Программа')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline, color: appTheme.destructive, size: 48),
-                const SizedBox(height: 12),
-                Text(
-                  _error ?? 'Программа не найдена',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: appTheme.destructive),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _loadData,
-                  child: const Text('Повторить'),
-                ),
-              ],
-            ),
-          ),
+        body: AppErrorView(
+          message: _error ?? 'Программа не найдена',
+          onRetry: _loadData,
         ),
       );
     }
@@ -742,7 +723,7 @@ class _ProgramWorkoutCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         color: appTheme.draft.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         'Черновик',
@@ -775,7 +756,7 @@ class _ProgramWorkoutCard extends StatelessWidget {
                       color: completedCount > 0
                           ? appTheme.success.withValues(alpha: 0.15)
                           : colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

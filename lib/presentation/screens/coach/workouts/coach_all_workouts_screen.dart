@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme_extension.dart';
 import '../../../../core/utils/workout_date_formatter.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../bloc/workout/crossfit_workout_cubit.dart';
+import '../../../widgets/app_state_view.dart';
 
 class CoachAllWorkoutsScreen extends StatefulWidget {
   const CoachAllWorkoutsScreen({super.key});
@@ -89,7 +90,6 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final appTheme = context.appTheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -108,78 +108,26 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
       body: BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
         builder: (context, state) {
           if (state is CrossfitWorkoutLoading) {
-            return Center(
-              child: CircularProgressIndicator(color: colorScheme.primary),
-            );
+            return const AppLoadingView(semanticLabel: 'Загрузка тренировок');
           }
 
           if (state is CrossfitWorkoutError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline, color: appTheme.destructive, size: 48),
-                    const SizedBox(height: 12),
-                    Text(
-                      state.message,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: appTheme.destructive),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _loadWorkouts,
-                      child: const Text('Повторить'),
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return AppErrorView(message: state.message, onRetry: () async => _loadWorkouts());
           }
 
           if (state is CrossfitWorkoutListLoaded) {
             var workouts = state.workouts;
 
             if (workouts.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.fitness_center_outlined,
-                        size: 64,
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'У вас пока нет тренировок',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Создайте свою первую тренировку и назначьте её программам.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          await context.push('/coach/workouts/create');
-                          if (mounted) _loadWorkouts();
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Создать тренировку'),
-                      ),
-                    ],
-                  ),
-                ),
+              return AppEmptyView(
+                icon: Icons.fitness_center_outlined,
+                title: 'У вас пока нет тренировок',
+                description: 'Создайте первую тренировку и назначьте её программам.',
+                actionLabel: 'Создать тренировку',
+                onAction: () async {
+                  await context.push('/coach/workouts/create');
+                  if (mounted) _loadWorkouts();
+                },
               );
             }
 
@@ -349,7 +297,7 @@ class _CoachWorkoutItemCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: appTheme.draft.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         'Черновик',

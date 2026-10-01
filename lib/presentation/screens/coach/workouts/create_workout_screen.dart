@@ -339,14 +339,19 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(
-                                            program.name,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: isSelected
-                                                  ? colorScheme.primary
-                                                  : colorScheme.onSurface,
+                                          ConstrainedBox(
+                                            constraints: const BoxConstraints(maxWidth: 220),
+                                            child: Text(
+                                              program.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: isSelected
+                                                    ? colorScheme.primary
+                                                    : colorScheme.onSurface,
+                                              ),
                                             ),
                                           ),
                                         ],

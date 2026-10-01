@@ -21,7 +21,7 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   static const dark = AppThemeExtension(
     destructive: Color(0xFFEF4444),
     draft: Color(0xFFF59E0B),
-    success: Color(0xFF00E676),
+    success: Color(0xFF34D399),
     warning: Color(0xFFF59E0B),
     timeChipBackground: Color(0x33CCFF00),
     publish: Color(0xFFEF4444),
@@ -30,7 +30,7 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   static const light = AppThemeExtension(
     destructive: Color(0xFFEF4444),
     draft: Color(0xFFF59E0B),
-    success: Color(0xFF10B981),
+    success: Color(0xFF34D399),
     warning: Color(0xFFF59E0B),
     timeChipBackground: Color(0x1F06B6D4),
     publish: Color(0xFFEF4444),

@@ -484,7 +484,7 @@ class _TodayWorkoutCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: BoxDecoration(
                     color: appTheme.draft.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: appTheme.draft.withValues(alpha: 0.4)),
                   ),
                   child: Text(
@@ -567,7 +567,7 @@ class _CoachProgramDashboardCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: colorScheme.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       program.kind.displayName,
