@@ -221,16 +221,8 @@ RLS-принципы (не нарушать):
   роут /workout/:id/results. Экран деталей остаётся рискованным местом для правок.
 - Результаты читаются/пишутся через CrossfitWorkoutRepository (отдельного
   result-репозитория нет).
-- Мёртвый код стартового шаблона, к продукту не относится (удалить отдельной задачей,
-  новых зависимостей от него не создавать): domain/entities/workout.dart,
-  domain/repositories/workout_repository.dart, data/repositories/workout_repository_impl.dart,
-  data/models/workout_dto.dart, data/datasources/local/workout_local_datasource.dart,
-  data/datasources/sensors/sensor_datasource.dart (+ зависимость pedometer),
-  presentation/bloc/workout_bloc|event|state.dart, screens/home_screen.dart,
-  widgets/stat_card.dart, widgets/workout_card.dart (проверить использование перед
-  удалением). Всё это до сих пор инициализируется в main.dart.
-- Hive-бокс workouts_box открывают и WorkoutFormCubit (черновик), и шаблонный
-  WorkoutLocalDataSource — конфликт, уйдёт вместе с мёртвым кодом.
+- Мёртвый код стартового шаблона и зависимость pedometer удалены; `workouts_box`
+  используется только WorkoutFormCubit для кэша черновика актуальной формы.
 
 ## 7. Текущие приоритеты (очередь работ)
 1. Стабилизация по итогам пилотной недели основного цикла: вход, программы,
@@ -239,8 +231,7 @@ RLS-принципы (не нарушать):
    Дальше по очереди: offline-кэш и очередь результатов, уведомления о новых
    тренировках, визуальная полировка (дизайн-бриф и подводные камни —
    docs/design-brief.md).
-Техдолг (брать отдельными задачами): удалить мёртвый код шаблона (раздел 6),
-сверить sql/ с живой БД.
+Техдолг (брать отдельными задачами): сверить sql/ с живой БД.
 
 ## 8. ЗАПРЕЩЕНО до отдельной прямой задачи
 Таймер, лидерборды, платежи, видео/изображения,
