@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme_extension.dart';
 import '../../../../core/utils/workout_date_formatter.dart';
+import '../../../../core/utils/workout_progress_formatter.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../../domain/entities/training_program.dart';
 import '../../../../domain/repositories/crossfit_workout_repository.dart';
@@ -786,7 +787,7 @@ class _ProgramWorkoutCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Заполнено $completedCount/$totalMembers',
+                          'Заполнено ${WorkoutProgressFormatter.format(completedCount, totalMembers)}',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

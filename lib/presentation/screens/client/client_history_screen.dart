@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/utils/workout_date_formatter.dart';
+import '../../../core/utils/workout_progress_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/training_program.dart';
 import '../../../domain/entities/part_result.dart';
@@ -389,9 +390,9 @@ class _HistoryWorkoutCard extends StatelessWidget {
                     ),
                     child: Text(
                       completedCount == totalParts && totalParts > 0
-                          ? 'Завершено ($completedCount/$totalParts)'
+                          ? 'Завершено (${WorkoutProgressFormatter.format(completedCount, totalParts)})'
                           : hasAnyResult
-                              ? 'Частично ($completedCount/$totalParts)'
+                              ? 'Частично (${WorkoutProgressFormatter.format(completedCount, totalParts)})'
                               : 'Нет результатов',
                       style: TextStyle(
                         fontSize: 11,
