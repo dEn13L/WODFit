@@ -3,9 +3,11 @@ import '../../core/config/supabase_config.dart';
 import '../../core/utils/app_logger.dart';
 import '../../domain/entities/crossfit_workout.dart';
 import '../../domain/entities/part_result.dart';
+import '../../domain/entities/user_profile.dart';
 import '../../domain/repositories/crossfit_workout_repository.dart';
 import '../models/crossfit_workout_model.dart';
 import '../models/part_result_model.dart';
+import '../models/user_profile_model.dart';
 
 class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
   static const String _tag = 'SupabaseCrossfitWorkoutRepository';
@@ -325,6 +327,62 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
           .toList();
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при получении результатов тренировки $workoutId', e, st);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<UserProfile>> getWorkoutParticipants(String workoutId) async {
+    try {
+      final response = await client
+          .from('workout_assignments')
+          .select('programs(program_members(profiles(*)))')
+          .eq('workout_id', workoutId);
+
+      final profilesById = <String, UserProfile>{};
+      for (final assignment in response as List<dynamic>) {
+        final programs = (assignment as Map)['programs'];
+        if (programs is! Map) continue;
+        final members = programs['program_members'];
+        if (members is! List) continue;
+        for (final member in members) {
+          final profile = (member as Map)['profiles'];
+          if (profile is! Map) continue;
+          final user = UserProfileModel.fromJson(
+            Map<String, dynamic>.from(profile),
+          ).toDomain();
+          profilesById[user.id] = user;
+        }
+      }
+
+      final profiles = profilesById.values.toList()
+        ..sort((a, b) => a.fullName.compareTo(b.fullName));
+      return profiles;
+    } on AuthException catch (e, st) {
+      AppLogger.e(
+        _tag,
+        'Ошибка авторизации при получении участников тренировки '
+        '$workoutId: ${e.message}',
+        e,
+        st,
+      );
+      rethrow;
+    } on PostgrestException catch (e, st) {
+      AppLogger.e(
+        _tag,
+        'Ошибка БД при получении участников тренировки $workoutId: '
+        '${e.message}; details=${e.details}; hint=${e.hint}; code=${e.code}',
+        e,
+        st,
+      );
+      rethrow;
+    } catch (e, st) {
+      AppLogger.e(
+        _tag,
+        'Ошибка при получении участников тренировки $workoutId',
+        e,
+        st,
+      );
       rethrow;
     }
   }
