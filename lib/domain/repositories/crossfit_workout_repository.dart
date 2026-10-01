@@ -1,5 +1,6 @@
 import '../entities/crossfit_workout.dart';
 import '../entities/part_result.dart';
+import '../entities/user_profile.dart';
 
 abstract class CrossfitWorkoutRepository {
   Future<List<CrossfitWorkout>> getCoachWorkouts();
@@ -26,6 +27,7 @@ abstract class CrossfitWorkoutRepository {
   Future<void> deleteWorkout(String workoutId);
   Future<void> publishWorkout(String id);
   Future<List<PartResult>> getWorkoutResults(String workoutId);
+  Future<List<UserProfile>> getWorkoutParticipants(String workoutId);
   Future<List<PartResult>> getUserWorkoutResults(String workoutId);
   Future<List<PartResult>> getClientAllResults();
   Future<PartResult> submitPartResult({

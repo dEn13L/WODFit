@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
+import '../../../domain/entities/user_profile.dart';
 import '../../../domain/repositories/crossfit_workout_repository.dart';
 
 abstract class CrossfitWorkoutState extends Equatable {
@@ -39,17 +40,19 @@ class CrossfitWorkoutDetailLoaded extends CrossfitWorkoutState {
   final CrossfitWorkout workout;
   final List<PartResult> userResults;
   final List<PartResult> allResults;
+  final List<UserProfile> participants;
   final String? message;
 
   const CrossfitWorkoutDetailLoaded({
     required this.workout,
     required this.userResults,
     required this.allResults,
+    required this.participants,
     this.message,
   });
 
   @override
-  List<Object?> get props => [workout, userResults, allResults, message];
+  List<Object?> get props => [workout, userResults, allResults, participants, message];
 }
 
 class CrossfitWorkoutError extends CrossfitWorkoutState {
@@ -159,6 +162,7 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
           workout: workout,
           userResults: current.userResults,
           allResults: current.allResults,
+          participants: current.participants,
           message: msg,
         ));
       } else if (state is CrossfitWorkoutListLoaded) {
@@ -232,11 +236,13 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
       final workout = await workoutRepository.getWorkoutById(workoutId);
       final userResults = await workoutRepository.getUserWorkoutResults(workoutId);
       final allResults = await workoutRepository.getWorkoutResults(workoutId);
+      final participants = await workoutRepository.getWorkoutParticipants(workoutId);
 
       emit(CrossfitWorkoutDetailLoaded(
         workout: workout,
         userResults: userResults,
         allResults: allResults,
+        participants: participants,
       ));
     } catch (e, st) {
       AppLogger.e(_tag, 'loadWorkoutDetails failed', e, st);
