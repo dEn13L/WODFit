@@ -122,6 +122,8 @@ class CrossfitWorkoutModel {
   final String status;
   final String createdAt;
   final String updatedAt;
+  final String? publishedAt;
+  final String? viewedAt;
   final List<WorkoutPartModel> parts;
   final List<WorkoutAssignmentModel> assignments;
 
@@ -134,11 +136,14 @@ class CrossfitWorkoutModel {
     this.status = 'draft',
     required this.createdAt,
     required this.updatedAt,
+    this.publishedAt,
+    this.viewedAt,
     this.parts = const [],
     this.assignments = const [],
   });
 
   factory CrossfitWorkoutModel.fromJson(Map<String, dynamic> json) {
+    final views = json['workout_views'] as List<dynamic>?;
     final partsList = (json['workout_parts'] as List<dynamic>?)
             ?.map((e) => WorkoutPartModel.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList() ??
@@ -158,6 +163,10 @@ class CrossfitWorkoutModel {
       status: (json['status'] as String?) ?? 'draft',
       createdAt: (json['created_at'] as String?) ?? DateTime.now().toIso8601String(),
       updatedAt: (json['updated_at'] as String?) ?? DateTime.now().toIso8601String(),
+      publishedAt: json['published_at'] as String?,
+      viewedAt: views?.isNotEmpty == true
+          ? (views!.first as Map)['viewed_at'] as String?
+          : null,
       parts: partsList,
       assignments: assignmentsList,
     );
@@ -173,6 +182,8 @@ class CrossfitWorkoutModel {
       status: WorkoutStatus.fromString(status),
       createdAt: (DateTime.tryParse(createdAt) ?? DateTime.now()).toLocal(),
       updatedAt: (DateTime.tryParse(updatedAt) ?? DateTime.now()).toLocal(),
+      publishedAt: publishedAt == null ? null : DateTime.tryParse(publishedAt!)?.toLocal(),
+      viewedAt: viewedAt == null ? null : DateTime.tryParse(viewedAt!)?.toLocal(),
       parts: parts.map((p) => p.toDomain()).toList(),
       assignments: assignments.map((a) => a.toDomain()).toList(),
     );

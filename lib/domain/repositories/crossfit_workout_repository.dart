@@ -26,6 +26,7 @@ abstract class CrossfitWorkoutRepository {
   Future<CrossfitWorkout> duplicateWorkout(String workoutId);
   Future<void> deleteWorkout(String workoutId);
   Future<void> publishWorkout(String id);
+  Future<void> markWorkoutViewed(String workoutId);
   Future<List<PartResult>> getWorkoutResults(String workoutId);
   Future<List<UserProfile>> getWorkoutParticipants(String workoutId);
   Future<List<PartResult>> getUserWorkoutResults(String workoutId);

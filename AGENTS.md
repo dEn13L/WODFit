@@ -34,7 +34,7 @@
   flutter pub get → flutter analyze → flutter test → flutter build web; без деплоя.
 - Проверка: `flutter analyze` обязателен перед каждым коммитом и должен быть чистым.
   В облачных сессиях Flutter ставит SessionStart-хук .claude/hooks/session-start.sh.
-- Миграции: sql/NN_slug.sql (последняя — 08_offline_result_sync.sql), применяются вручную
+- Миграции: sql/NN_slug.sql (последняя — 09_internal_workout_notifications.sql), применяются вручную
   через Supabase SQL Editor. Живая БД может расходиться с файлами (часть SQL
   применялась мимо репозитория) — перед изменением схемы сверять с живой БД
   (только чтение); применять миграции к живой БД — только по явной команде.
@@ -61,11 +61,12 @@ programs(id, coach_id→profiles, name, kind program_kind, description null,
 invite_code unique, created_at, updated_at)
 program_members(program_id, user_id, joined_at; PK(program_id, user_id))
 workouts(id, coach_id, title nullable — уточнение сессии, description nullable —
-не используется, scheduled_at timestamptz, status workout_status,
+не используется, scheduled_at timestamptz, status workout_status, published_at timestamptz,
 created_at, updated_at)
 workout_parts(id, workout_id, type nullable legacy, title, description, sort_order,
 score_type nullable legacy, created_at)
 workout_assignments(workout_id, program_id, assigned_at; PK(workout_id, program_id))
+workout_views(workout_id, user_id, viewed_at; PK(workout_id, user_id))
 part_results(id, workout_id, part_id, user_id, status result_status,
 score_type score_type — формат записи (fallback 'text'),
 score_text, time_ms, rounds, reps, weight_kg, distance_m, calories,
@@ -240,13 +241,17 @@ RLS-принципы (не нарушать):
   серверное подтверждение, локальное ожидание и ошибку синхронизации.
 - Миграция `sql/08_offline_result_sync.sql` применена к живой БД: добавлены
   метаданные LWW, soft delete и идемпотентный RPC `sync_part_result`.
+- Подготовлены внутренние уведомления о новых тренировках: дата первой публикации,
+  персональное состояние просмотра, маркер и блок «Новые» на главном экране клиента.
+  Миграция `sql/09_internal_workout_notifications.sql` применена к живой БД.
 
 ## 7. Текущие приоритеты (очередь работ)
 1. Стабилизация по итогам пилотной недели основного цикла: вход, программы,
    публикация, просмотр тренировки, сохранение результата, сводка результатов,
    темы и мобильный Web.
-   Дальше по очереди: уведомления о новых тренировках.
-Техдолг с высоким приоритетом перед уведомлениями: по завершённому
+   Внутренние уведомления и миграция готовы; следующий шаг — пилотная проверка
+   состояния просмотра.
+Техдолг с высоким приоритетом: по завершённому
 read-only аудиту из docs/database-security-audit.md отдельно согласовать и
 подготовить hardening-миграции; без подтверждения живую БД не изменять.
 

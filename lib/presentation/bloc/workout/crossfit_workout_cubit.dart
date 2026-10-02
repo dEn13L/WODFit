@@ -251,6 +251,14 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
     }
   }
 
+  Future<void> markWorkoutViewed(String workoutId) async {
+    try {
+      await workoutRepository.markWorkoutViewed(workoutId);
+    } catch (e, st) {
+      AppLogger.e(_tag, 'markWorkoutViewed failed', e, st);
+    }
+  }
+
   Future<bool> submitPartResult({
     required String workoutId,
     required String partId,
