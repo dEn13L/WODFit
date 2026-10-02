@@ -34,7 +34,7 @@
   flutter pub get → flutter analyze → flutter test → flutter build web; без деплоя.
 - Проверка: `flutter analyze` обязателен перед каждым коммитом и должен быть чистым.
   В облачных сессиях Flutter ставит SessionStart-хук .claude/hooks/session-start.sh.
-- Миграции: sql/NN_slug.sql (последняя — 09_internal_workout_notifications.sql), применяются вручную
+- Миграции: sql/NN_slug.sql (последняя — 10_harden_grants_and_functions.sql), применяются вручную
   через Supabase SQL Editor. Живая БД может расходиться с файлами (часть SQL
   применялась мимо репозитория) — перед изменением схемы сверять с живой БД
   (только чтение); применять миграции к живой БД — только по явной команде.
@@ -92,6 +92,8 @@ Enum'ы и подписи UI (строковые значения БД↔Dart ж
 
 RPC: join_program_by_code(p_invite_code text) — security definer, вступление по коду;
 sync_part_result(...) — security invoker, идемпотентная LWW-синхронизация результатов.
+Helper-функции RLS находятся в неэкспонируемой схеме private; публичный EXECUTE
+доступен authenticated только для join_program_by_code и sync_part_result.
 RLS-принципы (не нарушать):
 - тренер CRUD только свои programs/workouts и их детей;
 - участник программы читает свою программу, назначенные published-тренировки,
@@ -218,7 +220,12 @@ RLS-принципы (не нарушать):
 - Подготовлен воспроизводимый read-only аудит схемы и безопасности в
   docs/database-security-audit.sql; репозиторная часть отчёта находится в
   docs/database-security-audit.md. Live-сверка enum, колонок, функций, RLS,
-  grants, индексов и ограничений завершена; изменения БД не применялись.
+  grants, индексов и ограничений завершена.
+- Для первого шага security hardening подготовлены read-only preflight
+  docs/10_grants_functions_preflight.sql и миграция sql/10_harden_grants_and_functions.sql:
+  минимальные grants, безопасный search_path и недоступные через public API helpers.
+  Миграция применена к живой БД 2 октября 2026 года; postflight-аудит и
+  coach/client smoke-тест ещё не зафиксированы.
 - Автотесты покрывают форматтеры, formattedScore, сериализацию результата, матрицу
   и парсеры ввода; widget-тесты покрывают ResultsScreen и форму результата.
   Тестовый fake-репозиторий находится в test/support.
@@ -251,9 +258,9 @@ RLS-принципы (не нарушать):
    темы и мобильный Web.
    Внутренние уведомления и миграция готовы; следующий шаг — пилотная проверка
    состояния просмотра.
-Техдолг с высоким приоритетом: по завершённому
-read-only аудиту из docs/database-security-audit.md отдельно согласовать и
-подготовить hardening-миграции; без подтверждения живую БД не изменять.
+Техдолг с высоким приоритетом: выполнить повторный read-only аудит и coach/client
+smoke-тест после применения шага 3.1; затем отдельно согласовать шаги 3.2–3.4.
+Без подтверждения дальнейшие изменения живой БД не выполнять.
 
 ## 8. ЗАПРЕЩЕНО до отдельной прямой задачи
 Таймер, лидерборды, платежи, видео/изображения,
