@@ -201,6 +201,8 @@ class CrossfitWorkout extends Equatable {
   final WorkoutStatus status;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? publishedAt;
+  final DateTime? viewedAt;
   final List<WorkoutPart> parts;
   final List<WorkoutAssignment> assignments;
 
@@ -213,11 +215,14 @@ class CrossfitWorkout extends Equatable {
     this.status = WorkoutStatus.draft,
     required this.createdAt,
     required this.updatedAt,
+    this.publishedAt,
+    this.viewedAt,
     this.parts = const [],
     this.assignments = const [],
   });
 
   bool get isPublished => status == WorkoutStatus.published;
+  bool get isNew => isPublished && publishedAt != null && viewedAt == null;
 
   String get workoutTypesSummary {
     if (parts.isEmpty) return 'Тренировка';
@@ -240,6 +245,8 @@ class CrossfitWorkout extends Equatable {
     WorkoutStatus? status,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? publishedAt,
+    DateTime? viewedAt,
     List<WorkoutPart>? parts,
     List<WorkoutAssignment>? assignments,
   }) {
@@ -252,6 +259,8 @@ class CrossfitWorkout extends Equatable {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      publishedAt: publishedAt ?? this.publishedAt,
+      viewedAt: viewedAt ?? this.viewedAt,
       parts: parts ?? this.parts,
       assignments: assignments ?? this.assignments,
     );
@@ -267,6 +276,8 @@ class CrossfitWorkout extends Equatable {
         status,
         createdAt,
         updatedAt,
+        publishedAt,
+        viewedAt,
         parts,
         assignments,
       ];

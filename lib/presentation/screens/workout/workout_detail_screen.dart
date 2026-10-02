@@ -29,6 +29,15 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _loadWorkout();
+  }
+
+  Future<void> _loadWorkout() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated && authState.user.isClient) {
+      await context.read<CrossfitWorkoutCubit>().markWorkoutViewed(widget.workoutId);
+    }
+    if (!mounted) return;
     context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(widget.workoutId);
   }
 

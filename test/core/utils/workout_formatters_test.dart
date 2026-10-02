@@ -16,6 +16,10 @@ void main() {
       'Суббота, 19 сентября 2026',
     );
     expect(WorkoutDateFormatter.formatTime(date), '19:05');
+    expect(
+      WorkoutDateFormatter.formatPublished(date),
+      'Опубликована 19 сентября 2026, 19:05',
+    );
   });
 
   test('formats completed and total progress as X/Y', () {

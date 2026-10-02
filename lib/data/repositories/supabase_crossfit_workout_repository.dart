@@ -87,7 +87,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       // 3. Get published workouts
       final response = await client
           .from('workouts')
-          .select('*, workout_parts(*), workout_assignments(*, programs(name))')
+          .select('*, workout_parts(*), workout_assignments(*, programs(name)), workout_views(viewed_at)')
           .filter('id', 'in', workoutIds)
           .eq('status', 'published')
           .order('scheduled_at', ascending: false);
@@ -326,6 +326,32 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       AppLogger.i(_tag, 'Тренировка $id опубликована');
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при публикации тренировки $id', e, st);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> markWorkoutViewed(String workoutId) async {
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      await client.from('workout_views').upsert({
+        'workout_id': workoutId,
+        'user_id': userId,
+        'viewed_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    } on AuthException catch (e, st) {
+      AppLogger.e(_tag, 'Ошибка авторизации при сохранении просмотра: ${e.message}', e, st);
+      rethrow;
+    } on PostgrestException catch (e, st) {
+      AppLogger.e(
+        _tag,
+        'Ошибка БД при сохранении просмотра: ${e.message}; '
+        'details=${e.details}; hint=${e.hint}; code=${e.code}',
+        e,
+        st,
+      );
       rethrow;
     }
   }

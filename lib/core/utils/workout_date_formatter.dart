@@ -118,4 +118,11 @@ class WorkoutDateFormatter {
     final base = _formatTime(local);
     return _appendLabel(base, label);
   }
+
+  /// Формат даты публикации: "Опубликована 2 октября 2026, 14:30".
+  static String formatPublished(DateTime dateTime) {
+    final local = dateTime.toLocal();
+    return 'Опубликована ${local.day} ${_monthsGenitive[local.month]} '
+        '${local.year}, ${_formatTime(local)}';
+  }
 }

@@ -334,6 +334,53 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
 
               const SizedBox(height: 24),
 
+              BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
+                builder: (context, state) {
+                  if (state is! CrossfitWorkoutListLoaded) {
+                    return const SizedBox.shrink();
+                  }
+                  final newWorkouts = state.workouts.where((workout) => workout.isNew).toList()
+                    ..sort((a, b) => b.publishedAt!.compareTo(a.publishedAt!));
+                  if (newWorkouts.isEmpty) return const SizedBox.shrink();
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Новые', style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Недавно опубликованные тренировки',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 12),
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: newWorkouts.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final workout = newWorkouts[index];
+                            final results = state.userResults
+                                .where((result) => result.workoutId == workout.id)
+                                .toList();
+                            return _WorkoutClientCard(
+                              workout: workout,
+                              userResults: results,
+                              onTap: () async {
+                                await context.push('/workout/${workout.id}');
+                                if (mounted) _loadData();
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
               // Recent Results Section
               BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
                 builder: (context, state) {
@@ -641,9 +688,34 @@ class _WorkoutClientCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (workout.isNew) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'Новая',
+                        style: TextStyle(
+                          color: colorScheme.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                   Icon(Icons.arrow_forward_ios, size: 16, color: colorScheme.onSurfaceVariant),
                 ],
               ),
+              if (workout.publishedAt != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  WorkoutDateFormatter.formatPublished(workout.publishedAt!),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                ),
+              ],
               if (workout.description.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(

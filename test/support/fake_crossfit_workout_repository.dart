@@ -51,6 +51,9 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
   Future<void> publishWorkout(String id) async {}
 
   @override
+  Future<void> markWorkoutViewed(String workoutId) async {}
+
+  @override
   Future<PartResult> submitPartResult({
     required String workoutId,
     required String partId,
