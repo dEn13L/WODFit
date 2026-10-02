@@ -2,6 +2,10 @@
 
 Дата аудита: 1 октября 2026 года.
 
+> Результаты ниже фиксируют состояние до применения шага 3.1. Миграция
+> `10_harden_grants_and_functions.sql` применена 2 октября 2026 года; её итоговое
+> состояние должно быть подтверждено повторным read-only аудитом.
+
 ## Метод и границы
 
 Живая база проверена результатами read-only запросов из
@@ -154,7 +158,21 @@ RLS включён на всех основных и legacy-таблицах. `F
 
 ## Требуемые отдельные миграции
 
-Ниже только план; SQL к живой базе не применялся.
+Для первого шага подготовлены read-only preflight
+[`10_grants_functions_preflight.sql`](10_grants_functions_preflight.sql) и миграция
+[`10_harden_grants_and_functions.sql`](../sql/10_harden_grants_and_functions.sql).
+Миграция применена к живой базе 2 октября 2026 года: отозваны анонимные табличные
+права, права `authenticated` заменены явным allow-list, helper-функции перенесены
+в неэкспонируемую схему `private`, закреплён `search_path`, а публичными оставлены
+только необходимые RPC. Legacy `is_group_*` не удалены. Повторный read-only аудит
+и coach/client smoke-тест после применения подтверждены владельцем проекта.
+
+Для шага 3.2 подготовлены read-only preflight
+[`11_program_membership_preflight.sql`](11_program_membership_preflight.sql) и
+миграция [`11_harden_program_membership.sql`](../sql/11_harden_program_membership.sql).
+Они закрывают прямой `INSERT` в `program_members`, оставляют вступление только
+через RPC и разрешают участникам читать состав общей программы. Миграция к живой
+базе не применялась.
 
 1. **Security hardening:** закрыть прямой INSERT в `program_members`, ограничить
    result writes, исправить чтение состава программы и профилей, заменить

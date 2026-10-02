@@ -169,37 +169,37 @@ class SupabaseProgramRepository implements ProgramRepository {
     final cleanCode = inviteCode.trim().toUpperCase();
 
     try {
-      // First try via RPC function join_program_by_code
-      final rpcRes = await client.rpc('join_program_by_code', params: {'code': cleanCode});
+      final rpcRes = await client.rpc(
+        'join_program_by_code',
+        params: {'code': cleanCode},
+      );
       if (rpcRes != null && rpcRes is Map) {
         final programId = rpcRes['id'] as String;
-        final programRes = await client.from('programs').select('*, program_members(user_id)').eq('id', programId).single();
+        final programRes = await client
+            .from('programs')
+            .select('*, program_members(user_id)')
+            .eq('id', programId)
+            .single();
         AppLogger.i(_tag, 'Клиент вступил в программу $cleanCode (через RPC)');
         return TrainingProgramModel.fromJson(Map<String, dynamic>.from(programRes)).toDomain();
       }
-    } catch (rpcErr) {
-      AppLogger.w(_tag, 'join_program_by_code RPC fallback: $rpcErr');
-      // Fallback: direct lookup and insert if RPC is not available
-      try {
-        final programRes = await client.from('programs').select().eq('invite_code', cleanCode).maybeSingle();
-        if (programRes == null) {
-          throw Exception('Программа с кодом $cleanCode не найдена');
-        }
-
-        final programId = programRes['id'] as String;
-        final userId = client.auth.currentUser?.id;
-        if (userId != null) {
-          await client.from('program_members').upsert({
-            'program_id': programId,
-            'user_id': userId,
-          });
-        }
-        AppLogger.i(_tag, 'Клиент вступил в программу $cleanCode (через fallback)');
-        return TrainingProgramModel.fromJson(Map<String, dynamic>.from(programRes)).toDomain();
-      } catch (e, st) {
-        AppLogger.e(_tag, 'Ошибка при вступлении в программу по коду $cleanCode', e, st);
-        rethrow;
-      }
+    } on AuthException catch (e, st) {
+      AppLogger.e(
+        _tag,
+        'Ошибка авторизации при вступлении в программу: ${e.message}',
+        e,
+        st,
+      );
+      rethrow;
+    } on PostgrestException catch (e, st) {
+      AppLogger.e(
+        _tag,
+        'Ошибка БД при вступлении в программу: ${e.message}; '
+        'details=${e.details}; hint=${e.hint}; code=${e.code}',
+        e,
+        st,
+      );
+      rethrow;
     }
 
     throw Exception('Не удалось присоединиться к программе');
