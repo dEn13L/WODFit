@@ -19,7 +19,9 @@ class PartResultModel {
   final int? calories;
   final String createdAt;
   final String updatedAt;
+  final String? deletedAt;
   final UserProfileModel? profile;
+  final String syncStatus;
 
   const PartResultModel({
     required this.id,
@@ -38,7 +40,9 @@ class PartResultModel {
     this.calories,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
     this.profile,
+    this.syncStatus = 'synced',
   });
 
   factory PartResultModel.fromJson(Map<String, dynamic> json) {
@@ -64,7 +68,9 @@ class PartResultModel {
       calories: (json['calories'] as num?)?.toInt(),
       createdAt: (json['created_at'] as String?) ?? DateTime.now().toIso8601String(),
       updatedAt: (json['updated_at'] as String?) ?? DateTime.now().toIso8601String(),
+      deletedAt: json['deleted_at'] as String?,
       profile: profileModel,
+      syncStatus: (json['sync_status'] as String?) ?? 'synced',
     );
   }
 
@@ -86,6 +92,8 @@ class PartResultModel {
       'calories': calories,
       'created_at': createdAt,
       'updated_at': updatedAt,
+      'deleted_at': deletedAt,
+      'sync_status': syncStatus,
     };
   }
 
@@ -107,7 +115,12 @@ class PartResultModel {
       calories: calories,
       createdAt: (DateTime.tryParse(createdAt) ?? DateTime.now()).toLocal(),
       updatedAt: (DateTime.tryParse(updatedAt) ?? DateTime.now()).toLocal(),
+      deletedAt: deletedAt == null ? null : DateTime.tryParse(deletedAt!)?.toLocal(),
       userProfile: profile?.toDomain(),
+      syncStatus: ResultSyncStatus.values.firstWhere(
+        (value) => value.name == syncStatus,
+        orElse: () => ResultSyncStatus.synced,
+      ),
     );
   }
 
@@ -129,7 +142,9 @@ class PartResultModel {
       calories: entity.calories,
       createdAt: entity.createdAt.toUtc().toIso8601String(),
       updatedAt: entity.updatedAt.toUtc().toIso8601String(),
+      deletedAt: entity.deletedAt?.toUtc().toIso8601String(),
       profile: entity.userProfile != null ? UserProfileModel.fromDomain(entity.userProfile!) : null,
+      syncStatus: entity.syncStatus.name,
     );
   }
 }

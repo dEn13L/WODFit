@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/utils/app_logger.dart';
 import '../../domain/entities/crossfit_workout.dart';
@@ -8,13 +9,27 @@ import '../../domain/repositories/crossfit_workout_repository.dart';
 import '../models/crossfit_workout_model.dart';
 import '../models/part_result_model.dart';
 import '../models/user_profile_model.dart';
+import '../datasources/result_sync_local_data_source.dart';
+import '../models/result_sync_operation.dart';
+import '../services/result_sync_service.dart';
 
 class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
   static const String _tag = 'SupabaseCrossfitWorkoutRepository';
   final SupabaseClient? _client;
+  final ResultSyncLocalDataSource? _resultLocalDataSource;
+  late final ResultSyncService? _resultSyncService = _resultLocalDataSource == null
+      ? null
+      : ResultSyncService(
+          localDataSource: _resultLocalDataSource,
+          sendOperation: _sendResultOperation,
+          currentUserId: () => _client?.auth.currentUser?.id,
+        );
 
-  SupabaseCrossfitWorkoutRepository({SupabaseClient? client})
-      : _client = client ?? (SupabaseConfig.isConfigured ? SupabaseConfig.client : null);
+  SupabaseCrossfitWorkoutRepository({
+    SupabaseClient? client,
+    ResultSyncLocalDataSource? resultLocalDataSource,
+  })  : _client = client ?? (SupabaseConfig.isConfigured ? SupabaseConfig.client : null),
+        _resultLocalDataSource = resultLocalDataSource;
 
   SupabaseClient get client {
     final c = _client;
@@ -320,6 +335,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
           .from('part_results')
           .select('*, profiles(*)')
           .eq('workout_id', workoutId)
+          .isFilter('deleted_at', null)
           .order('created_at', ascending: false);
 
       return (response as List<dynamic>)
@@ -397,13 +413,26 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
           .from('part_results')
           .select('*, profiles(*)')
           .eq('workout_id', workoutId)
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .isFilter('deleted_at', null);
 
-      return (response as List<dynamic>)
+      final serverResults = (response as List<dynamic>)
           .map((item) => PartResultModel.fromJson(Map<String, dynamic>.from(item as Map)).toDomain())
           .toList();
+      await _resultSyncService?.cacheServerResults(serverResults);
+      await _resultSyncService?.synchronize();
+      final syncService = _resultSyncService;
+      return syncService == null
+          ? serverResults
+          : await syncService.mergeWithCache(
+              serverResults,
+              workoutId: workoutId,
+              userId: userId,
+            );
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при получении результатов пользователя для $workoutId', e, st);
+      final cached = _resultLocalDataSource?.getCachedResults(workoutId: workoutId, userId: userId) ?? const [];
+      if (cached.isNotEmpty) return cached;
       rethrow;
     }
   }
@@ -418,13 +447,22 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
           .from('part_results')
           .select('*, profiles(*)')
           .eq('user_id', userId)
+          .isFilter('deleted_at', null)
           .order('created_at', ascending: false);
 
-      return (response as List<dynamic>)
+      final serverResults = (response as List<dynamic>)
           .map((item) => PartResultModel.fromJson(Map<String, dynamic>.from(item as Map)).toDomain())
           .toList();
+      await _resultSyncService?.cacheServerResults(serverResults);
+      await _resultSyncService?.synchronize();
+      final syncService = _resultSyncService;
+      return syncService == null
+          ? serverResults
+          : await syncService.mergeWithCache(serverResults, userId: userId);
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при получении всех результатов клиента', e, st);
+      final cached = _resultLocalDataSource?.getCachedResults(userId: userId) ?? const [];
+      if (cached.isNotEmpty) return cached;
       rethrow;
     }
   }
@@ -447,6 +485,47 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     final userId = client.auth.currentUser?.id;
     if (userId == null) {
       throw Exception('Необходима авторизация');
+    }
+
+    final syncService = _resultSyncService;
+    if (syncService != null) {
+      final now = DateTime.now().toUtc();
+      final existing = _resultLocalDataSource!.getCachedResults(userId: userId).where(
+        (result) => result.partId == partId,
+      );
+      final result = PartResult(
+        id: existing.isEmpty ? const Uuid().v4() : existing.first.id,
+        workoutId: workoutId,
+        partId: partId,
+        userId: userId,
+        status: status,
+        scoreType: scoreType ?? WorkoutScoreType.text,
+        scoreText: scoreText.trim(),
+        note: note.trim(),
+        timeMs: timeMs,
+        rounds: rounds,
+        reps: reps,
+        weightKg: weightKg,
+        distanceM: distanceM,
+        calories: calories,
+        createdAt: existing.isEmpty ? now : existing.first.createdAt,
+        updatedAt: now,
+        syncStatus: ResultSyncStatus.pending,
+      );
+      final operation = ResultSyncOperation(
+        id: const Uuid().v4(),
+        type: existing.isEmpty
+            ? ResultSyncOperationType.create
+            : ResultSyncOperationType.update,
+        result: result,
+        occurredAt: now,
+      );
+      await syncService.enqueue(operation);
+      await syncService.synchronize();
+      final cached = _resultLocalDataSource!
+          .getCachedResults(userId: userId)
+          .where((item) => item.partId == partId);
+      return cached.isEmpty ? result : cached.first;
     }
 
     try {
@@ -482,10 +561,27 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
   }
 
   @override
-  Future<void> deletePartResult(String resultId) async {
+  Future<ResultSyncStatus> deletePartResult(String resultId) async {
     final userId = client.auth.currentUser?.id;
     if (userId == null) {
       throw Exception('Необходима авторизация');
+    }
+
+    final syncService = _resultSyncService;
+    final cachedResult = _resultLocalDataSource?.getCachedResult(resultId);
+    if (syncService != null && cachedResult != null) {
+      final now = DateTime.now().toUtc();
+      await syncService.enqueue(ResultSyncOperation(
+        id: const Uuid().v4(),
+        type: ResultSyncOperationType.delete,
+        result: cachedResult.copyWith(updatedAt: now),
+        occurredAt: now,
+      ));
+      await syncService.synchronize();
+      final pending = await _resultLocalDataSource!.getOperations();
+      return pending.any((operation) => operation.result.id == resultId)
+          ? ResultSyncStatus.pending
+          : ResultSyncStatus.synced;
     }
 
     try {
@@ -496,8 +592,46 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
           .eq('user_id', userId);
 
       AppLogger.i(_tag, 'Удален результат $resultId пользователя $userId');
+      return ResultSyncStatus.synced;
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при удалении результата $resultId', e, st);
+      rethrow;
+    }
+  }
+
+  Future<PartResult> _sendResultOperation(ResultSyncOperation operation) async {
+    try {
+      final result = operation.result;
+      final response = await client.rpc('sync_part_result', params: {
+        'p_operation_id': operation.id,
+        'p_result_id': result.id,
+        'p_workout_id': result.workoutId,
+        'p_part_id': result.partId,
+        'p_client_updated_at': operation.occurredAt.toUtc().toIso8601String(),
+        'p_deleted': operation.type == ResultSyncOperationType.delete,
+        'p_status': result.status.name,
+        'p_score_type': (result.scoreType ?? WorkoutScoreType.text).dbValue,
+        'p_score_text': result.scoreText,
+        'p_time_ms': result.timeMs,
+        'p_rounds': result.rounds,
+        'p_reps': result.reps,
+        'p_weight_kg': result.weightKg,
+        'p_distance_m': result.distanceM,
+        'p_calories': result.calories,
+        'p_note': result.note,
+      });
+      return PartResultModel.fromJson(Map<String, dynamic>.from(response as Map)).toDomain();
+    } on AuthException catch (e, st) {
+      AppLogger.e(_tag, 'Ошибка авторизации при синхронизации результата: ${e.message}', e, st);
+      rethrow;
+    } on PostgrestException catch (e, st) {
+      AppLogger.e(
+        _tag,
+        'Ошибка БД при синхронизации результата: ${e.message}; '
+        'details=${e.details}; hint=${e.hint}; code=${e.code}',
+        e,
+        st,
+      );
       rethrow;
     }
   }

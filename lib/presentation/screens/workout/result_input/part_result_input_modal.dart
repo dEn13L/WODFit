@@ -160,7 +160,9 @@ class _PartResultInputModalState extends State<PartResultInputModal> {
 
     final messenger = ScaffoldMessenger.of(context);
     final successColor = context.appTheme.success;
-    final success = await context.read<CrossfitWorkoutCubit>().submitPartResult(
+    final pendingColor = context.appTheme.warning;
+    final cubit = context.read<CrossfitWorkoutCubit>();
+    final success = await cubit.submitPartResult(
           workoutId: widget.workoutId,
           partId: widget.part.id,
           status: _status,
@@ -183,8 +185,14 @@ class _PartResultInputModalState extends State<PartResultInputModal> {
     Navigator.of(context).pop();
     messenger.showSnackBar(
       SnackBar(
-        content: const Text('Результат сохранён'),
-        backgroundColor: successColor,
+        content: Text(
+          cubit.lastMutationSyncStatus == ResultSyncStatus.synced
+              ? 'Результат сохранён'
+              : 'Результат сохранён локально и ожидает синхронизации',
+        ),
+        backgroundColor: cubit.lastMutationSyncStatus == ResultSyncStatus.synced
+            ? successColor
+            : pendingColor,
       ),
     );
   }
@@ -223,7 +231,9 @@ class _PartResultInputModalState extends State<PartResultInputModal> {
     setState(() => _isLoading = true);
     final messenger = ScaffoldMessenger.of(context);
     final successColor = context.appTheme.success;
-    final success = await context.read<CrossfitWorkoutCubit>().deletePartResult(
+    final pendingColor = context.appTheme.warning;
+    final cubit = context.read<CrossfitWorkoutCubit>();
+    final success = await cubit.deletePartResult(
           workoutId: widget.workoutId,
           resultId: widget.initialResult!.id,
         );
@@ -235,8 +245,14 @@ class _PartResultInputModalState extends State<PartResultInputModal> {
     Navigator.of(context).pop();
     messenger.showSnackBar(
       SnackBar(
-        content: const Text('Результат удалён'),
-        backgroundColor: successColor,
+        content: Text(
+          cubit.lastMutationSyncStatus == ResultSyncStatus.synced
+              ? 'Результат удалён'
+              : 'Удаление сохранено локально и ожидает синхронизации',
+        ),
+        backgroundColor: cubit.lastMutationSyncStatus == ResultSyncStatus.synced
+            ? successColor
+            : pendingColor,
       ),
     );
   }

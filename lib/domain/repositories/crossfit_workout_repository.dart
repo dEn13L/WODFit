@@ -44,5 +44,5 @@ abstract class CrossfitWorkoutRepository {
     double? distanceM,
     int? calories,
   });
-  Future<void> deletePartResult(String resultId);
+  Future<ResultSyncStatus> deletePartResult(String resultId);
 }
