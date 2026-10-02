@@ -359,7 +359,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: newWorkouts.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (_, _) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final workout = newWorkouts[index];
                             final results = state.userResults
