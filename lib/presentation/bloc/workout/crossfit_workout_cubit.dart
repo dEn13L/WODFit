@@ -67,6 +67,7 @@ class CrossfitWorkoutError extends CrossfitWorkoutState {
 class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
   static const String _tag = 'CrossfitWorkoutCubit';
   final CrossfitWorkoutRepository workoutRepository;
+  ResultSyncStatus lastMutationSyncStatus = ResultSyncStatus.synced;
 
   CrossfitWorkoutCubit({required this.workoutRepository}) : super(const CrossfitWorkoutInitial());
 
@@ -265,7 +266,7 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
     int? calories,
   }) async {
     try {
-      await workoutRepository.submitPartResult(
+      final result = await workoutRepository.submitPartResult(
         workoutId: workoutId,
         partId: partId,
         status: status,
@@ -280,8 +281,24 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
         calories: calories,
       );
 
-      // Reload details to keep results up to date
-      await loadWorkoutDetails(workoutId);
+      lastMutationSyncStatus = result.syncStatus;
+      final current = state;
+      if (current is CrossfitWorkoutDetailLoaded) {
+        final userResults = current.userResults
+            .where((item) => item.partId != result.partId)
+            .toList()
+          ..add(result);
+        final allResults = current.allResults
+            .where((item) => !(item.partId == result.partId && item.userId == result.userId))
+            .toList()
+          ..add(result);
+        emit(CrossfitWorkoutDetailLoaded(
+          workout: current.workout,
+          userResults: userResults,
+          allResults: allResults,
+          participants: current.participants,
+        ));
+      }
       return true;
     } catch (e, st) {
       AppLogger.e(_tag, 'submitPartResult failed', e, st);
@@ -295,8 +312,16 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
     required String resultId,
   }) async {
     try {
-      await workoutRepository.deletePartResult(resultId);
-      await loadWorkoutDetails(workoutId);
+      lastMutationSyncStatus = await workoutRepository.deletePartResult(resultId);
+      final current = state;
+      if (current is CrossfitWorkoutDetailLoaded) {
+        emit(CrossfitWorkoutDetailLoaded(
+          workout: current.workout,
+          userResults: current.userResults.where((item) => item.id != resultId).toList(),
+          allResults: current.allResults.where((item) => item.id != resultId).toList(),
+          participants: current.participants,
+        ));
+      }
       return true;
     } catch (e, st) {
       AppLogger.e(_tag, 'deletePartResult failed', e, st);

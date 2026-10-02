@@ -12,9 +12,9 @@
 - Клиент: Flutter (Dart), таргеты Android / iOS / Web (адаптив).
 - Состояние: flutter_bloc. Навигация: go_router.
 - Бэкенд: Supabase (PostgreSQL, Auth, RLS, RPC; Storage не используется).
-- Локально: Hive — ТОЛЬКО кэш: settings_box (тема), workouts_box (черновик формы).
-  Кэш тренировок и очередь результатов — будущая offline-задача, сейчас НЕ реализованы.
-  Источник истины — Supabase. Бизнес-логику на Hive не строить.
+- Локально: Hive — кэш: settings_box (тема), workouts_box (черновик формы),
+  result_sync_box (локальная проекция результатов и очередь синхронизации).
+  Источник истины после подтверждения синхронизации — Supabase.
 - Логирование: AppLogger (core).
 - Архитектура: Clean Architecture:
   lib/core (router, theme, config, errors, utils, logger),
@@ -34,7 +34,7 @@
   flutter pub get → flutter analyze → flutter test → flutter build web; без деплоя.
 - Проверка: `flutter analyze` обязателен перед каждым коммитом и должен быть чистым.
   В облачных сессиях Flutter ставит SessionStart-хук .claude/hooks/session-start.sh.
-- Миграции: sql/NN_slug.sql (последняя — 07_tasks_simplify.sql), применяются вручную
+- Миграции: sql/NN_slug.sql (последняя — 08_offline_result_sync.sql), применяются вручную
   через Supabase SQL Editor. Живая БД может расходиться с файлами (часть SQL
   применялась мимо репозитория) — перед изменением схемы сверять с живой БД
   (только чтение); применять миграции к живой БД — только по явной команде.
@@ -69,7 +69,8 @@ workout_assignments(workout_id, program_id, assigned_at; PK(workout_id, program_
 part_results(id, workout_id, part_id, user_id, status result_status,
 score_type score_type — формат записи (fallback 'text'),
 score_text, time_ms, rounds, reps, weight_kg, distance_m, calories,
-note, created_at, updated_at; UNIQUE(part_id, user_id))
+note, client_updated_at, last_operation_id, deleted_at, created_at, updated_at;
+UNIQUE(part_id, user_id))
 legacy: workout_templates, workout_template_parts — таблицы сохранены, фича удалена,
 код их не использует; новых зависимостей от них не создавать.
 
@@ -88,7 +89,8 @@ Enum'ы и подписи UI (строковые значения БД↔Dart ж
   distance «Дистанция», calories «Калории».
 - result_status: done «Выполнено», scaled «Масштабировано», notDone «Не выполнено».
 
-RPC: join_program_by_code(p_invite_code text) — security definer, вступление по коду.
+RPC: join_program_by_code(p_invite_code text) — security definer, вступление по коду;
+sync_part_result(...) — security invoker, идемпотентная LWW-синхронизация результатов.
 RLS-принципы (не нарушать):
 - тренер CRUD только свои programs/workouts и их детей;
 - участник программы читает свою программу, назначенные published-тренировки,
@@ -231,20 +233,26 @@ RLS-принципы (не нарушать):
   result-репозитория нет).
 - Мёртвый код стартового шаблона и зависимость pedometer удалены; `workouts_box`
   используется только WorkoutFormCubit для кэша черновика актуальной формы.
+- Offline-first сохранение результатов использует `result_sync_box`: операции
+  create/update/delete имеют UUID, сохраняются между перезапусками, повторяются
+  с exponential backoff и удаляются только после подтверждения Supabase. Конфликты
+  разрешаются по LWW (`client_updated_at`, затем UUID операции); UI различает
+  серверное подтверждение, локальное ожидание и ошибку синхронизации.
+- Миграция `sql/08_offline_result_sync.sql` применена к живой БД: добавлены
+  метаданные LWW, soft delete и идемпотентный RPC `sync_part_result`.
 
 ## 7. Текущие приоритеты (очередь работ)
 1. Стабилизация по итогам пилотной недели основного цикла: вход, программы,
    публикация, просмотр тренировки, сохранение результата, сводка результатов,
    темы и мобильный Web.
-   Дальше по очереди: offline-кэш и очередь результатов, уведомления о новых
-   тренировках.
-Техдолг с высоким приоритетом перед offline и уведомлениями: по завершённому
+   Дальше по очереди: уведомления о новых тренировках.
+Техдолг с высоким приоритетом перед уведомлениями: по завершённому
 read-only аудиту из docs/database-security-audit.md отдельно согласовать и
 подготовить hardening-миграции; без подтверждения живую БД не изменять.
 
 ## 8. ЗАПРЕЩЕНО до отдельной прямой задачи
 Таймер, лидерборды, платежи, видео/изображения,
-push-уведомления, offline (до отдельной задачи), HealthKit/Google Fit/wearables,
+push-уведомления, HealthKit/Google Fit/wearables,
 клубы/абонементы, AI-функции, экспорт CSV, «создание из существующей тренировки»,
 воскрешение шаблонов, новые сущности сверх схемы раздела 3.
 

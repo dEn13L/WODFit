@@ -11,6 +11,7 @@ import '../../bloc/workout/crossfit_workout_cubit.dart';
 import '../../widgets/app_state_view.dart';
 import '../coach/workouts/create_workout_screen.dart';
 import 'result_input/part_result_input_modal.dart';
+import 'result_sync_status_view.dart';
 
 class WorkoutDetailScreen extends StatefulWidget {
   final String workoutId;
@@ -623,6 +624,13 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                                               'Режим: ${userResult.status.displayName}',
                                               style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
                                             ),
+                                            if (userResult.syncStatus != ResultSyncStatus.synced) ...[
+                                              const SizedBox(height: 2),
+                                              ResultSyncStatusView(
+                                                status: userResult.syncStatus,
+                                                onRetry: () => showResultDialog(part, userResult),
+                                              ),
+                                            ],
                                             if (userResult.note.isNotEmpty) ...[
                                               const SizedBox(height: 2),
                                               Text(

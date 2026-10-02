@@ -16,7 +16,7 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       throw UnimplementedError();
 
   @override
-  Future<void> deletePartResult(String resultId) async {}
+  Future<ResultSyncStatus> deletePartResult(String resultId) async => ResultSyncStatus.synced;
 
   @override
   Future<void> deleteWorkout(String workoutId) async {}

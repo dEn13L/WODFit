@@ -7,6 +7,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_service.dart';
 import 'data/repositories/supabase_auth_repository.dart';
+import 'data/datasources/result_sync_local_data_source.dart';
 import 'data/repositories/supabase_crossfit_workout_repository.dart';
 import 'data/repositories/supabase_program_repository.dart';
 import 'domain/repositories/auth_repository.dart';
@@ -33,7 +34,10 @@ Future<void> main() async {
   // 3. Instantiate repositories
   final AuthRepository authRepository = SupabaseAuthRepository();
   final ProgramRepository programRepository = SupabaseProgramRepository();
-  final CrossfitWorkoutRepository crossfitWorkoutRepository = SupabaseCrossfitWorkoutRepository();
+  final resultSyncBox = await Hive.openBox<dynamic>(HiveResultSyncLocalDataSource.boxName);
+  final CrossfitWorkoutRepository crossfitWorkoutRepository = SupabaseCrossfitWorkoutRepository(
+    resultLocalDataSource: HiveResultSyncLocalDataSource(resultSyncBox),
+  );
 
   runApp(
     WodFitApp(

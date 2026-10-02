@@ -18,6 +18,7 @@ void main() {
       weightKg: 82.5,
       createdAt: DateTime.utc(2026, 9, 19, 18),
       updatedAt: DateTime.utc(2026, 9, 19, 19),
+      syncStatus: ResultSyncStatus.pending,
     );
 
     final json = PartResultModel.fromDomain(source).toJson();
@@ -32,5 +33,6 @@ void main() {
     expect(restored.weightKg, 82.5);
     expect(restored.createdAt.toUtc(), source.createdAt);
     expect(restored.updatedAt.toUtc(), source.updatedAt);
+    expect(restored.syncStatus, ResultSyncStatus.pending);
   });
 }

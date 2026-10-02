@@ -26,6 +26,8 @@ enum ResultStatus {
   }
 }
 
+enum ResultSyncStatus { synced, pending, failed }
+
 class PartResult extends Equatable {
   final String id;
   final String workoutId;
@@ -43,7 +45,9 @@ class PartResult extends Equatable {
   final int? calories;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
   final UserProfile? userProfile;
+  final ResultSyncStatus syncStatus;
 
   const PartResult({
     required this.id,
@@ -62,7 +66,9 @@ class PartResult extends Equatable {
     this.calories,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
     this.userProfile,
+    this.syncStatus = ResultSyncStatus.synced,
   });
 
   /// Человекочитаемое представление результата с форматированием по score_type (fallback: text)
@@ -137,7 +143,9 @@ class PartResult extends Equatable {
     int? calories,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? deletedAt,
     UserProfile? userProfile,
+    ResultSyncStatus? syncStatus,
   }) {
     return PartResult(
       id: id ?? this.id,
@@ -156,7 +164,9 @@ class PartResult extends Equatable {
       calories: calories ?? this.calories,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       userProfile: userProfile ?? this.userProfile,
+      syncStatus: syncStatus ?? this.syncStatus,
     );
   }
 
@@ -178,6 +188,8 @@ class PartResult extends Equatable {
         calories,
         createdAt,
         updatedAt,
+        deletedAt,
         userProfile,
+        syncStatus,
       ];
 }
