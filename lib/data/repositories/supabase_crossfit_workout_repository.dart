@@ -17,18 +17,21 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
   static const String _tag = 'SupabaseCrossfitWorkoutRepository';
   final SupabaseClient? _client;
   final ResultSyncLocalDataSource? resultLocalDataSource;
-  late final ResultSyncService? _resultSyncService = resultLocalDataSource == null
-      ? null
-      : ResultSyncService(
-          localDataSource: resultLocalDataSource,
-          sendOperation: _sendResultOperation,
-          currentUserId: () => _client?.auth.currentUser?.id,
-        );
+  late final ResultSyncService? _resultSyncService;
 
   SupabaseCrossfitWorkoutRepository({
     SupabaseClient? client,
     this.resultLocalDataSource,
-  }) : _client = client ?? (SupabaseConfig.isConfigured ? SupabaseConfig.client : null);
+  }) : _client = client ?? (SupabaseConfig.isConfigured ? SupabaseConfig.client : null) {
+    final localDataSource = resultLocalDataSource;
+    _resultSyncService = localDataSource == null
+        ? null
+        : ResultSyncService(
+            localDataSource: localDataSource,
+            sendOperation: _sendResultOperation,
+            currentUserId: () => _client?.auth.currentUser?.id,
+          );
+  }
 
   SupabaseClient get client {
     final c = _client;
