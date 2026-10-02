@@ -16,20 +16,19 @@ import '../services/result_sync_service.dart';
 class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
   static const String _tag = 'SupabaseCrossfitWorkoutRepository';
   final SupabaseClient? _client;
-  final ResultSyncLocalDataSource? _resultLocalDataSource;
-  late final ResultSyncService? _resultSyncService = _resultLocalDataSource == null
+  final ResultSyncLocalDataSource? resultLocalDataSource;
+  late final ResultSyncService? _resultSyncService = resultLocalDataSource == null
       ? null
       : ResultSyncService(
-          localDataSource: _resultLocalDataSource,
+          localDataSource: resultLocalDataSource,
           sendOperation: _sendResultOperation,
           currentUserId: () => _client?.auth.currentUser?.id,
         );
 
   SupabaseCrossfitWorkoutRepository({
     SupabaseClient? client,
-    ResultSyncLocalDataSource? resultLocalDataSource,
-  })  : _client = client ?? (SupabaseConfig.isConfigured ? SupabaseConfig.client : null),
-        _resultLocalDataSource = resultLocalDataSource;
+    this.resultLocalDataSource,
+  }) : _client = client ?? (SupabaseConfig.isConfigured ? SupabaseConfig.client : null);
 
   SupabaseClient get client {
     final c = _client;
@@ -431,7 +430,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
             );
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при получении результатов пользователя для $workoutId', e, st);
-      final cached = _resultLocalDataSource?.getCachedResults(workoutId: workoutId, userId: userId) ?? const [];
+      final cached = resultLocalDataSource?.getCachedResults(workoutId: workoutId, userId: userId) ?? const [];
       if (cached.isNotEmpty) return cached;
       rethrow;
     }
@@ -461,7 +460,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
           : await syncService.mergeWithCache(serverResults, userId: userId);
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при получении всех результатов клиента', e, st);
-      final cached = _resultLocalDataSource?.getCachedResults(userId: userId) ?? const [];
+      final cached = resultLocalDataSource?.getCachedResults(userId: userId) ?? const [];
       if (cached.isNotEmpty) return cached;
       rethrow;
     }
@@ -488,9 +487,10 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     }
 
     final syncService = _resultSyncService;
-    if (syncService != null) {
+    final localDataSource = resultLocalDataSource;
+    if (syncService != null && localDataSource != null) {
       final now = DateTime.now().toUtc();
-      final existing = _resultLocalDataSource!.getCachedResults(userId: userId).where(
+      final existing = localDataSource.getCachedResults(userId: userId).where(
         (result) => result.partId == partId,
       );
       final result = PartResult(
@@ -522,7 +522,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       );
       await syncService.enqueue(operation);
       await syncService.synchronize();
-      final cached = _resultLocalDataSource!
+      final cached = localDataSource
           .getCachedResults(userId: userId)
           .where((item) => item.partId == partId);
       return cached.isEmpty ? result : cached.first;
@@ -568,8 +568,9 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     }
 
     final syncService = _resultSyncService;
-    final cachedResult = _resultLocalDataSource?.getCachedResult(resultId);
-    if (syncService != null && cachedResult != null) {
+    final localDataSource = resultLocalDataSource;
+    final cachedResult = localDataSource?.getCachedResult(resultId);
+    if (syncService != null && localDataSource != null && cachedResult != null) {
       final now = DateTime.now().toUtc();
       await syncService.enqueue(ResultSyncOperation(
         id: const Uuid().v4(),
@@ -578,7 +579,7 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
         occurredAt: now,
       ));
       await syncService.synchronize();
-      final pending = await _resultLocalDataSource!.getOperations();
+      final pending = await localDataSource.getOperations();
       return pending.any((operation) => operation.result.id == resultId)
           ? ResultSyncStatus.pending
           : ResultSyncStatus.synced;
