@@ -171,8 +171,9 @@ RLS включён на всех основных и legacy-таблицах. `F
 [`11_program_membership_preflight.sql`](11_program_membership_preflight.sql) и
 миграция [`11_harden_program_membership.sql`](../sql/11_harden_program_membership.sql).
 Они закрывают прямой `INSERT` в `program_members`, оставляют вступление только
-через RPC и разрешают участникам читать состав общей программы. Миграция к живой
-базе не применялась.
+через RPC и разрешают участникам читать состав общей программы. Миграция применена
+к живой базе 2 октября 2026 года; повторный read-only аудит и coach/client
+smoke-тест после применения ещё не зафиксированы.
 
 1. **Security hardening:** закрыть прямой INSERT в `program_members`, ограничить
    result writes, исправить чтение состава программы и профилей, заменить
