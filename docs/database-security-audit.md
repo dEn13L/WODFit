@@ -165,7 +165,15 @@ RLS включён на всех основных и legacy-таблицах. `F
 права, права `authenticated` заменены явным allow-list, helper-функции перенесены
 в неэкспонируемую схему `private`, закреплён `search_path`, а публичными оставлены
 только необходимые RPC. Legacy `is_group_*` не удалены. Повторный read-only аудит
-и coach/client smoke-тест после применения ещё не зафиксированы.
+и coach/client smoke-тест после применения подтверждены владельцем проекта.
+
+Для шага 3.2 подготовлены read-only preflight
+[`11_program_membership_preflight.sql`](11_program_membership_preflight.sql) и
+миграция [`11_harden_program_membership.sql`](../sql/11_harden_program_membership.sql).
+Они закрывают прямой `INSERT` в `program_members`, оставляют вступление только
+через RPC и разрешают участникам читать состав общей программы. Миграция применена
+к живой базе 2 октября 2026 года; повторный read-only аудит и coach/client
+smoke-тест после применения ещё не зафиксированы.
 
 1. **Security hardening:** закрыть прямой INSERT в `program_members`, ограничить
    result writes, исправить чтение состава программы и профилей, заменить
