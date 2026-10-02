@@ -34,7 +34,7 @@
   flutter pub get → flutter analyze → flutter test → flutter build web; без деплоя.
 - Проверка: `flutter analyze` обязателен перед каждым коммитом и должен быть чистым.
   В облачных сессиях Flutter ставит SessionStart-хук .claude/hooks/session-start.sh.
-- Миграции: sql/NN_slug.sql (последняя — 07_tasks_simplify.sql), применяются вручную
+- Миграции: sql/NN_slug.sql (последняя — 08_offline_result_sync.sql), применяются вручную
   через Supabase SQL Editor. Живая БД может расходиться с файлами (часть SQL
   применялась мимо репозитория) — перед изменением схемы сверять с живой БД
   (только чтение); применять миграции к живой БД — только по явной команде.
@@ -69,7 +69,8 @@ workout_assignments(workout_id, program_id, assigned_at; PK(workout_id, program_
 part_results(id, workout_id, part_id, user_id, status result_status,
 score_type score_type — формат записи (fallback 'text'),
 score_text, time_ms, rounds, reps, weight_kg, distance_m, calories,
-note, created_at, updated_at; UNIQUE(part_id, user_id))
+note, client_updated_at, last_operation_id, deleted_at, created_at, updated_at;
+UNIQUE(part_id, user_id))
 legacy: workout_templates, workout_template_parts — таблицы сохранены, фича удалена,
 код их не использует; новых зависимостей от них не создавать.
 
@@ -88,7 +89,8 @@ Enum'ы и подписи UI (строковые значения БД↔Dart ж
   distance «Дистанция», calories «Калории».
 - result_status: done «Выполнено», scaled «Масштабировано», notDone «Не выполнено».
 
-RPC: join_program_by_code(p_invite_code text) — security definer, вступление по коду.
+RPC: join_program_by_code(p_invite_code text) — security definer, вступление по коду;
+sync_part_result(...) — security invoker, идемпотентная LWW-синхронизация результатов.
 RLS-принципы (не нарушать):
 - тренер CRUD только свои programs/workouts и их детей;
 - участник программы читает свою программу, назначенные published-тренировки,
@@ -236,9 +238,8 @@ RLS-принципы (не нарушать):
   с exponential backoff и удаляются только после подтверждения Supabase. Конфликты
   разрешаются по LWW (`client_updated_at`, затем UUID операции); UI различает
   серверное подтверждение, локальное ожидание и ошибку синхронизации.
-- Миграция `sql/08_offline_result_sync.sql` добавляет метаданные LWW, soft delete
-  и идемпотентный RPC `sync_part_result`; до её ручного применения offline-запись
-  результатов в развернутом клиенте работать не будет.
+- Миграция `sql/08_offline_result_sync.sql` применена к живой БД: добавлены
+  метаданные LWW, soft delete и идемпотентный RPC `sync_part_result`.
 
 ## 7. Текущие приоритеты (очередь работ)
 1. Стабилизация по итогам пилотной недели основного цикла: вход, программы,
