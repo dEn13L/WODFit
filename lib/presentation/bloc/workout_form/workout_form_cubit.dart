@@ -159,20 +159,46 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   static const String _boxName = 'workouts_box';
 
   final CrossfitWorkoutRepository workoutRepository;
+  final bool _isCopy;
   Timer? _debounceTimer;
   final _removedTasks = <({WorkoutFormTask task, int index})>[];
 
   WorkoutFormCubit({
     required this.workoutRepository,
     CrossfitWorkout? workoutToEdit,
+    CrossfitWorkout? workoutToCopy,
     String? initialProgramId,
     List<String>? initialProgramIds,
-  }) : super(WorkoutFormState.initial(
-          initialProgramId: initialProgramId,
-          initialProgramIds: initialProgramIds,
-        )) {
+  }) : assert(workoutToEdit == null || workoutToCopy == null),
+       _isCopy = workoutToCopy != null,
+       super(
+         WorkoutFormState.initial(
+           initialProgramId: initialProgramId,
+           initialProgramIds: initialProgramIds,
+         ),
+       ) {
     if (workoutToEdit != null) {
       loadForEdit(workoutToEdit);
+    } else if (workoutToCopy != null) {
+      final parts = List<WorkoutPart>.from(workoutToCopy.parts)
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      emit(
+        state.copyWith(
+          tasks: parts.isEmpty
+              ? [WorkoutFormTask(id: const Uuid().v4())]
+              : parts
+                    .map(
+                      (part) => WorkoutFormTask(
+                        id: const Uuid().v4(),
+                        title: part.title,
+                        description: part.description,
+                      ),
+                    )
+                    .toList(),
+          selectedProgramIds: workoutToCopy.assignedProgramIds.toSet(),
+          sessionName: workoutToCopy.title,
+        ),
+      );
     } else {
       _checkCachedDraft();
     }
@@ -352,7 +378,7 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   }
 
   void _scheduleAutoSave() {
-    if (state.isEditMode) return;
+    if (state.isEditMode || _isCopy) return;
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
       _saveDraftToCache();
@@ -360,7 +386,7 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   }
 
   Future<void> _saveDraftToCache() async {
-    if (state.isEditMode) return;
+    if (state.isEditMode || _isCopy) return;
     try {
       final box = await _getBox();
       final draftData = {
@@ -469,7 +495,7 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
           programIds: state.selectedProgramIds.toList(),
           publish: publish,
         );
-        await clearDraftCache();
+        if (!_isCopy) await clearDraftCache();
         emit(state.copyWith(
           savedWorkout: workout,
           submitStatus: WorkoutFormSubmitStatus.success,

@@ -6,6 +6,7 @@ import '../../../../core/utils/workout_date_formatter.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../bloc/workout/crossfit_workout_cubit.dart';
 import '../../../widgets/app_state_view.dart';
+import 'create_workout_screen.dart';
 
 class CoachAllWorkoutsScreen extends StatefulWidget {
   const CoachAllWorkoutsScreen({super.key});
@@ -26,17 +27,9 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
 
   Future<void> _loadWorkouts() => context.read<CrossfitWorkoutCubit>().loadCoachWorkouts();
 
-  Future<void> _duplicateWorkout(String workoutId) async {
-    final cubit = context.read<CrossfitWorkoutCubit>();
-    await cubit.duplicateWorkout(workoutId);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Тренировка скопирована в черновики'),
-          backgroundColor: context.appTheme.success,
-        ),
-      );
-    }
+  Future<void> _duplicateWorkout(CrossfitWorkout workout) async {
+    final saved = await CreateWorkoutScreen.openCopy(context, workout);
+    if (saved != null && mounted) await _loadWorkouts();
   }
 
   Future<void> _deleteWorkout(CrossfitWorkout workout) async {
@@ -230,7 +223,7 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
                                   await context.push('/workout/${workout.id}');
                                   if (mounted) _loadWorkouts();
                                 },
-                                onDuplicate: () => _duplicateWorkout(workout.id),
+                                onDuplicate: () => _duplicateWorkout(workout),
                                 onDelete: () => _deleteWorkout(workout),
                               );
                             },

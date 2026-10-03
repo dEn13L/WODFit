@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../bloc/workout_form/workout_form_cubit.dart';
-import 'task_description_editor.dart';
 import '../../../../widgets/confirm_dialog.dart';
 
 class WorkoutTaskCard extends StatefulWidget {
@@ -26,14 +25,20 @@ class WorkoutTaskCard extends StatefulWidget {
 
 class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
   late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
   final FocusNode _titleFocusNode = FocusNode();
+  final FocusNode _descriptionFocusNode = FocusNode();
   bool _isCardFocused = false;
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.task.title);
+    _descriptionController = TextEditingController(
+      text: widget.task.description,
+    );
     _titleFocusNode.addListener(_onFocusChange);
+    _descriptionFocusNode.addListener(_onFocusChange);
   }
 
   @override
@@ -43,16 +48,24 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
         _titleController.text != widget.task.title) {
       _titleController.text = widget.task.title;
     }
+    if (oldWidget.task.description != widget.task.description &&
+        _descriptionController.text != widget.task.description) {
+      _descriptionController.text = widget.task.description;
+    }
   }
 
   void _onFocusChange() {
     setState(() {
-      _isCardFocused = _titleFocusNode.hasFocus;
+      _isCardFocused =
+          _titleFocusNode.hasFocus || _descriptionFocusNode.hasFocus;
     });
   }
 
   @override
   void dispose() {
+    _descriptionFocusNode.removeListener(_onFocusChange);
+    _descriptionFocusNode.dispose();
+    _descriptionController.dispose();
     _titleFocusNode.removeListener(_onFocusChange);
     _titleFocusNode.dispose();
     _titleController.dispose();
@@ -63,7 +76,6 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final hasDescription = widget.task.description.trim().isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -100,7 +112,7 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
               ),
             ),
 
-            // Middle Content: Title and Description Preview
+            // Название и текст задания редактируются в одной карточке.
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,6 +122,8 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
                     controller: _titleController,
                     focusNode: _titleFocusNode,
                     onChanged: widget.onTitleChanged,
+                    textInputAction: TextInputAction.next,
+                    onSubmitted: (_) => _descriptionFocusNode.requestFocus(),
                     textCapitalization: TextCapitalization.sentences,
                     style: TextStyle(
                       fontSize: 16,
@@ -117,7 +131,7 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
                       color: colorScheme.onSurface,
                     ),
                     decoration: InputDecoration(
-                      hintText: 'например: Разминка, Силовая, Комплекс',
+                      hintText: 'Название задания',
                       hintStyle: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -135,40 +149,33 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Description preview zone (clickable)
-                  InkWell(
-                    onTap: () {
-                      TaskDescriptionEditor.show(
-                        context,
-                        initialDescription: widget.task.description,
-                        onSaved: widget.onDescriptionChanged,
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: hasDescription
-                          ? Text(
-                              widget.task.description,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: colorScheme.onSurfaceVariant,
-                                height: 1.4,
-                              ),
-                            )
-                          : Text(
-                              'Опишите движения, раунды, повторы, вес, лимиты времени и масштабирование…',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: colorScheme.onSurfaceVariant.withValues(
-                                  alpha: 0.6,
-                                ),
-                                height: 1.3,
-                              ),
-                            ),
+                  TextField(
+                    controller: _descriptionController,
+                    focusNode: _descriptionFocusNode,
+                    onChanged: widget.onDescriptionChanged,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
+                    textCapitalization: TextCapitalization.sentences,
+                    minLines: 3,
+                    maxLines: null,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colorScheme.onSurface,
+                      height: 1.4,
+                    ),
+                    decoration: InputDecoration(
+                      hintText:
+                          'Текст задания: движения, раунды, повторы, вес…',
+                      hintStyle: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 14,
+                      ),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
                     ),
                   ),
                 ],

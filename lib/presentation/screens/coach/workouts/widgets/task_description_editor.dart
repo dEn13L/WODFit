@@ -104,7 +104,10 @@ class _TaskDescriptionEditorState extends State<TaskDescriptionEditor> {
             TextField(
               controller: _controller,
               autofocus: true,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
               minLines: 6,
+              maxLines: null,
               style: TextStyle(
                 fontSize: 15,
                 color: colorScheme.onSurface,

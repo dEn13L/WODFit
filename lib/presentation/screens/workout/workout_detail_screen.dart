@@ -173,8 +173,7 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                   tooltip: 'Дублировать',
                   icon: Icon(Icons.copy_outlined, color: colorScheme.onSurface),
                   onPressed: () async {
-                    final cubit = context.read<CrossfitWorkoutCubit>();
-                    await cubit.duplicateWorkout(workout.id);
+                    await CreateWorkoutScreen.openCopy(context, workout);
                   },
                 ),
                 IconButton(

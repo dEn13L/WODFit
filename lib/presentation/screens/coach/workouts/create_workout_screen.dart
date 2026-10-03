@@ -14,15 +14,34 @@ import 'widgets/workout_task_card.dart';
 
 class CreateWorkoutScreen extends StatelessWidget {
   final CrossfitWorkout? workoutToEdit;
+  final CrossfitWorkout? workoutToCopy;
   final String? initialProgramId;
   final List<String>? initialProgramIds;
 
   const CreateWorkoutScreen({
     super.key,
     this.workoutToEdit,
+    this.workoutToCopy,
     this.initialProgramId,
     this.initialProgramIds,
   });
+
+  static Future<CrossfitWorkout?> openCopy(
+    BuildContext context,
+    CrossfitWorkout workout,
+  ) => Navigator.of(context).push<CrossfitWorkout>(
+    MaterialPageRoute(
+      builder: (_) => MultiBlocProvider(
+        providers: [
+          BlocProvider<ProgramCubit>.value(value: context.read<ProgramCubit>()),
+          BlocProvider<CrossfitWorkoutCubit>.value(
+            value: context.read<CrossfitWorkoutCubit>(),
+          ),
+        ],
+        child: CreateWorkoutScreen(workoutToCopy: workout),
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +49,7 @@ class CreateWorkoutScreen extends StatelessWidget {
       create: (ctx) => WorkoutFormCubit(
         workoutRepository: ctx.read<CrossfitWorkoutRepository>(),
         workoutToEdit: workoutToEdit,
+        workoutToCopy: workoutToCopy,
         initialProgramId: initialProgramId,
         initialProgramIds: initialProgramIds,
       ),
