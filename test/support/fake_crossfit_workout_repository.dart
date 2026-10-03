@@ -42,6 +42,9 @@ class FakeCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
       throw UnimplementedError();
 
   @override
+  Future<Map<String, int>> getWorkoutResultUserCounts(List<String> workoutIds) async => {};
+
+  @override
   Future<List<UserProfile>> getWorkoutParticipants(String workoutId) async => [];
 
   @override

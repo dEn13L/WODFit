@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -19,6 +20,8 @@ import 'domain/repositories/crossfit_workout_repository.dart';
 import 'domain/repositories/program_repository.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/bloc/auth/auth_event.dart';
+import 'presentation/bloc/auth/auth_state.dart';
+import 'presentation/state/session_data_cache.dart';
 import 'presentation/bloc/program/program_cubit.dart';
 import 'presentation/bloc/theme/theme_cubit.dart';
 import 'presentation/bloc/workout/crossfit_workout_cubit.dart';
@@ -91,16 +94,29 @@ class WodFitApp extends StatefulWidget {
 
 class _WodFitAppState extends State<WodFitApp> {
   late final AuthBloc _authBloc;
+  final _sessionCache = SessionDataCache();
+  late final StreamSubscription<AuthState> _cacheAuthSubscription;
+  String? _cacheOwner;
 
   @override
   void initState() {
     super.initState();
     _authBloc = AuthBloc(authRepository: widget.authRepository)
       ..add(const AuthCheckRequested());
+    _cacheAuthSubscription = _authBloc.stream.listen((state) {
+      if (state is AuthLoading) return;
+      final owner = state is Authenticated ? '${state.user.id}:${state.user.role.name}' : null;
+      if (owner != _cacheOwner) {
+        _cacheOwner = owner;
+        _sessionCache.clear();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _cacheAuthSubscription.cancel();
+    _sessionCache.close();
     _authBloc.close();
     super.dispose();
   }
@@ -111,6 +127,7 @@ class _WodFitAppState extends State<WodFitApp> {
 
     return MultiRepositoryProvider(
       providers: [
+        RepositoryProvider<SessionDataCache>.value(value: _sessionCache),
         RepositoryProvider<AuthRepository>.value(value: widget.authRepository),
         RepositoryProvider<ProgramRepository>.value(
           value: widget.programRepository,
@@ -128,11 +145,12 @@ class _WodFitAppState extends State<WodFitApp> {
           ),
           BlocProvider<ProgramCubit>(
             create: (context) =>
-                ProgramCubit(programRepository: widget.programRepository),
+                ProgramCubit(programRepository: widget.programRepository, cache: _sessionCache),
           ),
           BlocProvider<CrossfitWorkoutCubit>(
             create: (context) => CrossfitWorkoutCubit(
               workoutRepository: widget.crossfitWorkoutRepository,
+              cache: _sessionCache,
             ),
           ),
         ],

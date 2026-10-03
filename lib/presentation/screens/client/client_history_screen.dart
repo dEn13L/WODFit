@@ -40,10 +40,10 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
     super.dispose();
   }
 
-  void _loadData() {
-    context.read<CrossfitWorkoutCubit>().loadClientWorkouts();
-    context.read<ProgramCubit>().loadClientPrograms();
-  }
+  Future<void> _loadData() => Future.wait([
+    context.read<CrossfitWorkoutCubit>().loadClientWorkouts(),
+    context.read<ProgramCubit>().loadClientPrograms(),
+  ]);
 
   @override
   Widget build(BuildContext context) {
