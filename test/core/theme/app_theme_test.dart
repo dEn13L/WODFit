@@ -5,7 +5,8 @@ import 'package:wod_fit/core/theme/app_theme_extension.dart';
 
 void main() {
   double contrast(Color foreground, Color background) {
-    final lighter = foreground.computeLuminance() > background.computeLuminance()
+    final lighter =
+        foreground.computeLuminance() > background.computeLuminance()
         ? foreground.computeLuminance()
         : background.computeLuminance();
     final darker = foreground.computeLuminance() > background.computeLuminance()
@@ -14,7 +15,7 @@ void main() {
     return (lighter + 0.05) / (darker + 0.05);
   }
 
-  test('themes keep readable primary actions and body text', () {
+  test('themes keep cyan actions, links, hints and time labels readable', () {
     for (final theme in [AppTheme.darkTheme, AppTheme.lightTheme]) {
       expect(
         contrast(theme.colorScheme.onSurface, theme.colorScheme.surface),
@@ -24,17 +25,51 @@ void main() {
         contrast(theme.colorScheme.onSurfaceVariant, theme.colorScheme.surface),
         greaterThanOrEqualTo(4.5),
       );
+      expect(
+        contrast(theme.colorScheme.onPrimary, theme.colorScheme.primary),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        contrast(theme.colorScheme.primary, theme.colorScheme.surface),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        contrast(theme.colorScheme.primary, theme.scaffoldBackgroundColor),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        contrast(
+          theme.colorScheme.onPrimaryContainer,
+          theme.colorScheme.primaryContainer,
+        ),
+        greaterThanOrEqualTo(4.5),
+      );
+      final button = theme.elevatedButtonTheme.style!;
+      expect(
+        contrast(
+          button.foregroundColor!.resolve({})!,
+          button.backgroundColor!.resolve({})!,
+        ),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        contrast(
+          theme.inputDecorationTheme.hintStyle!.color!,
+          theme.inputDecorationTheme.fillColor!,
+        ),
+        greaterThanOrEqualTo(4.5),
+      );
+      final extension = theme.extension<AppThemeExtension>()!;
+      expect(
+        contrast(theme.colorScheme.primary, extension.timeChipBackground),
+        greaterThanOrEqualTo(4.5),
+      );
     }
-
-    expect(
-      contrast(
-        AppTheme.darkTheme.colorScheme.onPrimary,
-        AppTheme.darkTheme.colorScheme.primary,
-      ),
-      greaterThanOrEqualTo(4.5),
-    );
-    expect(AppTheme.lightTheme.colorScheme.primary, const Color(0xFF06B6D4));
-    expect(AppTheme.lightTheme.colorScheme.onPrimary, Colors.white);
+    final darkHue = HSLColor.fromColor(AppTheme.darkTheme.colorScheme.primary)
+        .hue;
+    final lightHue = HSLColor.fromColor(AppTheme.lightTheme.colorScheme.primary)
+        .hue;
+    expect((darkHue - lightHue).abs(), lessThan(10));
   });
 
   test('themes share component geometry and semantic colors', () {

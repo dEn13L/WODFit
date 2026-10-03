@@ -1,41 +1,6 @@
 import 'package:flutter/material.dart';
+import 'app_colors.dart';
 import 'app_theme_extension.dart';
-
-class AppColors {
-  // Dark theme colors
-  static const Color background = Color(0xFF0C0F12);
-  static const Color surface = Color(0xFF171C21);
-  static const Color surfaceLight = Color(0xFF252C33);
-
-  // Accents (Dark)
-  static const Color primaryNeon = Color(0xFFCCFF00); // Electric Lime
-  static const Color primaryNeonDark = Color(0xFF99CC00);
-  static const Color accentOrange = Color(0xFFFF5722);
-  static const Color accentCyan = Color(0xFF00E5FF);
-
-  // Text (Dark)
-  static const Color textPrimary = Color(0xFFF2F5F7);
-  static const Color textSecondary = Color(0xFFB4BDC7);
-  static const Color textMuted = Color(0xFF98A2AD);
-
-  // Status (Shared)
-  static const Color success = Color(0xFF34D399);
-  static const Color error = Color(0xFFEF4444);
-  static const Color warning = Color(0xFFF59E0B);
-
-  // Light theme tokens
-  static const Color lightBackground = Color(0xFFF8FAFC); // soft light slate
-  static const Color lightSurface = Color(0xFFFFFFFF); // pure white
-  static const Color lightSurfaceVariant = Color(0xFFF1F5F9); // light grey for cards/containers
-  static const Color lightPrimary = Color(0xFF06B6D4); // electric cyan
-  static const Color lightAccentOrange = Color(0xFFFF5722);
-  static const Color lightAccentNeon = Color(0xFF84CC16); // lighter lime for light theme
-  static const Color lightTextPrimary = Color(0xFF0F172A); // dark charcoal
-  static const Color lightTextSecondary = Color(0xFF475569); // medium grey
-  static const Color lightTextMuted = Color(0xFF94A3B8); // light grey for hints
-  static const Color lightBorder = Color(0xFFE2E8F0); // light grey borders
-  static const Color lightDivider = Color(0xFFE2E8F0);
-}
 
 class AppTheme {
   static const String resultFontFamily = 'monospace';
@@ -46,20 +11,37 @@ class AppTheme {
       brightness: Brightness.dark,
       extensions: const [AppThemeExtension.dark],
       scaffoldBackgroundColor: AppColors.background,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.primaryNeon,
-        secondary: AppColors.accentOrange,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.darkPrimary,
+        brightness: Brightness.dark,
+        primary: AppColors.darkPrimary,
+        primaryContainer: AppColors.darkPrimaryContainer,
+        onPrimaryContainer: AppColors.darkPrimary,
+        secondary: AppColors.darkPrimary,
+        secondaryContainer: AppColors.darkPrimaryContainer,
+        onSecondaryContainer: AppColors.darkPrimary,
+        tertiary: AppColors.darkPrimary,
+        onTertiary: AppColors.darkOnPrimary,
+        tertiaryContainer: AppColors.darkPrimaryContainer,
+        onTertiaryContainer: AppColors.darkPrimary,
+        surfaceTint: AppColors.darkPrimary,
         surface: AppColors.surface,
+        surfaceDim: AppColors.background,
+        surfaceBright: AppColors.surfaceLight,
+        surfaceContainerLowest: AppColors.background,
+        surfaceContainerLow: AppColors.surface,
+        surfaceContainer: AppColors.surface,
+        surfaceContainerHigh: AppColors.surfaceLight,
         surfaceContainerHighest: AppColors.surfaceLight,
-        onPrimary: Colors.black,
-        onSecondary: Colors.white,
+        onPrimary: AppColors.darkOnPrimary,
+        onSecondary: AppColors.darkOnPrimary,
         onSurface: AppColors.textPrimary,
         onSurfaceVariant: AppColors.textSecondary,
-        outline: AppColors.surfaceLight,
-        outlineVariant: AppColors.surfaceLight,
+        outline: AppColors.darkBorder,
+        outlineVariant: AppColors.darkBorder,
       ),
-      dividerColor: AppColors.surfaceLight,
-      dividerTheme: const DividerThemeData(color: AppColors.surfaceLight),
+      dividerColor: AppColors.darkBorder,
+      dividerTheme: const DividerThemeData(color: AppColors.darkBorder),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -82,8 +64,8 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryNeon,
-          foregroundColor: Colors.black,
+          backgroundColor: AppColors.darkPrimary,
+          foregroundColor: AppColors.darkOnPrimary,
           elevation: 0,
           minimumSize: const Size(64, 52),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -111,7 +93,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primaryNeon,
+          foregroundColor: AppColors.darkPrimary,
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
@@ -127,20 +109,20 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.surfaceLight),
+          borderSide: const BorderSide(color: AppColors.darkBorder),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.surfaceLight),
+          borderSide: const BorderSide(color: AppColors.darkBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primaryNeon, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.darkPrimary, width: 1.5),
         ),
       ),
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        side: const BorderSide(color: AppColors.surfaceLight),
+        side: const BorderSide(color: AppColors.darkBorder),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
       textTheme: const TextTheme(
@@ -188,15 +170,32 @@ class AppTheme {
       brightness: Brightness.light,
       extensions: const [AppThemeExtension.light],
       scaffoldBackgroundColor: AppColors.lightBackground,
-      colorScheme: const ColorScheme.light(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.darkPrimary,
+        brightness: Brightness.light,
         primary: AppColors.lightPrimary,
-        secondary: AppColors.lightAccentOrange,
+        primaryContainer: AppColors.lightPrimaryContainer,
+        onPrimaryContainer: AppColors.lightPrimary,
+        secondary: AppColors.lightPrimary,
+        secondaryContainer: AppColors.lightPrimaryContainer,
+        onSecondaryContainer: AppColors.lightPrimary,
+        tertiary: AppColors.lightPrimary,
+        onTertiary: AppColors.lightOnPrimary,
+        tertiaryContainer: AppColors.lightPrimaryContainer,
+        onTertiaryContainer: AppColors.lightPrimary,
+        surfaceTint: AppColors.lightPrimary,
         surface: AppColors.lightSurface,
+        surfaceDim: AppColors.lightSurfaceVariant,
+        surfaceBright: AppColors.lightSurface,
+        surfaceContainerLowest: AppColors.lightSurface,
+        surfaceContainerLow: AppColors.lightBackground,
+        surfaceContainer: AppColors.lightSurface,
+        surfaceContainerHigh: AppColors.lightSurfaceVariant,
         surfaceContainerHighest: AppColors.lightSurfaceVariant,
         outline: AppColors.lightBorder,
         outlineVariant: AppColors.lightBorder,
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
+        onPrimary: AppColors.lightOnPrimary,
+        onSecondary: AppColors.lightOnPrimary,
         onSurface: AppColors.lightTextPrimary,
         onSurfaceVariant: AppColors.lightTextSecondary,
       ),
@@ -226,7 +225,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.lightPrimary,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.lightOnPrimary,
           elevation: 0,
           minimumSize: const Size(64, 52),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -264,7 +263,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.lightSurface,
         hintStyle: const TextStyle(color: AppColors.lightTextMuted, fontSize: 14),
         labelStyle: const TextStyle(color: AppColors.lightTextSecondary, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
