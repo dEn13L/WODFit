@@ -155,14 +155,17 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
             ),
           );
         } else if (state.submitStatus == WorkoutFormSubmitStatus.success) {
-          context.read<CrossfitWorkoutCubit>().loadCoachWorkouts();
+          final workout = state.savedWorkout;
+          if (workout != null) {
+            context.read<CrossfitWorkoutCubit>().applySavedWorkout(workout);
+          }
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.successMessage ?? 'Успешно сохранено'),
               backgroundColor: appTheme.success,
             ),
           );
-          context.pop();
+          context.pop(workout);
         }
       },
       builder: (context, formState) {
