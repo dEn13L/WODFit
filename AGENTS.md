@@ -92,8 +92,9 @@ Enum'ы и подписи UI (строковые значения БД↔Dart ж
 
 RPC: join_program_by_code(code text) — security definer, вступление по коду;
 sync_part_result(...) — security invoker, идемпотентная LWW-синхронизация результатов.
-Helper-функции RLS находятся в неэкспонируемой схеме private; публичный EXECUTE
-доступен authenticated только для join_program_by_code и sync_part_result.
+Helper-функции RLS находятся в неэкспонируемой схеме private. После 12 публичный
+EXECUTE доступен authenticated только для join_program_by_code и sync_part_result;
+в текущей live до 12 остаётся лишний EXECUTE у set_workout_published_at().
 RLS-принципы (не нарушать):
 - тренер CRUD только свои programs/workouts и их детей;
 - участник программы читает свою программу, назначенные published-тренировки,
@@ -113,7 +114,8 @@ RLS-принципы (не нарушать):
   только из собственных программ.
   Индексы существуют: programs(coach_id), program_members(program_id/user_id),
   workout_assignments(program_id/workout_id), part_results(workout_id/user_id),
-  workouts(coach_id, scheduled_at).
+  workouts(coach_id). Составные workouts(coach_id, scheduled_at) и
+  part_results(workout_id, user_id) в live отсутствуют; добавлять только после EXPLAIN.
 
 ## 4. Продуктовые правила интерфейса (СТРОГИЕ)
 1.  Идентификатор тренировки — дата и время; уточнение сессии (workouts.title) —
