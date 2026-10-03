@@ -2,23 +2,45 @@
 
 ## Состояние на 3 октября 2026
 
-Базовый main: 35b5ac5a84b2e469cec7a05f075ff624012c1510 (PR #12).
-Проект Supabase: wod-fit. Проверка live выполнялась только чтением.
+Базовый main: d261261a4b14a408f266bb8a824031685e83c141 (merged PR #13).
+Проект Supabase: wod-fit (`zxcjryanpxfvxeqgizht`). Миграции 12/13 применены
+владельцем вручную; агент выполнял только read-only проверку live.
+
+3 октября владелец сообщил: «Миграции применены, тест проведён».
+Повторно выполнен блок из 19 checks скрипта
+[security-hardening-postflight.sql](security-hardening-postflight.sql)
+в READ ONLY-транзакции: **19 PASS / 0 FAIL**. Полные тела функций, политики и
+default ACL этим повторным запуском отдельно не сверялись.
+
+Smoke-тест проведён по сообщению владельца. Детальный протокол, результаты
+по каждому пункту, реальные JWT и покрытие отрицательной матрицы не предоставлены;
+агент не выполнял и независимо не подтверждал полный UI/API smoke.
+Статус: применение и каталожный postflight подтверждены, smoke заявлен владельцем;
+полное покрытие критериев завершения ниже документально не подтверждено.
 
 | Шаг | Статус |
 |---|---|
-| 10 / grants и helpers | Применён; ранее подтверждён владельцем. EXECUTE у publication trigger оставался в live |
-| 11 / membership | Применён; каталоги и доступ существующих coach/client сверены повторно |
-| 12 / result/profile RLS | Подготовлен; в production не применён |
-| 13 / result integrity | Подготовлен; в production не применён |
+| 10 / grants и helpers | Применён 2 октября; лишний EXECUTE у publication trigger закрыт миграцией 12 |
+| 11 / membership | Применён 2 октября; grants и политики подтверждены общим postflight 3 октября |
+| 12 / result/profile RLS | Применён 3 октября; подтверждён postflight |
+| 13 / result integrity | Применён 3 октября; подтверждён postflight |
 
-Live: десять таблиц с RLS; program_members имеет SELECT/DELETE и две политики.
+Текущий postflight подтверждает RLS на десяти таблицах, минимальные grants
+членства и профилей, два доступных authenticated public RPC, отсутствие anon
+EXECUTE и табличных прав, безопасный search_path, удаление legacy group helpers,
+новые политики профилей/результатов и закрытый доступ к legacy-таблицам.
+Также подтверждены enum score_type, отсутствие legacy default, валидированный
+составной FK, отсутствие несоответствий part/workout и включённые triggers.
+
+## Исторический checkpoint до 12/13
+
+До применения 12/13: десять таблиц с RLS; program_members имеет SELECT/DELETE и две политики.
 Шесть результатов: ноль несоответствий part/workout, ноль неизвестных score_type,
 ноль NULL score_type. Одно членство: профиль существует, роль client.
 Владельцы программ и тренировок имеют роль coach. У is_group_* нет каталожных
 зависимостей; тела ссылаются на старые таблицы. У authenticated нет CREATE в public/private.
 
-Read-only smoke в транзакциях с SET LOCAL ROLE authenticated и локальными JWT claims:
+Исторический read-only smoke до 12/13 в транзакциях с SET LOCAL ROLE authenticated и локальными JWT claims:
 
 | Роль | Программы | Членства | Тренировки | Задания | Результаты |
 |---|---:|---:|---:|---:|---:|
@@ -26,14 +48,17 @@ Read-only smoke в транзакциях с SET LOCAL ROLE authenticated и л�
 | Существующий coach | 3 | 1 | 12 | 23 | 6 |
 
 Coach не получил чужих программ/тренировок. Это SQL-проверка RLS, а не проверка
-реального JWT через PostgREST или UI. В live всего один coach и один client;
-проверка второго участника, посторонней программы и полного UI smoke ещё требуется.
-Чтение всех profiles и слабые result-write политики в live пока остаются.
+реального JWT через PostgREST или UI. На момент этой проверки в live были один coach и один client;
+эта проверка не покрывала второго участника, постороннюю программу и полный UI smoke.
+До 12 оставались чтение всех profiles и слабые result-write политики; теперь они заменены.
 Data API проверен GET-запросом без пользовательского JWT с Accept-Profile private:
 406 / PGRST106, exposed schemas public и graphql_public. private не экспонируется.
-Текущий live postflight: 10 PASS / 9 FAIL; ожидаемые FAIL устраняются 12/13.
+Исторический postflight до 12/13: 10 PASS / 9 FAIL. После применения: 19 PASS / 0 FAIL.
 
-## Порядок применения
+## Порядок применения для окружений, где 12/13 ещё не применены
+
+В production wod-fit эти шаги уже выполнены владельцем. Повторно применять
+миграции ради проверки не требуется; использовать read-only postflight.
 
 1. Проверить project ref и production commit; проверить актуальность main и live.
 2. Выполнить docs/12_security_hardening_preflight.sql, сохранить все результаты.

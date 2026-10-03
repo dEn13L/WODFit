@@ -34,8 +34,9 @@
   flutter pub get → flutter analyze → flutter test → flutter build web; без деплоя.
 - Проверка: `flutter analyze` обязателен перед каждым коммитом и должен быть чистым.
   В облачных сессиях Flutter ставит SessionStart-хук .claude/hooks/session-start.sh.
-- Миграции: sql/NN_slug.sql (последняя подготовленная — 14_atomic_workout_save.sql; live соответствует 12/13 по read-only аудиту), применяются вручную
-  через Supabase SQL Editor. Живая БД может расходиться с файлами (часть SQL
+- Миграции: sql/NN_slug.sql; последняя применённая — 13_result_integrity.sql.
+  Подготовлена 14_atomic_workout_save.sql; в live не применялась.
+  12/13 применены 3 октября 2026 года вручную через Supabase SQL Editor. Живая БД может расходиться с файлами (часть SQL
   применялась мимо репозитория) — перед изменением схемы сверять с живой БД
   (только чтение); применять миграции к живой БД — только по явной команде.
 
@@ -68,7 +69,7 @@ score_type nullable legacy)
 workout_assignments(workout_id, program_id, assigned_at; PK(workout_id, program_id))
 workout_views(workout_id, user_id, viewed_at; PK(workout_id, user_id))
 part_results(id, workout_id, part_id, user_id, status result_status,
-score_type nullable enum score_type в live — формат записи (fallback 'text'),
+score_type nullable enum score_type — формат записи (fallback 'text'),
 score_text, time_ms, rounds, reps, weight_kg, distance_m, calories,
 note, client_updated_at, last_operation_id, deleted_at, created_at, updated_at;
 UNIQUE(part_id, user_id))
@@ -92,19 +93,20 @@ Enum'ы и подписи UI (строковые значения БД↔Dart ж
 
 RPC: join_program_by_code(code text) — security definer, вступление по коду;
 sync_part_result(...) — security invoker, идемпотентная LWW-синхронизация результатов.
-Helper-функции RLS находятся в неэкспонируемой схеме private. В live публичный
-EXECUTE доступен authenticated только для join_program_by_code и sync_part_result.
+Helper-функции RLS находятся в неэкспонируемой схеме private. Публичный
+EXECUTE доступен authenticated только для join_program_by_code и sync_part_result;
+прямой EXECUTE у set_workout_published_at() закрыт, trigger включён.
 Миграция 14 добавляет save_workout; до её применения RPC отсутствует в live.
 RLS-принципы (не нарушать):
 - тренер CRUD только свои programs/workouts и их детей;
 - участник программы читает свою программу, назначенные published-тренировки,
   их задания и результаты участников своей программы;
-- part_results: insert/update/delete только свои (user_id = auth.uid()); после 12 —
+- part_results: insert/update/delete только свои (user_id = auth.uid());
   только client в назначенной published-тренировке с соответствующим заданием;
-  после 13 соответствие part_id/workout_id дополнительно гарантирует составной FK.
+  соответствие part_id/workout_id дополнительно гарантирует составной FK.
   Собственные исторические результаты остаются читаемыми; результаты других —
   только общей назначенной программе или тренеру своей тренировки.
-- После 12 profiles читаются только связанными пользователями; UPDATE клиенту
+- profiles читаются только связанными пользователями; UPDATE клиенту
   разрешён только для full_name своего профиля, роль/email/id неизменяемы.
 - тренер читает результаты своих тренировок;
 - анонимный доступ запрещён ко всем таблицам;
@@ -241,17 +243,19 @@ RLS-принципы (не нарушать):
   sql/11_harden_program_membership.sql: прямой INSERT членства закрывается,
   вступление остаётся только через RPC, участники получают чтение состава общей
   программы. Миграция применена к живой БД 2 октября 2026 года; postflight-аудит
-  и coach/client smoke-тест ещё не зафиксированы.
-- Подготовлены sql/12_harden_result_and_profile_access.sql и sql/13_result_integrity.sql:
+  подтверждён 3 октября 2026 года (общий postflight: 19 PASS / 0 FAIL).
+- Применены sql/12_harden_result_and_profile_access.sql и sql/13_result_integrity.sql:
   result/profile RLS, защита роли профиля, coach writes, legacy-политики, trigger ACL,
   удаление неиспользуемых is_group_*, default privileges, enum и составной FK.
-  В live соответствующие ограничения и политики подтверждены read-only аудитом
-  в задаче атомарного сохранения тренировок. Preflight: docs/12_security_hardening_preflight.sql;
+  Владелец подтвердил применение 3 октября 2026 года.
+  Preflight: docs/12_security_hardening_preflight.sql;
   postflight: docs/security-hardening-postflight.sql; процедура и фактические
   read-only результаты: docs/security-hardening-validation.md.
 - Два замечания PR #12 исправлены: preflight ORDER BY и понятная ошибка join RPC.
   Проверка SQL на локальной структуре live с искусственными данными пройдена;
-  полный production UI smoke не выполнен. PR CI дополнен PostgreSQL 17 security job.
+  владелец сообщил о проведённом smoke-тесте 3 октября 2026 года. Детальный
+  протокол UI/API и покрытие отрицательной матрицы не предоставлены; не считать
+  их независимо проверенными. PR CI дополнен PostgreSQL 17 security job.
 - Создание/редактирование тренировок переведено на единственный RPC save_workout
   (SECURITY INVOKER), возвращающий всю проекцию без дополнительного чтения.
   Подготовлена sql/14_atomic_workout_save.sql, в live не применялась:
@@ -294,13 +298,13 @@ RLS-принципы (не нарушать):
    темы и мобильный Web.
    Внутренние уведомления и миграция готовы; следующий шаг — пилотная проверка
    состояния просмотра.
-Техдолг с высоким приоритетом: выполнить повторный read-only аудит и coach/client
-smoke-тест после применения шага 3.2 завершить на реальных JWT/UI;
-ограничения 12/13 подтверждены в live read-only аудитом; полный JWT/UI smoke
-остаётся отдельной проверкой. Миграцию 14 проверить в PR CI и применять только
-по прямой команде владельца до выпуска клиента с save_workout. Каталожный read-only аудит и SQL role smoke шага 3.2 выполнены
-3 октября; в live недостаточно пользователей для полной отрицательной матрицы.
-Без подтверждения дальнейшие изменения живой БД не выполнять.
+Security hardening 10–13 применён: read-only postflight 3 октября 2026 года —
+19 PASS / 0 FAIL. Владелец подтвердил проведение smoke-теста; детальный протокол
+и покрытие UI/API-матрицы не предоставлены. Текущий статус и границы доказательств:
+docs/security-hardening-validation.md. Оптимизация индексов остаётся отдельной
+задачей после EXPLAIN. Миграцию 14 проверить в PR CI и применять только
+по прямой команде владельца до выпуска клиента с save_workout.
+Дальнейшие изменения живой БД — только по прямой команде.
 
 ## 8. ЗАПРЕЩЕНО до отдельной прямой задачи
 Таймер, лидерборды, платежи, видео/изображения,
