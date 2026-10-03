@@ -30,7 +30,7 @@ void main() {
               'email': 'coach@example.com',
               'created_at': '2026-10-03T12:00:00Z',
             },
-          }), 200, headers: {'content-type': 'application/json'});
+          }), 200, headers: {'content-type': 'application/json'}, request: request);
         }
         requests.add(request);
         if (request.method == 'POST') {
@@ -45,7 +45,7 @@ void main() {
         return http.Response(jsonEncode({
           ...inserted!,
           'created_at': '2026-10-03T12:00:00Z',
-        }), 200, headers: {'content-type': 'application/json'});
+        }), 200, headers: {'content-type': 'application/json'}, request: request);
       }),
     );
     addTearDown(client.dispose);
