@@ -76,9 +76,11 @@ begin
   end if;
 
   if p_workout_id is null then
-    insert into public.workouts (coach_id, title, description, scheduled_at, status)
-      values (auth.uid(), btrim(p_title), btrim(p_description), p_scheduled_at, p_status)
-      returning id into v_id;
+    -- SELECT-policy использует STABLE helper: INSERT RETURNING ещё не видит
+    -- новую строку через helper. UUID назначаем до INSERT; читаем следующим запросом.
+    v_id := gen_random_uuid();
+    insert into public.workouts (id, coach_id, title, description, scheduled_at, status)
+      values (v_id, auth.uid(), btrim(p_title), btrim(p_description), p_scheduled_at, p_status);
   else
     -- Сериализация параллельных сохранений одной тренировки.
     select id into v_id from public.workouts
