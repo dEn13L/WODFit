@@ -8,6 +8,37 @@ permissions:
   contents: read
 
 jobs:
+  sql-security:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: local-test-only
+          POSTGRES_DB: wod_fit_security_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: local-test-only
+      PGDATABASE: wod_fit_security_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore schema fixture and verify security migrations
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f test/sql/live_schema_fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f sql/12_harden_result_and_profile_access.sql
+          psql -X -v ON_ERROR_STOP=1 -f sql/13_result_integrity.sql
+          psql -X -v ON_ERROR_STOP=1 -f test/sql/security_hardening_test.sql
+          psql -X -At -v ON_ERROR_STOP=1 -f docs/security-hardening-postflight.sql | tee postflight.txt
+          if grep -q "^FAIL|" postflight.txt; then exit 1; fi
   verify:
     runs-on: ubuntu-latest
     steps:

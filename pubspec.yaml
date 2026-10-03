@@ -52,6 +52,8 @@ dependencies:
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
+  # HTTP уже используется Supabase; MockClient проверяет ошибки RPC без сети.
+  http: 1.6.0
   flutter_test:
     sdk: flutter
 

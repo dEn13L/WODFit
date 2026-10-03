@@ -39,6 +39,7 @@ join pg_namespace as n on n.oid = p.pronamespace
 where n.nspname = 'public'
   and p.proname in (
     'handle_new_user',
+    'set_workout_published_at',
     'join_program_by_code',
     'sync_part_result',
     'is_program_member',
@@ -73,7 +74,7 @@ left join pg_depend d
  and d.refobjid = p.oid
 where n.nspname = 'public'
   and p.proname in ('is_group_member', 'is_group_coach')
-order by legacy_function::text, d.deptype, dependent_object;
+order by p.oid::regprocedure::text, d.deptype, dependent_object;
 
 select schemaname, tablename, policyname, qual, with_check
 from pg_policies
