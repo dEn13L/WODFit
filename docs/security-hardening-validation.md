@@ -29,6 +29,9 @@ Coach не получил чужих программ/тренировок. Эт
 реального JWT через PostgREST или UI. В live всего один coach и один client;
 проверка второго участника, посторонней программы и полного UI smoke ещё требуется.
 Чтение всех profiles и слабые result-write политики в live пока остаются.
+Data API проверен GET-запросом без пользовательского JWT с Accept-Profile private:
+406 / PGRST106, exposed schemas public и graphql_public. private не экспонируется.
+Текущий live postflight: 10 PASS / 9 FAIL; ожидаемые FAIL устраняются 12/13.
 
 ## Порядок применения
 
