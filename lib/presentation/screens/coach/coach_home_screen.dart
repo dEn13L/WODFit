@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+
 import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/training_program.dart';
+import 'widgets/coach_welcome_banner.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
@@ -40,14 +41,18 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
     final workoutState = context.watch<CrossfitWorkoutCubit>().state;
     final programState = context.watch<ProgramCubit>().state;
 
-    final isLoading = workoutState is CrossfitWorkoutLoading || programState is ProgramLoading;
+    final isLoading =
+        workoutState is CrossfitWorkoutLoading ||
+        programState is ProgramLoading;
 
     final allWorkouts = workoutState is CrossfitWorkoutListLoaded
         ? workoutState.workouts
         : (workoutState is CrossfitWorkoutDetailLoaded
-            ? [workoutState.workout]
-            : <CrossfitWorkout>[]);
-    final allPrograms = programState is ProgramLoaded ? programState.programs : <TrainingProgram>[];
+              ? [workoutState.workout]
+              : <CrossfitWorkout>[]);
+    final allPrograms = programState is ProgramLoaded
+        ? programState.programs
+        : <TrainingProgram>[];
 
     final now = DateTime.now();
     final todayWorkouts = allWorkouts.where((w) {
@@ -55,8 +60,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
       return scheduled.year == now.year &&
           scheduled.month == now.month &&
           scheduled.day == now.day;
-    }).toList()
-      ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+    }).toList()..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
 
     final nearestDates = <String, DateTime>{};
     for (final workout in allWorkouts) {
@@ -85,12 +89,15 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              user?.fullName ?? 'Тренер',
+              'WodFit',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(
               'Панель тренера',
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
           ],
         ),
@@ -119,7 +126,9 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
         color: Theme.of(context).colorScheme.primary,
         child: isLoading
             ? Center(
-                child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
+                child: CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               )
             : SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -127,6 +136,8 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    CoachWelcomeBanner(name: user?.fullName),
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -136,8 +147,13 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         onPressed: () async {
                           await context.push('/coach/workouts/create');
@@ -162,18 +178,25 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+                          color:
+                              Theme.of(context).cardTheme.color ??
+                              Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline, color: context.appTheme.destructive),
+                            Icon(
+                              Icons.error_outline,
+                              color: context.appTheme.destructive,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 workoutState.message,
-                                style: TextStyle(color: context.appTheme.destructive, fontSize: 13),
+                                style: TextStyle(
+                                  color: context.appTheme.destructive,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                             TextButton(
@@ -186,18 +209,25 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                     else if (todayWorkouts.isEmpty)
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 24,
+                        ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+                          color:
+                              Theme.of(context).cardTheme.color ??
+                              Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                         child: Column(
                           children: [
                             Icon(
                               Icons.event_available,
                               size: 36,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: 0.5),
                             ),
                             const SizedBox(height: 10),
                             Text(
@@ -212,7 +242,12 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                             Text(
                               'Запланируйте тренировку на сегодня кнопкой «Создать тренировку».',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
@@ -222,14 +257,18 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: todayWorkouts.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 10),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final workout = todayWorkouts[index];
                           return _TodayWorkoutCard(
                             workout: workout,
                             onTap: () async {
                               if (workout.status == WorkoutStatus.draft) {
-                                await context.push('/coach/workouts/create', extra: workout);
+                                await context.push(
+                                  '/coach/workouts/create',
+                                  extra: workout,
+                                );
                               } else {
                                 await context.push('/workout/${workout.id}');
                               }
@@ -255,18 +294,25 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+                          color:
+                              Theme.of(context).cardTheme.color ??
+                              Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline, color: context.appTheme.destructive),
+                            Icon(
+                              Icons.error_outline,
+                              color: context.appTheme.destructive,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 programState.message,
-                                style: TextStyle(color: context.appTheme.destructive, fontSize: 13),
+                                style: TextStyle(
+                                  color: context.appTheme.destructive,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                             TextButton(
@@ -281,16 +327,20 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+                          color:
+                              Theme.of(context).cardTheme.color ??
+                              Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                         child: Column(
                           children: [
                             Icon(
                               Icons.group_work_outlined,
                               size: 40,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: 0.5),
                             ),
                             const SizedBox(height: 12),
                             Text(
@@ -305,7 +355,12 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                             Text(
                               'Создайте групповую или персональную программу для назначения тренировок атлетам.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton.icon(
@@ -324,19 +379,17 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: sortedPrograms.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 12),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final program = sortedPrograms[index];
-                          final programWorkouts = allWorkouts
-                              .where((w) => w.assignedProgramIds.contains(program.id))
-                              .toList();
-
                           return _CoachProgramDashboardCard(
                             program: program,
-                            workoutCount: programWorkouts.length,
                             nearestWorkoutDate: nearestDates[program.id],
                             onTap: () async {
-                              await context.push('/coach/programs/${program.id}');
+                              await context.push(
+                                '/coach/programs/${program.id}',
+                              );
                               if (mounted) _loadData();
                             },
                           );
@@ -379,12 +432,17 @@ class _HomeSectionHeader extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
                       title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -395,7 +453,10 @@ class _HomeSectionHeader extends StatelessWidget {
               icon: const Icon(Icons.list, size: 16),
               label: Text(linkLabel),
               style: TextButton.styleFrom(
-                textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                textStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -409,10 +470,7 @@ class _TodayWorkoutCard extends StatelessWidget {
   final CrossfitWorkout workout;
   final VoidCallback onTap;
 
-  const _TodayWorkoutCard({
-    required this.workout,
-    required this.onTap,
-  });
+  const _TodayWorkoutCard({required this.workout, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -423,15 +481,19 @@ class _TodayWorkoutCard extends StatelessWidget {
     final timeStr = WorkoutDateFormatter.formatTime(workout.scheduledAt);
 
     return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(14.0),
+          padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: appTheme.timeChipBackground,
                   borderRadius: BorderRadius.circular(8),
@@ -451,7 +513,10 @@ class _TodayWorkoutCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      WorkoutDateFormatter.formatTodayTomorrow(workout.scheduledAt, workout.title),
+                      WorkoutDateFormatter.formatTodayTomorrow(
+                        workout.scheduledAt,
+                        workout.title,
+                      ),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -462,42 +527,60 @@ class _TodayWorkoutCard extends StatelessWidget {
                     Text(
                       workout.assignments.isEmpty
                           ? 'Без программы'
-                          : workout.assignments.map((a) => a.programName ?? 'Программа').join(', '),
-                      style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                          : workout.assignments
+                                .map((a) => a.programName ?? 'Программа')
+                                .join(', '),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (isDraft) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Продолжить',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.primary),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: appTheme.draft.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'Черновик',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: appTheme.draft,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'Продолжить',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],
                 ),
               ),
-              if (isDraft) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: appTheme.draft.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: appTheme.draft.withValues(alpha: 0.4)),
-                  ),
-                  child: Text(
-                    'Черновик',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: appTheme.draft,
-                    ),
-                  ),
-                ),
-              ],
               const SizedBox(width: 4),
-              Icon(Icons.arrow_forward_ios, size: 14, color: colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),
@@ -508,13 +591,11 @@ class _TodayWorkoutCard extends StatelessWidget {
 
 class _CoachProgramDashboardCard extends StatelessWidget {
   final TrainingProgram program;
-  final int workoutCount;
   final DateTime? nearestWorkoutDate;
   final VoidCallback onTap;
 
   const _CoachProgramDashboardCard({
     required this.program,
-    required this.workoutCount,
     required this.nearestWorkoutDate,
     required this.onTap,
   });
@@ -522,108 +603,88 @@ class _CoachProgramDashboardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colors = theme.colorScheme;
     final isPersonal = program.kind == ProgramKind.personal;
-    final nearestDateText = nearestWorkoutDate != null
-        ? DateFormat('dd.MM HH:mm').format(nearestWorkoutDate!.toLocal())
-        : 'Нет запланированных';
-
     return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.all(16),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      isPersonal ? Icons.person : Icons.groups,
-                      color: colorScheme.primary,
-                      size: 20,
-                    ),
+              ExcludeSemantics(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    CoachWelcomeBanner.assetPath,
+                    width: 56,
+                    height: 64,
+                    fit: BoxFit.cover,
+                    alignment: isPersonal
+                        ? Alignment.centerRight
+                        : Alignment.center,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      program.name,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      program.kind.displayName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  // Members count
-                  Row(
-                    children: [
-                      Icon(Icons.people_outline, size: 14, color: colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${program.memberCount} участников',
-                        style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(program.name, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          isPersonal
+                              ? Icons.person_outline
+                              : Icons.groups_outlined,
+                          size: 16,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            isPersonal
+                                ? 'Персональная программа'
+                                : 'Групповая программа',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (nearestWorkoutDate != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.event_outlined,
+                            size: 14,
+                            color: colors.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              WorkoutDateFormatter.formatTodayTomorrow(
+                                nearestWorkoutDate!,
+                              ),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                  const SizedBox(width: 16),
-                  // Workout count
-                  Row(
-                    children: [
-                      Icon(Icons.fitness_center, size: 13, color: colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$workoutCount тренировок',
-                        style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.event_outlined, size: 14, color: colorScheme.primary),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Ближайшая: $nearestDateText',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: nearestWorkoutDate != null ? FontWeight.w600 : FontWeight.normal,
-                      color: nearestWorkoutDate != null ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
             ],
           ),
         ),
