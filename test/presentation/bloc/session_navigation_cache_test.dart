@@ -523,7 +523,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('(A)').first);
+      final workoutA = find.textContaining('(A)').first;
+      await tester.ensureVisible(workoutA);
+      await tester.pumpAndSettle();
+      await tester.tap(workoutA, warnIfMissed: true);
       await tester.pumpAndSettle();
       expect(
         tester

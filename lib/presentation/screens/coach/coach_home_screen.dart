@@ -56,7 +56,28 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
           scheduled.month == now.month &&
           scheduled.day == now.day;
     }).toList()
-      ..sort((a, b) => b.scheduledAt.toLocal().compareTo(a.scheduledAt.toLocal()));
+      ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+
+    final nearestDates = <String, DateTime>{};
+    for (final workout in allWorkouts) {
+      if (workout.scheduledAt.isBefore(now)) continue;
+      for (final programId in workout.assignedProgramIds) {
+        final previous = nearestDates[programId];
+        if (previous == null || workout.scheduledAt.isBefore(previous)) {
+          nearestDates[programId] = workout.scheduledAt;
+        }
+      }
+    }
+    final sortedPrograms = List<TrainingProgram>.of(allPrograms)
+      ..sort((a, b) {
+        final aDate = nearestDates[a.id];
+        final bDate = nearestDates[b.id];
+        if (aDate == null && bDate == null) return a.name.compareTo(b.name);
+        if (aDate == null) return 1;
+        if (bDate == null) return -1;
+        final order = aDate.compareTo(bDate);
+        return order != 0 ? order : a.name.compareTo(b.name);
+      });
 
     return Scaffold(
       appBar: AppBar(
@@ -85,14 +106,6 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
             },
           ),
           IconButton(
-            tooltip: 'Все тренировки',
-            icon: const Icon(Icons.format_list_bulleted),
-            onPressed: () async {
-              await context.push('/coach/workouts');
-              if (mounted) _loadData();
-            },
-          ),
-          IconButton(
             tooltip: 'Выйти',
             icon: const Icon(Icons.logout),
             onPressed: () {
@@ -114,84 +127,35 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Quick Actions Block
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            icon: const Icon(Icons.add_circle_outline, size: 20),
-                            label: const Text(
-                              'Новая тренировка',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            onPressed: () async {
-                              await context.push('/coach/workouts/create');
-                              if (mounted) _loadData();
-                            },
-                          ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.add_circle_outline, size: 20),
+                        label: const Text(
+                          'Создать тренировку',
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: Icon(
-                              Icons.group_add_outlined,
-                              size: 20,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                            label: Text(
-                              'Новая программа',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
-                              side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-                              padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            onPressed: () async {
-                              await context.push('/coach/programs/create');
-                              if (mounted) _loadData();
-                            },
-                          ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
-                      ],
+                        onPressed: () async {
+                          await context.push('/coach/workouts/create');
+                          if (mounted) _loadData();
+                        },
+                      ),
                     ),
 
                     const SizedBox(height: 24),
 
-                    // Block "Сегодня"
-                    Row(
-                      children: [
-                        Icon(Icons.today, size: 20, color: Theme.of(context).colorScheme.primary),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Сегодня',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          DateFormat('dd.MM.yyyy').format(now),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    _HomeSectionHeader(
+                      icon: Icons.today,
+                      title: 'Сегодня',
+                      linkLabel: 'Все тренировки',
+                      onPressed: () async {
+                        await context.push('/coach/workouts');
+                        if (mounted) _loadData();
+                      },
                     ),
                     const SizedBox(height: 12),
                     if (workoutState is CrossfitWorkoutError)
@@ -246,7 +210,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Запланируйте тренировку на сегодня кнопкой «Новая тренировка».',
+                              'Запланируйте тренировку на сегодня кнопкой «Создать тренировку».',
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                             ),
@@ -264,7 +228,11 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                           return _TodayWorkoutCard(
                             workout: workout,
                             onTap: () async {
-                              await context.push('/workout/${workout.id}');
+                              if (workout.status == WorkoutStatus.draft) {
+                                await context.push('/coach/workouts/create', extra: workout);
+                              } else {
+                                await context.push('/workout/${workout.id}');
+                              }
                               if (mounted) _loadData();
                             },
                           );
@@ -273,39 +241,14 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
 
                     const SizedBox(height: 28),
 
-                    // Block "Программы"
-                    Row(
-                      children: [
-                        Icon(Icons.fitness_center_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Программы',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          tooltip: 'Создать программу',
-                          icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary),
-                          onPressed: () async {
-                            await context.push('/coach/programs/create');
-                            if (mounted) _loadData();
-                          },
-                        ),
-                        TextButton.icon(
-                          onPressed: () async {
-                            await context.push('/coach/workouts');
-                            if (mounted) _loadData();
-                          },
-                          icon: const Icon(Icons.list, size: 16),
-                          label: const Text('Все тренировки'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Theme.of(context).colorScheme.primary,
-                            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
+                    _HomeSectionHeader(
+                      icon: Icons.fitness_center_outlined,
+                      title: 'Программы',
+                      linkLabel: 'Все программы',
+                      onPressed: () async {
+                        await context.push('/coach/programs');
+                        if (mounted) _loadData();
+                      },
                     ),
                     const SizedBox(height: 12),
                     if (programState is ProgramError)
@@ -380,25 +323,18 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                       ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: allPrograms.length,
+                        itemCount: sortedPrograms.length,
                         separatorBuilder: (context, index) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
-                          final program = allPrograms[index];
+                          final program = sortedPrograms[index];
                           final programWorkouts = allWorkouts
                               .where((w) => w.assignedProgramIds.contains(program.id))
                               .toList();
 
-                          final upcoming = programWorkouts
-                              .where((w) => w.scheduledAt.toLocal().isAfter(now) || w.scheduledAt.toLocal().isAtSameMomentAs(now))
-                              .toList()
-                            ..sort((a, b) => a.scheduledAt.toLocal().compareTo(b.scheduledAt.toLocal()));
-
-                          final DateTime? nearestDate = upcoming.isNotEmpty ? upcoming.first.scheduledAt : null;
-
                           return _CoachProgramDashboardCard(
                             program: program,
                             workoutCount: programWorkouts.length,
-                            nearestWorkoutDate: nearestDate,
+                            nearestWorkoutDate: nearestDates[program.id],
                             onTap: () async {
                               await context.push('/coach/programs/${program.id}');
                               if (mounted) _loadData();
@@ -410,6 +346,60 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                   ],
                 ),
               ),
+      ),
+    );
+  }
+}
+
+class _HomeSectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String linkLabel;
+  final VoidCallback onPressed;
+
+  const _HomeSectionHeader({
+    required this.icon,
+    required this.title,
+    required this.linkLabel,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SizedBox(
+        width: constraints.maxWidth,
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton.icon(
+              onPressed: onPressed,
+              icon: const Icon(Icons.list, size: 16),
+              label: Text(linkLabel),
+              style: TextButton.styleFrom(
+                textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -470,11 +460,20 @@ class _TodayWorkoutCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${workout.workoutTypesSummary}${workout.assignments.isNotEmpty ? ' • ${workout.assignments.map((a) => a.programName ?? 'Программа').join(', ')}' : ''}',
+                      workout.assignments.isEmpty
+                          ? 'Без программы'
+                          : workout.assignments.map((a) => a.programName ?? 'Программа').join(', '),
                       style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (isDraft) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Продолжить',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.primary),
+                      ),
+                    ],
                   ],
                 ),
               ),
