@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../../bloc/workout_form/workout_form_cubit.dart';
 import 'task_description_editor.dart';
+import '../../../../widgets/confirm_dialog.dart';
 
 class WorkoutTaskCard extends StatefulWidget {
   final WorkoutFormTask task;
@@ -119,7 +121,9 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
                       hintStyle: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.6,
+                        ),
                       ),
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
@@ -159,7 +163,9 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                color: colorScheme.onSurfaceVariant.withValues(
+                                  alpha: 0.6,
+                                ),
                                 height: 1.3,
                               ),
                             ),
@@ -182,7 +188,17 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               tooltip: 'Удалить задание',
-              onPressed: widget.onDelete,
+              onPressed: () async {
+                final confirmed = await ConfirmDialog.show(
+                  context,
+                  title: 'Удалить задание?',
+                  message:
+                      'Задание будет удалено при сохранении тренировки. '
+                      'Если у него есть результаты участников, включая удалённые, '
+                      'сохранение будет отклонено и задание вернётся в форму.',
+                );
+                if (confirmed && mounted) widget.onDelete();
+              },
             ),
           ],
         ),

@@ -5,6 +5,7 @@ import '../../core/utils/app_logger.dart';
 import '../../domain/entities/crossfit_workout.dart';
 import '../../domain/entities/part_result.dart';
 import '../../domain/entities/user_profile.dart';
+import '../../domain/exceptions/workout_save_exception.dart';
 import '../../domain/repositories/crossfit_workout_repository.dart';
 import '../models/crossfit_workout_model.dart';
 import '../models/part_result_model.dart';
@@ -130,55 +131,14 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     required List<String> programIds,
     bool publish = false,
   }) async {
-    final userId = client.auth.currentUser?.id;
-    if (userId == null) {
-      throw Exception('Необходима авторизация');
-    }
-
-    try {
-      // 1. Insert workout
-      final workoutRes = await client.from('workouts').insert({
-        'coach_id': userId,
-        'title': title.trim(),
-        'description': description.trim(),
-        'scheduled_at': scheduledAt.toUtc().toIso8601String(),
-        'status': publish ? 'published' : 'draft',
-      }).select().single();
-
-      final workoutId = workoutRes['id'] as String;
-
-      // 2. Insert workout parts
-      if (parts.isNotEmpty) {
-        final partsData = parts.asMap().entries.map((entry) {
-          final index = entry.key;
-          final part = entry.value;
-          return {
-            'workout_id': workoutId,
-            'title': part.title.trim(),
-            'description': part.description.trim(),
-            'sort_order': index,
-          };
-        }).toList();
-
-        await client.from('workout_parts').insert(partsData);
-      }
-
-      // 3. Insert assignments
-      if (programIds.isNotEmpty) {
-        final assignmentsData = programIds.map((programId) => {
-          'workout_id': workoutId,
-          'program_id': programId,
-        }).toList();
-
-        await client.from('workout_assignments').insert(assignmentsData);
-      }
-
-      AppLogger.i(_tag, 'Создана тренировка $workoutId: $title (publish=$publish)');
-      return await getWorkoutById(workoutId);
-    } catch (e, st) {
-      AppLogger.e(_tag, 'Ошибка при создании тренировки', e, st);
-      rethrow;
-    }
+    return _saveWorkout(
+      title: title,
+      description: description,
+      scheduledAt: scheduledAt,
+      parts: parts,
+      programIds: programIds,
+      status: publish ? WorkoutStatus.published : WorkoutStatus.draft,
+    );
   }
 
   @override
@@ -190,80 +150,79 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
     required List<WorkoutPart> parts,
     required List<String> programIds,
     required WorkoutStatus status,
+  }) => _saveWorkout(
+    id: id,
+    title: title,
+    description: description,
+    scheduledAt: scheduledAt,
+    parts: parts,
+    programIds: programIds,
+    status: status,
+  );
+
+  Future<CrossfitWorkout> _saveWorkout({
+    String? id,
+    required String title,
+    required String description,
+    required DateTime scheduledAt,
+    required List<WorkoutPart> parts,
+    required List<String> programIds,
+    required WorkoutStatus status,
   }) async {
-    final userId = client.auth.currentUser?.id;
-    if (userId == null) {
-      throw Exception('Необходима авторизация');
-    }
-
     try {
-      // 1. Update workout header
-      await client.from('workouts').update({
-        'title': title.trim(),
-        'description': description.trim(),
-        'scheduled_at': scheduledAt.toUtc().toIso8601String(),
-        'status': status.name,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      }).eq('id', id).eq('coach_id', userId);
-
-      // 2. Get existing parts from DB
-      final existingPartsRes = await client
-          .from('workout_parts')
-          .select('id')
-          .eq('workout_id', id);
-
-      final existingPartIds = (existingPartsRes as List<dynamic>)
-          .map((e) => e['id'] as String)
-          .toSet();
-
-      final currentPartIds = parts.map((p) => p.id).toSet();
-
-      // Delete parts that no longer exist
-      final toDeleteIds = existingPartIds.difference(currentPartIds);
-      if (toDeleteIds.isNotEmpty) {
-        await client
-            .from('workout_parts')
-            .delete()
-            .filter('id', 'in', toDeleteIds.toList());
-      }
-
-      // Upsert / insert parts
-      if (parts.isNotEmpty) {
-        final partsData = parts.asMap().entries.map((entry) {
-          final index = entry.key;
-          final part = entry.value;
-          final data = <String, dynamic>{
-            'workout_id': id,
-            'title': part.title.trim(),
-            'description': part.description.trim(),
-            'sort_order': index,
-          };
-          if (existingPartIds.contains(part.id)) {
-            data['id'] = part.id;
-          }
-          return data;
-        }).toList();
-
-        await client.from('workout_parts').upsert(partsData);
-      }
-
-      // 3. Update assignments
-      await client.from('workout_assignments').delete().eq('workout_id', id);
-
-      if (programIds.isNotEmpty) {
-        final assignmentsData = programIds.map((programId) => {
-          'workout_id': id,
-          'program_id': programId,
-        }).toList();
-
-        await client.from('workout_assignments').insert(assignmentsData);
-      }
-
-      AppLogger.i(_tag, 'Обновлена тренировка $id: $title');
-      return await getWorkoutById(id);
+      final response = await client.rpc(
+        'save_workout',
+        params: {
+          'p_workout_id': id,
+          'p_title': title.trim(),
+          'p_description': description.trim(),
+          'p_scheduled_at': scheduledAt.toUtc().toIso8601String(),
+          'p_status': status.name,
+          'p_parts': parts
+              .map(
+                (part) => {
+                  // Новая тренировка не должна повторно использовать UUID исходных заданий.
+                  'id': id == null ? const Uuid().v4() : part.id,
+                  'title': part.title.trim(),
+                  'description': part.description.trim(),
+                },
+              )
+              .toList(),
+          'p_program_ids': programIds.toSet().toList(),
+        },
+      );
+      return CrossfitWorkoutModel.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      ).toDomain();
+    } on PostgrestException catch (e, st) {
+      AppLogger.e(
+        _tag,
+        'Ошибка RPC save_workout: message=${e.message}, details=${e.details}, hint=${e.hint}, code=${e.code}',
+        e,
+        st,
+      );
+      final message = switch (e.code) {
+        'W0001' => 'Нельзя удалить задание с результатами участников, включая удалённые результаты. Удалённые задания возвращены в форму.',
+        '23503' when e.message.contains('part_results_part_workout_fkey') => 'Нельзя удалить задание с результатами участников. Удалённые задания возвращены в форму.',
+        '42501' => 'Нет доступа к тренировке или выбранной программе. Обновите список и попробуйте снова.',
+        '22023' || '22P02' => 'Проверьте задания и программы. Для публикации нужны программа и задания с названиями.',
+        'PGRST202' => 'Сохранение тренировок пока недоступно. Обратитесь к тренеру или администратору.',
+        _ => 'Не удалось сохранить тренировку. Попробуйте ещё раз.',
+      };
+      throw WorkoutSaveException(message,
+        restoreRemovedTasks: e.code == 'W0001' ||
+          (e.code == '23503' && e.message.contains('part_results_part_workout_fkey')),
+      );
+    } on AuthException catch (e, st) {
+      AppLogger.e(_tag, 'Ошибка авторизации при сохранении тренировки', e, st);
+      throw const WorkoutSaveException(
+        'Войдите в аккаунт снова, чтобы сохранить тренировку.',
+      );
     } catch (e, st) {
-      AppLogger.e(_tag, 'Ошибка при обновлении тренировки $id', e, st);
-      rethrow;
+      AppLogger.e(_tag, 'Ошибка при сохранении тренировки', e, st);
+      throw const WorkoutSaveException(
+        'Не удалось сохранить тренировку. Проверьте соединение и попробуйте ещё раз.',
+      );
     }
   }
 

@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
+import '../../../../domain/exceptions/workout_save_exception.dart';
 import '../../../../domain/repositories/crossfit_workout_repository.dart';
 
 class WorkoutFormTask extends Equatable {
@@ -154,6 +155,7 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
 
   final CrossfitWorkoutRepository workoutRepository;
   Timer? _debounceTimer;
+  final _removedTasks = <({WorkoutFormTask task, int index})>[];
 
   WorkoutFormCubit({
     required this.workoutRepository,
@@ -266,6 +268,13 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   }
 
   void removeTask(String taskId) {
+    final index = state.tasks.indexWhere((task) => task.id == taskId);
+    if (index < 0) return;
+    if (state.isEditMode) {
+      _removedTasks.add((task: state.tasks[index], index: index));
+      emit(state.copyWith(tasks: state.tasks.where((task) => task.id != taskId).toList()));
+      return;
+    }
     if (state.tasks.length <= 1) {
       // Keep at least one empty task
       emit(state.copyWith(
@@ -413,6 +422,8 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   }
 
   Future<void> _submitWorkout({required bool publish}) async {
+    if (state.submitStatus == WorkoutFormSubmitStatus.loading) return;
+    _debounceTimer?.cancel();
     emit(state.copyWith(submitStatus: WorkoutFormSubmitStatus.loading));
 
     try {
@@ -460,9 +471,21 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
       }
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при сохранении тренировки', e, st);
+      if (e is WorkoutSaveException && e.restoreRemovedTasks) {
+        final tasks = List<WorkoutFormTask>.from(state.tasks);
+        for (final removed in _removedTasks.reversed) {
+          if (!tasks.any((task) => task.id == removed.task.id)) {
+            tasks.insert(removed.index.clamp(0, tasks.length), removed.task);
+          }
+        }
+        _removedTasks.clear();
+        emit(state.copyWith(tasks: tasks));
+      }
       emit(state.copyWith(
         submitStatus: WorkoutFormSubmitStatus.error,
-        errorMessage: 'Не удалось сохранить: $e',
+        errorMessage: e is WorkoutSaveException
+            ? e.message
+            : 'Не удалось сохранить тренировку. Попробуйте ещё раз.',
       ));
     }
   }
