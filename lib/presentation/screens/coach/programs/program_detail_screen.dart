@@ -41,7 +41,7 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
 
   Future<void> _loadData() async {
     setState(() {
-      _isLoading = true;
+      _isLoading = _program == null;
       _error = null;
     });
 
@@ -92,6 +92,16 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
         });
       }
     }
+  }
+
+  void _applyReturnedWorkout(CrossfitWorkout? workout) {
+    if (workout == null) return;
+    setState(() {
+      _programWorkouts = _programWorkouts.where((w) => w.id != workout.id).toList();
+      if (workout.assignedProgramIds.contains(widget.programId)) {
+        _programWorkouts.add(workout);
+      }
+    });
   }
 
   void _copyInviteCode(String code) {
@@ -204,8 +214,14 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
             kind: result['kind'] as ProgramKind,
             description: result['description'] as String,
           );
-      if (success) {
-        _loadData();
+      if (success && mounted) {
+        final state = context.read<ProgramCubit>().state;
+        if (state is ProgramLoaded) {
+          final updated = state.programs.where((p) => p.id == program.id);
+          if (updated.isNotEmpty) {
+            setState(() => _program = updated.first);
+          }
+        }
       }
     }
   }
@@ -485,11 +501,14 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    await context.push(
+                    final saved = await context.push<CrossfitWorkout>(
                       '/coach/workouts/create',
                       extra: {'initialProgramId': widget.programId},
                     );
-                    if (mounted) _loadData();
+                    if (mounted) {
+                      _applyReturnedWorkout(saved);
+                      _loadData();
+                    }
                   },
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Новая тренировка'),
@@ -612,8 +631,11 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                       completedCount: completedCount,
                       totalMembers: memberCount,
                       onTap: () async {
-                        await context.push('/workout/${workout.id}');
-                        if (mounted) _loadData();
+                        final updated = await context.push<CrossfitWorkout>('/workout/${workout.id}');
+                        if (mounted) {
+                          _applyReturnedWorkout(updated);
+                          _loadData();
+                        }
                       },
                     );
                   },
@@ -661,8 +683,11 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                       completedCount: completedCount,
                       totalMembers: memberCount,
                       onTap: () async {
-                        await context.push('/workout/${workout.id}');
-                        if (mounted) _loadData();
+                        final updated = await context.push<CrossfitWorkout>('/workout/${workout.id}');
+                        if (mounted) {
+                          _applyReturnedWorkout(updated);
+                          _loadData();
+                        }
                       },
                     );
                   },
