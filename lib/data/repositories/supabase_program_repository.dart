@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/utils/app_logger.dart';
 import '../../domain/entities/training_program.dart';
+import '../../domain/exceptions/program_join_exception.dart';
 import '../../domain/repositories/program_repository.dart';
 import '../models/program_model.dart';
 
@@ -190,7 +191,7 @@ class SupabaseProgramRepository implements ProgramRepository {
         e,
         st,
       );
-      rethrow;
+      throw const ProgramJoinException('Сессия истекла. Войдите снова.');
     } on PostgrestException catch (e, st) {
       AppLogger.e(
         _tag,
@@ -199,10 +200,22 @@ class SupabaseProgramRepository implements ProgramRepository {
         e,
         st,
       );
-      rethrow;
+      if (e.code == '42501') {
+        throw const ProgramJoinException(
+          'Вступать в программу могут только авторизованные атлеты.',
+        );
+      }
+      if (e.code == 'P0001' && e.message.startsWith('Программа с кодом ')) {
+        throw const ProgramJoinException(
+          'Программа с таким кодом не найдена. Проверьте код приглашения.',
+        );
+      }
+      throw const ProgramJoinException(
+        'Не удалось вступить в программу. Попробуйте ещё раз.',
+      );
     }
 
-    throw Exception('Не удалось присоединиться к программе');
+    throw const ProgramJoinException('Не удалось присоединиться к программе');
   }
 
   @override
