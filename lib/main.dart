@@ -1,8 +1,12 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/config/supabase_config.dart';
+import 'core/utils/app_logger.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_service.dart';
@@ -28,16 +32,34 @@ Future<void> main() async {
   final ThemeService themeService = ThemeService();
   await themeService.init();
 
+  await AppLogger.initialize(Hive.box<dynamic>('settings_box'));
+  FlutterError.onError = (details) {
+    AppLogger.e(
+      'Flutter',
+      details.context?.toDescription() ?? 'Framework error',
+      details.exception,
+      details.stack,
+    );
+    FlutterError.presentError(details);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    AppLogger.e('Platform', 'Unhandled error', error, stack);
+    return true;
+  };
+
   // 2. Initialize Backend (Supabase)
   await SupabaseConfig.initialize();
 
   // 3. Instantiate repositories
   final AuthRepository authRepository = SupabaseAuthRepository();
   final ProgramRepository programRepository = SupabaseProgramRepository();
-  final resultSyncBox = await Hive.openBox<dynamic>(HiveResultSyncLocalDataSource.boxName);
-  final CrossfitWorkoutRepository crossfitWorkoutRepository = SupabaseCrossfitWorkoutRepository(
-    resultLocalDataSource: HiveResultSyncLocalDataSource(resultSyncBox),
+  final resultSyncBox = await Hive.openBox<dynamic>(
+    HiveResultSyncLocalDataSource.boxName,
   );
+  final CrossfitWorkoutRepository crossfitWorkoutRepository =
+      SupabaseCrossfitWorkoutRepository(
+        resultLocalDataSource: HiveResultSyncLocalDataSource(resultSyncBox),
+      );
 
   runApp(
     WodFitApp(
@@ -73,7 +95,8 @@ class _WodFitAppState extends State<WodFitApp> {
   @override
   void initState() {
     super.initState();
-    _authBloc = AuthBloc(authRepository: widget.authRepository)..add(const AuthCheckRequested());
+    _authBloc = AuthBloc(authRepository: widget.authRepository)
+      ..add(const AuthCheckRequested());
   }
 
   @override
@@ -89,8 +112,12 @@ class _WodFitAppState extends State<WodFitApp> {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<AuthRepository>.value(value: widget.authRepository),
-        RepositoryProvider<ProgramRepository>.value(value: widget.programRepository),
-        RepositoryProvider<CrossfitWorkoutRepository>.value(value: widget.crossfitWorkoutRepository),
+        RepositoryProvider<ProgramRepository>.value(
+          value: widget.programRepository,
+        ),
+        RepositoryProvider<CrossfitWorkoutRepository>.value(
+          value: widget.crossfitWorkoutRepository,
+        ),
         RepositoryProvider<ThemeService>.value(value: widget.themeService),
       ],
       child: MultiBlocProvider(
@@ -100,10 +127,13 @@ class _WodFitAppState extends State<WodFitApp> {
             create: (context) => ThemeCubit(themeService: widget.themeService),
           ),
           BlocProvider<ProgramCubit>(
-            create: (context) => ProgramCubit(programRepository: widget.programRepository),
+            create: (context) =>
+                ProgramCubit(programRepository: widget.programRepository),
           ),
           BlocProvider<CrossfitWorkoutCubit>(
-            create: (context) => CrossfitWorkoutCubit(workoutRepository: widget.crossfitWorkoutRepository),
+            create: (context) => CrossfitWorkoutCubit(
+              workoutRepository: widget.crossfitWorkoutRepository,
+            ),
           ),
         ],
         child: BlocBuilder<ThemeCubit, ThemeMode>(
