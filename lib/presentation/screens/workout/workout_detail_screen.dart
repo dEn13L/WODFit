@@ -110,7 +110,7 @@ class _CoachWorkoutDetailView extends StatelessWidget {
             appBar: AppBar(
               leading: IconButton(
                 icon: Icon(Icons.arrow_back_ios_new, size: 20, color: colorScheme.onSurface),
-                onPressed: () => context.pop(),
+                onPressed: () => context.pop(workout),
               ),
               actions: [
                 IconButton(
@@ -122,9 +122,6 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                         builder: (ctx) => CreateWorkoutScreen(workoutToEdit: workout),
                       ),
                     );
-                    if (context.mounted) {
-                      context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(workout.id);
-                    }
                   },
                 ),
                 IconButton(
@@ -190,7 +187,11 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                     if (confirm == true) {
                       final ok = await cubit.deleteWorkout(workout.id);
                       if (ok && context.mounted) {
-                        router.pop();
+                        // Сбрасываем стек, включая повторно открытые детали тренировки.
+                        final programIds = workout.assignedProgramIds;
+                        router.go(programIds.isEmpty
+                            ? '/coach/workouts'
+                            : '/coach/programs/${programIds.first}');
                         messenger.showSnackBar(
                           SnackBar(
                             content: const Text('Тренировка удалена'),
