@@ -64,6 +64,7 @@ class WorkoutFormState extends Equatable {
   final WorkoutFormSubmitStatus submitStatus;
   final String? errorMessage;
   final String? successMessage;
+  final CrossfitWorkout? savedWorkout;
   final bool hasCachedDraft;
   final Map<String, dynamic>? cachedDraftData;
 
@@ -78,6 +79,7 @@ class WorkoutFormState extends Equatable {
     this.submitStatus = WorkoutFormSubmitStatus.initial,
     this.errorMessage,
     this.successMessage,
+    this.savedWorkout,
     this.hasCachedDraft = false,
     this.cachedDraftData,
   });
@@ -112,6 +114,7 @@ class WorkoutFormState extends Equatable {
     WorkoutFormSubmitStatus? submitStatus,
     String? errorMessage,
     String? successMessage,
+    CrossfitWorkout? savedWorkout,
     bool? hasCachedDraft,
     Map<String, dynamic>? cachedDraftData,
   }) {
@@ -126,6 +129,7 @@ class WorkoutFormState extends Equatable {
       submitStatus: submitStatus ?? this.submitStatus,
       errorMessage: errorMessage,
       successMessage: successMessage,
+      savedWorkout: savedWorkout ?? this.savedWorkout,
       hasCachedDraft: hasCachedDraft ?? this.hasCachedDraft,
       cachedDraftData: cachedDraftData ?? this.cachedDraftData,
     );
@@ -143,6 +147,7 @@ class WorkoutFormState extends Equatable {
         submitStatus,
         errorMessage,
         successMessage,
+        savedWorkout,
         hasCachedDraft,
         cachedDraftData,
       ];
@@ -441,7 +446,7 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
       }).toList();
 
       if (state.isEditMode && state.workoutId != null) {
-        await workoutRepository.updateWorkout(
+        final workout = await workoutRepository.updateWorkout(
           id: state.workoutId!,
           title: state.sessionName.trim(),
           description: '',
@@ -451,11 +456,12 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
           status: publish ? WorkoutStatus.published : WorkoutStatus.draft,
         );
         emit(state.copyWith(
+          savedWorkout: workout,
           submitStatus: WorkoutFormSubmitStatus.success,
           successMessage: publish ? 'Тренировка опубликована' : 'Черновик сохранён',
         ));
       } else {
-        await workoutRepository.createWorkout(
+        final workout = await workoutRepository.createWorkout(
           title: state.sessionName.trim(),
           description: '',
           scheduledAt: state.scheduledAt,
@@ -465,6 +471,7 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
         );
         await clearDraftCache();
         emit(state.copyWith(
+          savedWorkout: workout,
           submitStatus: WorkoutFormSubmitStatus.success,
           successMessage: publish ? 'Тренировка опубликована' : 'Черновик сохранён',
         ));

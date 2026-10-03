@@ -1,3 +1,4 @@
+import '../../domain/exceptions/workout_unavailable_exception.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/config/supabase_config.dart';
@@ -116,6 +117,12 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
       return model.toDomain().copyWith(parts: sortedParts);
+    } on PostgrestException catch (e, st) {
+      AppLogger.e(_tag, 'Workout $id: ${e.message}; details=${e.details}; hint=${e.hint}; code=${e.code}', e, st);
+      if (e.code == 'PGRST116' || e.code == '42501') {
+        throw const WorkoutUnavailableException();
+      }
+      rethrow;
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при получении тренировки $id', e, st);
       rethrow;
@@ -330,6 +337,36 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
           .toList();
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при получении результатов тренировки $workoutId', e, st);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Map<String, int>> getWorkoutResultUserCounts(List<String> workoutIds) async {
+    if (workoutIds.isEmpty) return {};
+    try {
+      final users = <String, Set<String>>{};
+      const pageSize = 1000;
+      var offset = 0;
+      while (true) {
+        final rows = await client.from('part_results')
+            .select('workout_id,user_id')
+            .inFilter('workout_id', workoutIds)
+            .isFilter('deleted_at', null)
+            .order('id')
+            .range(offset, offset + pageSize - 1);
+        for (final row in rows) {
+          (users[row['workout_id'] as String] ??= <String>{}).add(row['user_id'] as String);
+        }
+        if (rows.length < pageSize) break;
+        offset += pageSize;
+      }
+      return {for (final id in workoutIds) id: users[id]?.length ?? 0};
+    } on PostgrestException catch (e, st) {
+      AppLogger.e(_tag, 'Result counts: ${e.message}; details=${e.details}; hint=${e.hint}; code=${e.code}', e, st);
+      rethrow;
+    } catch (e, st) {
+      AppLogger.e(_tag, 'Result counts failed', e, st);
       rethrow;
     }
   }

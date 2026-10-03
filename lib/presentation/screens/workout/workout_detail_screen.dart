@@ -13,6 +13,7 @@ import '../../../domain/entities/part_result.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_state.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
+import '../../bloc/program/program_cubit.dart';
 import '../../widgets/app_state_view.dart';
 import '../coach/workouts/create_workout_screen.dart';
 import 'result_input/part_result_input_modal.dart';
@@ -59,13 +60,12 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
 
   Future<void> _loadWorkout() async {
     final authState = context.read<AuthBloc>().state;
+    final cubit = context.read<CrossfitWorkoutCubit>();
+    final loading = cubit.loadWorkoutDetails(widget.workoutId);
     if (authState is Authenticated && authState.user.isClient) {
-      await context.read<CrossfitWorkoutCubit>().markWorkoutViewed(
-        widget.workoutId,
-      );
+      await cubit.markWorkoutViewed(widget.workoutId);
     }
-    if (!mounted) return;
-    context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(widget.workoutId);
+    await loading;
   }
 
   void _showResultDialog(WorkoutPart part, PartResult? existingResult) {
@@ -76,10 +76,13 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (modalContext) {
-        return PartResultInputModal(
-          workoutId: widget.workoutId,
-          part: part,
-          initialResult: existingResult,
+        return BlocProvider<CrossfitWorkoutCubit>.value(
+          value: context.read<CrossfitWorkoutCubit>(),
+          child: PartResultInputModal(
+            workoutId: widget.workoutId,
+            part: part,
+            initialResult: existingResult,
+          ),
         );
       },
     );
@@ -145,7 +148,7 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                   size: 20,
                   color: colorScheme.onSurface,
                 ),
-                onPressed: () => context.pop(),
+                onPressed: () => context.pop(workout),
               ),
               actions: [
                 _diagnosticsButton(context),
@@ -155,15 +158,15 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                   onPressed: () async {
                     await Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (ctx) =>
-                            CreateWorkoutScreen(workoutToEdit: workout),
+                        builder: (ctx) => MultiBlocProvider(
+                          providers: [
+                            BlocProvider<ProgramCubit>.value(value: context.read<ProgramCubit>()),
+                            BlocProvider<CrossfitWorkoutCubit>.value(value: context.read<CrossfitWorkoutCubit>()),
+                          ],
+                          child: CreateWorkoutScreen(workoutToEdit: workout),
+                        ),
                       ),
                     );
-                    if (context.mounted) {
-                      context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(
-                        workout.id,
-                      );
-                    }
                   },
                 ),
                 IconButton(
@@ -229,7 +232,11 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                     if (confirm == true) {
                       final ok = await cubit.deleteWorkout(workout.id);
                       if (ok && context.mounted) {
-                        router.pop();
+                        // Убираем из стека все маршруты удалённой тренировки.
+                        final programIds = workout.assignedProgramIds;
+                        router.go(programIds.isEmpty
+                            ? '/coach/workouts'
+                            : '/coach/programs/${programIds.first}');
                         messenger.showSnackBar(
                           SnackBar(
                             content: const Text('Тренировка удалена'),
@@ -242,7 +249,10 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                 ),
               ],
             ),
-            body: SingleChildScrollView(
+            body: RefreshIndicator(
+              onRefresh: () => context.read<CrossfitWorkoutCubit>().loadWorkoutDetails(workoutId),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -449,7 +459,7 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                   const SizedBox(height: 32),
                 ],
               ),
-            ),
+            )),
           );
         }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,6 +11,8 @@ import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../../domain/entities/training_program.dart';
 import '../../../../domain/repositories/crossfit_workout_repository.dart';
 import '../../../../domain/repositories/program_repository.dart';
+import '../../../state/session_data_cache.dart';
+import '../../../bloc/program/program_detail_cubit.dart';
 import '../../../bloc/program/program_cubit.dart';
 import '../../../widgets/app_state_view.dart';
 
@@ -26,6 +29,8 @@ class ProgramDetailScreen extends StatefulWidget {
 }
 
 class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
+  late final ProgramDetailCubit _detailCubit;
+  late final StreamSubscription<ProgramDetailState> _detailSubscription;
   bool _isLoading = true;
   String? _error;
   TrainingProgram? _program;
@@ -36,62 +41,50 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _detailCubit = ProgramDetailCubit(
+      programRepository: context.read<ProgramRepository>(),
+      workoutRepository: context.read<CrossfitWorkoutRepository>(),
+      cache: context.read<SessionDataCache>(),
+    );
+    _detailSubscription = _detailCubit.stream.listen(_applyDetailState);
     _loadData();
+    _applyDetailState(_detailCubit.state);
   }
 
-  Future<void> _loadData() async {
+  void _applyDetailState(ProgramDetailState state) {
+    if (!mounted) return;
     setState(() {
-      _isLoading = true;
-      _error = null;
+      _isLoading = state.isLoading;
+      _error = state.error;
+      if (state.data != null) {
+        _program = state.data!.program;
+        _members = state.data!.members;
+        _programWorkouts = state.data!.workouts;
+        _workoutResultUserCount = state.data!.resultCounts;
+      }
     });
-
-    try {
-      final programRepo = context.read<ProgramRepository>();
-      final workoutRepo = context.read<CrossfitWorkoutRepository>();
-
-      final allPrograms = await programRepo.getCoachPrograms();
-      final program = allPrograms.firstWhere(
-        (p) => p.id == widget.programId,
-        orElse: () => throw Exception('Программа не найдена'),
-      );
-
-      final members = await programRepo.getProgramMembers(widget.programId);
-      final allCoachWorkouts = await workoutRepo.getCoachWorkouts();
-
-      final programWorkouts = allCoachWorkouts
-          .where((w) => w.assignedProgramIds.contains(widget.programId))
-          .toList();
-
-      final Map<String, int> resultCounts = {};
-      await Future.wait(
-        programWorkouts.map((workout) async {
-          try {
-            final results = await workoutRepo.getWorkoutResults(workout.id);
-            final uniqueUsers = results.map((r) => r.userId).toSet();
-            resultCounts[workout.id] = uniqueUsers.length;
-          } catch (_) {
-            resultCounts[workout.id] = 0;
-          }
-        }),
-      );
-
-      if (mounted) {
-        setState(() {
-          _program = program;
-          _members = members;
-          _programWorkouts = programWorkouts;
-          _workoutResultUserCount = resultCounts;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
-          _isLoading = false;
-        });
-      }
+    if (state.refreshError != null && ModalRoute.of(context)?.isCurrent == true) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.refreshError!)));
     }
+  }
+
+  Future<void> _loadData() => _detailCubit.load(widget.programId);
+
+  @override
+  void dispose() {
+    _detailSubscription.cancel();
+    _detailCubit.close();
+    super.dispose();
+  }
+
+  void _applyReturnedWorkout(CrossfitWorkout? workout) {
+    if (workout == null) return;
+    setState(() {
+      _programWorkouts = _programWorkouts.where((w) => w.id != workout.id).toList();
+      if (workout.assignedProgramIds.contains(widget.programId)) {
+        _programWorkouts.add(workout);
+      }
+    });
   }
 
   void _copyInviteCode(String code) {
@@ -204,8 +197,14 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
             kind: result['kind'] as ProgramKind,
             description: result['description'] as String,
           );
-      if (success) {
-        _loadData();
+      if (success && mounted) {
+        final state = context.read<ProgramCubit>().state;
+        if (state is ProgramLoaded) {
+          final updated = state.programs.where((p) => p.id == program.id);
+          if (updated.isNotEmpty) {
+            setState(() => _program = updated.first);
+          }
+        }
       }
     }
   }
@@ -485,11 +484,14 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    await context.push(
+                    final saved = await context.push<CrossfitWorkout>(
                       '/coach/workouts/create',
                       extra: {'initialProgramId': widget.programId},
                     );
-                    if (mounted) _loadData();
+                    if (mounted) {
+                      _applyReturnedWorkout(saved);
+                      _loadData();
+                    }
                   },
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Новая тренировка'),
@@ -612,8 +614,11 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                       completedCount: completedCount,
                       totalMembers: memberCount,
                       onTap: () async {
-                        await context.push('/workout/${workout.id}');
-                        if (mounted) _loadData();
+                        final updated = await context.push<CrossfitWorkout>('/workout/${workout.id}');
+                        if (mounted) {
+                          _applyReturnedWorkout(updated);
+                          _loadData();
+                        }
                       },
                     );
                   },
@@ -661,8 +666,11 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                       completedCount: completedCount,
                       totalMembers: memberCount,
                       onTap: () async {
-                        await context.push('/workout/${workout.id}');
-                        if (mounted) _loadData();
+                        final updated = await context.push<CrossfitWorkout>('/workout/${workout.id}');
+                        if (mounted) {
+                          _applyReturnedWorkout(updated);
+                          _loadData();
+                        }
                       },
                     );
                   },

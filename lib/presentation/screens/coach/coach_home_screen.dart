@@ -27,10 +27,10 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
     _loadData();
   }
 
-  void _loadData() {
-    context.read<CrossfitWorkoutCubit>().loadCoachWorkouts();
-    context.read<ProgramCubit>().loadCoachPrograms();
-  }
+  Future<void> _loadData() => Future.wait([
+    context.read<CrossfitWorkoutCubit>().loadCoachWorkouts(),
+    context.read<ProgramCubit>().loadCoachPrograms(),
+  ]);
 
   @override
   Widget build(BuildContext context) {

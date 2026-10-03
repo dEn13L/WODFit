@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../presentation/widgets/screen_data_scope.dart';
 import '../../domain/entities/crossfit_workout.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../presentation/bloc/auth/auth_bloc.dart';
@@ -63,21 +64,21 @@ class AppRouter {
         ),
         GoRoute(
           path: '/coach',
-          builder: (context, state) => const CoachHomeScreen(),
+          builder: (context, state) => const ScreenDataScope(child: CoachHomeScreen()),
           routes: [
             GoRoute(
               path: 'programs',
-              builder: (context, state) => const CoachProgramsScreen(),
+              builder: (context, state) => const ScreenDataScope(child: CoachProgramsScreen()),
               routes: [
                 GoRoute(
                   path: 'create',
-                  builder: (context, state) => const CreateProgramScreen(),
+                  builder: (context, state) => const ScreenDataScope(child: CreateProgramScreen()),
                 ),
                 GoRoute(
                   path: ':id',
                   builder: (context, state) {
                     final id = state.pathParameters['id'] ?? '';
-                    return ProgramDetailScreen(programId: id);
+                    return ScreenDataScope(child: ProgramDetailScreen(programId: id));
                   },
                 ),
               ],
@@ -88,33 +89,33 @@ class AppRouter {
             ),
             GoRoute(
               path: 'workouts',
-              builder: (context, state) => const CoachAllWorkoutsScreen(),
+              builder: (context, state) => const ScreenDataScope(child: CoachAllWorkoutsScreen()),
             ),
             GoRoute(
               path: 'workouts/create',
               builder: (context, state) {
                 final extra = state.extra;
                 if (extra is CrossfitWorkout) {
-                  return CreateWorkoutScreen(workoutToEdit: extra);
+                  return ScreenDataScope(child: CreateWorkoutScreen(workoutToEdit: extra));
                 } else if (extra is Map<String, dynamic>) {
-                  return CreateWorkoutScreen(
+                  return ScreenDataScope(child: CreateWorkoutScreen(
                     workoutToEdit: extra['workoutToEdit'] as CrossfitWorkout?,
                     initialProgramId: extra['initialProgramId'] as String?,
                     initialProgramIds: extra['initialProgramIds'] as List<String>?,
-                  );
+                  ));
                 }
-                return const CreateWorkoutScreen();
+                return const ScreenDataScope(child: CreateWorkoutScreen());
               },
             ),
           ],
         ),
         GoRoute(
           path: '/client',
-          builder: (context, state) => const ClientHomeScreen(),
+          builder: (context, state) => const ScreenDataScope(child: ClientHomeScreen()),
           routes: [
             GoRoute(
               path: 'join-program',
-              builder: (context, state) => const JoinProgramScreen(),
+              builder: (context, state) => const ScreenDataScope(child: JoinProgramScreen()),
             ),
             GoRoute(
               path: 'join-group',
@@ -122,7 +123,7 @@ class AppRouter {
             ),
             GoRoute(
               path: 'history',
-              builder: (context, state) => const ClientHistoryScreen(),
+              builder: (context, state) => const ScreenDataScope(child: ClientHistoryScreen()),
             ),
           ],
         ),
@@ -130,14 +131,14 @@ class AppRouter {
           path: '/workout/:id',
           builder: (context, state) {
             final id = state.pathParameters['id'] ?? '';
-            return WorkoutDetailScreen(workoutId: id);
+            return ScreenDataScope(child: WorkoutDetailScreen(workoutId: id));
           },
           routes: [
             GoRoute(
               path: 'results',
               builder: (context, state) {
                 final id = state.pathParameters['id'] ?? '';
-                return ResultsScreen(workoutId: id);
+                return ScreenDataScope(child: ResultsScreen(workoutId: id));
               },
             ),
           ],

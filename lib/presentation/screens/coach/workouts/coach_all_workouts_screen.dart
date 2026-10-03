@@ -24,9 +24,7 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
     _loadWorkouts();
   }
 
-  void _loadWorkouts() {
-    context.read<CrossfitWorkoutCubit>().loadCoachWorkouts();
-  }
+  Future<void> _loadWorkouts() => context.read<CrossfitWorkoutCubit>().loadCoachWorkouts();
 
   Future<void> _duplicateWorkout(String workoutId) async {
     final cubit = context.read<CrossfitWorkoutCubit>();
