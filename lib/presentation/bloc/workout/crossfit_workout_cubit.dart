@@ -71,6 +71,37 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
 
   CrossfitWorkoutCubit({required this.workoutRepository}) : super(const CrossfitWorkoutInitial());
 
+  void applySavedWorkout(CrossfitWorkout workout) {
+    final current = state;
+    if (current is CrossfitWorkoutDetailLoaded &&
+        current.workout.id == workout.id) {
+      final partIds = workout.parts.map((part) => part.id).toSet();
+      emit(
+        CrossfitWorkoutDetailLoaded(
+          workout: workout,
+          userResults: current.userResults
+              .where((r) => partIds.contains(r.partId))
+              .toList(),
+          allResults: current.allResults
+              .where((r) => partIds.contains(r.partId))
+              .toList(),
+          participants: current.participants,
+        ),
+      );
+    } else if (current is CrossfitWorkoutListLoaded) {
+      final workouts =
+          current.workouts.where((w) => w.id != workout.id).toList()
+            ..add(workout);
+      workouts.sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
+      emit(
+        CrossfitWorkoutListLoaded(
+          workouts: workouts,
+          userResults: current.userResults,
+        ),
+      );
+    }
+  }
+
   Future<void> loadCoachWorkouts() async {
     emit(const CrossfitWorkoutLoading());
     try {
@@ -210,8 +241,6 @@ class CrossfitWorkoutCubit extends Cubit<CrossfitWorkoutState> {
           workouts: current.where((w) => w.id != workoutId).toList(),
           message: 'Тренировка удалена',
         ));
-      } else {
-        await loadCoachWorkouts();
       }
       return true;
     } catch (e, st) {
