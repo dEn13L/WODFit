@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../core/theme/app_theme_extension.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../../domain/entities/training_program.dart';
@@ -68,6 +69,7 @@ class _CreateWorkoutView extends StatefulWidget {
 class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
   late final TextEditingController _sessionNameController;
   bool _bannerShown = false;
+  bool _showSessionName = false;
 
   @override
   void initState() {
@@ -94,7 +96,11 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
     }
   }
 
-  Future<void> _pickDate(BuildContext context, WorkoutFormCubit cubit, DateTime initialDate) async {
+  Future<void> _pickDate(
+    BuildContext context,
+    WorkoutFormCubit cubit,
+    DateTime initialDate,
+  ) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
@@ -114,7 +120,11 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
     }
   }
 
-  Future<void> _pickTime(BuildContext context, WorkoutFormCubit cubit, DateTime initialDate) async {
+  Future<void> _pickTime(
+    BuildContext context,
+    WorkoutFormCubit cubit,
+    DateTime initialDate,
+  ) async {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initialDate),
@@ -157,8 +167,10 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                 textColor: colorScheme.primary,
                 onPressed: () {
                   context.read<WorkoutFormCubit>().restoreCachedDraft();
-                  _sessionNameController.text =
-                      context.read<WorkoutFormCubit>().state.sessionName;
+                  _sessionNameController.text = context
+                      .read<WorkoutFormCubit>()
+                      .state
+                      .sessionName;
                 },
               ),
               duration: const Duration(seconds: 6),
@@ -281,10 +293,10 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                           // 4. Header title
                           Text(
                             formState.isEditMode
-                                ? 'Редактирование\nтренировки'
-                                : 'Создание\nтренировки',
+                                ? 'Редактирование тренировки'
+                                : 'Новая тренировка',
                             style: TextStyle(
-                              fontSize: 30,
+                              fontSize: 24,
                               fontWeight: FontWeight.w800,
                               color: colorScheme.onSurface,
                               height: 1.15,
@@ -293,15 +305,7 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                           const SizedBox(height: 24),
 
                           // 5. Section "НАЗНАЧИТЬ ПРОГРАММАМ"
-                          Text(
-                            'НАЗНАЧИТЬ ПРОГРАММАМ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: colorScheme.onSurfaceVariant,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
+                          Text('Кому', style: theme.textTheme.titleMedium),
                           const SizedBox(height: 10),
 
                           BlocBuilder<ProgramCubit, ProgramState>(
@@ -310,11 +314,31 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                   ? programState.programs
                                   : <TrainingProgram>[];
 
+                              if (programState is ProgramLoading ||
+                                  programState is ProgramInitial) {
+                                return const LinearProgressIndicator();
+                              }
+                              if (programState is ProgramError) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(programState.message),
+                                    TextButton(
+                                      onPressed: () => context
+                                          .read<ProgramCubit>()
+                                          .loadCoachPrograms(),
+                                      child: const Text('Повторить'),
+                                    ),
+                                  ],
+                                );
+                              }
                               if (programs.isEmpty) {
                                 return Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: theme.cardTheme.color ?? colorScheme.surface,
+                                    color:
+                                        theme.cardTheme.color ??
+                                        colorScheme.surface,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: colorScheme.outlineVariant,
@@ -338,46 +362,69 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                       .selectedProgramIds
                                       .contains(program.id);
 
-                                  return InkWell(
-                                    onTap: () => cubit.toggleProgram(program.id),
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? colorScheme.primary.withValues(alpha: 0.15)
-                                            : (theme.cardTheme.color ?? colorScheme.surface),
-                                        borderRadius:
-                                            BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? colorScheme.primary
-                                              : colorScheme.outlineVariant,
-                                          width: isSelected ? 1.5 : 1.0,
+                                  return Semantics(
+                                    selected: isSelected,
+                                    button: true,
+                                    child: InkWell(
+                                      onTap: () =>
+                                          cubit.toggleProgram(program.id),
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 8,
                                         ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          ConstrainedBox(
-                                            constraints: const BoxConstraints(maxWidth: 220),
-                                            child: Text(
-                                              program.name,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: isSelected
-                                                    ? colorScheme.primary
-                                                    : colorScheme.onSurface,
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? colorScheme.primary.withValues(
+                                                  alpha: 0.15,
+                                                )
+                                              : (theme.cardTheme.color ??
+                                                    colorScheme.surface),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          border: Border.all(
+                                            color: isSelected
+                                                ? colorScheme.primary
+                                                : colorScheme.outlineVariant,
+                                            width: isSelected ? 1.5 : 1.0,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              program.kind ==
+                                                      ProgramKind.personal
+                                                  ? Icons.person_outline
+                                                  : Icons.groups_outlined,
+                                              size: 18,
+                                              color: isSelected
+                                                  ? colorScheme.primary
+                                                  : colorScheme
+                                                        .onSurfaceVariant,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            ConstrainedBox(
+                                              constraints: const BoxConstraints(
+                                                maxWidth: 220,
+                                              ),
+                                              child: Text(
+                                                program.name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isSelected
+                                                      ? colorScheme.primary
+                                                      : colorScheme.onSurface,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   );
@@ -387,7 +434,9 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                           ),
                           const SizedBox(height: 24),
 
-                          // 6. Row 50/50: Date & Time
+                          Text('Когда', style: theme.textTheme.titleMedium),
+                          const SizedBox(height: 12),
+                          // Дата и время
                           Row(
                             children: [
                               // Date field
@@ -396,7 +445,7 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'ДАТА',
+                                      'Дата',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -418,9 +467,12 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                           vertical: 12,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: theme.cardTheme.color ?? colorScheme.surface,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          color:
+                                              theme.cardTheme.color ??
+                                              colorScheme.surface,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           border: Border.all(
                                             color: colorScheme.outlineVariant,
                                           ),
@@ -430,8 +482,9 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                               MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                              DateFormat('dd.MM.yyyy')
-                                                  .format(formState.scheduledAt),
+                                              DateFormat(
+                                                'dd.MM.yyyy',
+                                              ).format(formState.scheduledAt),
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
@@ -441,7 +494,8 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                             Icon(
                                               Icons.calendar_today_outlined,
                                               size: 18,
-                                              color: colorScheme.onSurfaceVariant,
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
                                             ),
                                           ],
                                         ),
@@ -458,7 +512,7 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'ВРЕМЯ',
+                                      'Время',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -480,9 +534,12 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                           vertical: 12,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: theme.cardTheme.color ?? colorScheme.surface,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          color:
+                                              theme.cardTheme.color ??
+                                              colorScheme.surface,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           border: Border.all(
                                             color: colorScheme.outlineVariant,
                                           ),
@@ -492,8 +549,9 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                               MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                              DateFormat('HH:mm')
-                                                  .format(formState.scheduledAt),
+                                              DateFormat(
+                                                'HH:mm',
+                                              ).format(formState.scheduledAt),
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
@@ -503,7 +561,8 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                                             Icon(
                                               Icons.access_time,
                                               size: 18,
-                                              color: colorScheme.onSurfaceVariant,
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
                                             ),
                                           ],
                                         ),
@@ -516,32 +575,26 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Session Name field
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'УТОЧНЕНИЕ (НЕОБЯЗАТЕЛЬНО)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: colorScheme.onSurfaceVariant,
-                                  letterSpacing: 0.8,
-                                ),
+                          // Уже заполненное уточнение видно при редактировании и восстановлении.
+                          if (_showSessionName ||
+                              formState.sessionName.isNotEmpty)
+                            TextField(
+                              controller: _sessionNameController,
+                              maxLength: 40,
+                              onChanged: cubit.setSessionName,
+                              decoration: const InputDecoration(
+                                labelText: 'Уточнение (необязательно)',
+                                hintText: 'Например, утро или вечер',
+                                counterText: '',
                               ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _sessionNameController,
-                                maxLength: 40,
-                                onChanged: (value) =>
-                                    cubit.setSessionName(value),
-                                decoration: const InputDecoration(
-                                  hintText: 'например: Утро, Вечер, Сессия 1',
-                                  counterText: '',
-                                ),
-                              ),
-                            ],
-                          ),
+                            )
+                          else
+                            TextButton.icon(
+                              onPressed: () =>
+                                  setState(() => _showSessionName = true),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Добавить уточнение'),
+                            ),
                           const SizedBox(height: 28),
 
                           // 7. Section header: "ЗАДАНИЯ ТРЕНИРОВКИ" + Pill counter

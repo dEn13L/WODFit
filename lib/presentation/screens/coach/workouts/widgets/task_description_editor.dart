@@ -23,9 +23,14 @@ class TaskDescriptionEditor extends StatefulWidget {
         context: context,
         builder: (ctx) => Dialog(
           backgroundColor: theme.colorScheme.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
+            constraints: BoxConstraints(
+              maxWidth: 640,
+              maxHeight: MediaQuery.of(ctx).size.height * 0.8,
+            ),
             child: TaskDescriptionEditor(
               initialDescription: initialDescription,
               onSaved: onSaved,
@@ -37,6 +42,7 @@ class TaskDescriptionEditor extends StatefulWidget {
       await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
+        useSafeArea: true,
         backgroundColor: theme.colorScheme.surface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -45,9 +51,16 @@ class TaskDescriptionEditor extends StatefulWidget {
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(ctx).viewInsets.bottom,
           ),
-          child: TaskDescriptionEditor(
-            initialDescription: initialDescription,
-            onSaved: onSaved,
+          child: SizedBox(
+            height:
+                (MediaQuery.of(ctx).size.height -
+                    MediaQuery.of(ctx).viewInsets.bottom -
+                    MediaQuery.of(ctx).padding.top) *
+                0.85,
+            child: TaskDescriptionEditor(
+              initialDescription: initialDescription,
+              onSaved: onSaved,
+            ),
           ),
         ),
       );
@@ -79,6 +92,7 @@ class _TaskDescriptionEditorState extends State<TaskDescriptionEditor> {
     final colorScheme = theme.colorScheme;
 
     return SafeArea(
+      top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
         child: Column(
@@ -88,52 +102,64 @@ class _TaskDescriptionEditorState extends State<TaskDescriptionEditor> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Описание задания',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'Описание задания',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 IconButton(
+                  tooltip: 'Закрыть',
                   icon: Icon(Icons.close, color: colorScheme.onSurfaceVariant),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              keyboardType: TextInputType.multiline,
-              textInputAction: TextInputAction.newline,
-              minLines: 6,
-              maxLines: null,
-              style: TextStyle(
-                fontSize: 15,
-                color: colorScheme.onSurface,
-                height: 1.4,
-              ),
-              decoration: const InputDecoration(
-                hintText: 'Опишите движения, раунды, повторы, вес, лимиты времени и масштабирование…',
-                hintMaxLines: 3,
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                autofocus: true,
+                expands: true,
+                minLines: null,
+                maxLines: null,
+                textAlignVertical: TextAlignVertical.top,
+                keyboardType: TextInputType.multiline,
+                textInputAction: TextInputAction.newline,
+                textCapitalization: TextCapitalization.sentences,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: colorScheme.onSurface,
+                  height: 1.4,
+                ),
+                decoration: const InputDecoration(
+                  hintText: 'Например: 3 раунда\n10 приседаний\n200 м бега',
+                  hintMaxLines: 4,
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 12,
+              runSpacing: 4,
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: TextButton.styleFrom(
                     foregroundColor: colorScheme.onSurfaceVariant,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   child: const Text(
                     'Отмена',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
-                const SizedBox(width: 12),
                 ElevatedButton(
                   onPressed: () {
                     widget.onSaved(_controller.text.trim());
@@ -143,7 +169,10 @@ class _TaskDescriptionEditorState extends State<TaskDescriptionEditor> {
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
