@@ -45,7 +45,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Не удалось создать программу. Проверьте подключение и попробуйте снова.'), findsOneWidget);
     expect(find.textContaining('sensitive'), findsNothing);
-    expect(find.text('Новая программа'), findsOneWidget);
+    expect(tester.widget<EditableText>(find.byType(EditableText).first).controller.text,
+        'Новая программа');
     await tester.tap(button);
     await tester.pumpAndSettle();
     expect(repository.attempts, 2);

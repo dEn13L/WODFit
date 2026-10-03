@@ -55,18 +55,12 @@ class ResultSyncService {
               item.result.userId == operation.result.userId,
         );
         if (hasNewerOperation) continue;
-        if (operation.type == ResultSyncOperationType.delete) {
-          if (serverResult.deletedAt != null) {
-            await localDataSource.removeCachedResult(operation.result.id);
-          } else {
-            await localDataSource.cacheResult(
-              serverResult.copyWith(syncStatus: ResultSyncStatus.synced),
-            );
-          }
+        if (serverResult.id != operation.result.id) {
+          await localDataSource.removeCachedResult(operation.result.id);
+        }
+        if (serverResult.deletedAt != null) {
+          await localDataSource.removeCachedResult(serverResult.id);
         } else {
-          if (serverResult.id != operation.result.id) {
-            await localDataSource.removeCachedResult(operation.result.id);
-          }
           await localDataSource.cacheResult(
             serverResult.copyWith(syncStatus: ResultSyncStatus.synced),
           );
@@ -129,11 +123,11 @@ class ResultSyncService {
     final merged = <String, PartResult>{
       for (final result in serverResults)
         if (!deletedKeys.contains('${result.partId}:${result.userId}'))
-          result.id: result,
+          '${result.partId}:${result.userId}': result,
     };
     for (final cached in localDataSource.getCachedResults(workoutId: workoutId, userId: userId)) {
       if (cached.syncStatus != ResultSyncStatus.synced) {
-        merged[cached.id] = cached;
+        merged['${cached.partId}:${cached.userId}'] = cached;
       }
     }
     return merged.values.toList();

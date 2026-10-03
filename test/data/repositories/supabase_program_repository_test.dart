@@ -37,7 +37,7 @@ void main() {
           expect(request.headers['prefer'], isNot(contains('return=representation')));
           expect(request.url.queryParameters, isNot(contains('select')));
           inserted = jsonDecode(request.body) as Map<String, dynamic>;
-          return http.Response('', 201);
+          return http.Response('', 201, request: request);
         }
         expect(request.method, 'GET');
         expect(request.url.queryParameters['id'], 'eq.${inserted!['id']}');
