@@ -179,7 +179,7 @@ class ProgramCubit extends Cubit<ProgramState> {
     } catch (e, st) {
       if (isClosed || generation != cache.generation) return null;
       AppLogger.e(_tag, 'createProgram failed', e, st);
-      emit(ProgramError(e.toString().replaceAll('Exception: ', '')));
+      emit(const ProgramError('Не удалось создать программу. Проверьте подключение и попробуйте снова.'));
       return null;
     }
   }

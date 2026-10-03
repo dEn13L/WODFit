@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/utils/app_logger.dart';
 import '../../domain/entities/training_program.dart';
@@ -87,17 +88,39 @@ class SupabaseProgramRepository implements ProgramRepository {
 
     try {
       final inviteCode = _generateInviteCode();
+      final programId = const Uuid().v4();
 
-      final response = await client.from('programs').insert({
+      // STABLE helper в SELECT-policy не видит новую строку в INSERT RETURNING.
+      // Читаем созданную программу отдельным запросом после завершения INSERT.
+      await client.from('programs').insert({
+        'id': programId,
         'coach_id': userId,
         'name': name.trim(),
         'kind': kind.name,
         'description': description.trim(),
         'invite_code': inviteCode,
-      }).select().single();
+      });
+      final response = await client
+          .from('programs')
+          .select()
+          .eq('id', programId)
+          .eq('coach_id', userId)
+          .single();
 
       AppLogger.i(_tag, 'Создана новая программа: ${name.trim()} ($inviteCode)');
       return TrainingProgramModel.fromJson(Map<String, dynamic>.from(response)).toDomain();
+    } on PostgrestException catch (e, st) {
+      AppLogger.e(
+        _tag,
+        'Ошибка БД при создании программы: ${e.message}; '
+        'details=${e.details}; hint=${e.hint}; code=${e.code}',
+        e,
+        st,
+      );
+      rethrow;
+    } on AuthException catch (e, st) {
+      AppLogger.e(_tag, 'Ошибка авторизации при создании программы: ${e.message}', e, st);
+      rethrow;
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при создании программы', e, st);
       rethrow;

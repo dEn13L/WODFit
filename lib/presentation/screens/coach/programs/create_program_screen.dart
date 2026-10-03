@@ -119,13 +119,15 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
   }
 
   Future<void> _onSubmit() async {
+    if (_isLoading) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() {
       _isLoading = true;
     });
 
-    final program = await context.read<ProgramCubit>().createProgram(
+    final cubit = context.read<ProgramCubit>();
+    final program = await cubit.createProgram(
           name: _nameController.text,
           kind: _selectedKind,
           description: _descriptionController.text,
@@ -137,6 +139,16 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
       });
       if (program != null) {
         await _showSuccessDialog(program);
+      } else {
+        final state = cubit.state;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(state is ProgramError
+                ? state.message
+                : 'Не удалось создать программу. Попробуйте снова.'),
+            backgroundColor: context.appTheme.destructive,
+          ),
+        );
       }
     }
   }
