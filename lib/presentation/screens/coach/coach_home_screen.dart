@@ -531,10 +531,7 @@ class _TodayWorkoutCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      WorkoutDateFormatter.formatTodayTomorrow(
-                        workout.scheduledAt,
-                        workout.title,
-                      ),
+                      '${workout.nameForProgram()}\n${WorkoutDateFormatter.formatTodayTomorrow(workout.scheduledAt)}',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,

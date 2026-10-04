@@ -41,6 +41,8 @@ jobs:
           if grep -q "^FAIL|" postflight.txt; then exit 1; fi
           psql -X -v ON_ERROR_STOP=1 -f sql/14_atomic_workout_save.sql
           psql -X -v ON_ERROR_STOP=1 -f test/sql/atomic_workout_save_test.sql
+          psql -X -v ON_ERROR_STOP=1 -f sql/15_program_workout_numbers.sql
+          psql -X -v ON_ERROR_STOP=1 -f test/sql/program_workout_numbers_test.sql
   verify:
     runs-on: ubuntu-latest
     steps:

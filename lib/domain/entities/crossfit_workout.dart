@@ -125,7 +125,8 @@ enum WorkoutStatus {
     );
   }
 
-  String get displayName => this == WorkoutStatus.published ? 'Опубликовано' : 'Черновик';
+  String get displayName =>
+      this == WorkoutStatus.published ? 'Опубликовано' : 'Черновик';
 }
 
 class WorkoutPart extends Equatable {
@@ -168,7 +169,15 @@ class WorkoutPart extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, workoutId, type, scoreType, title, description, sortOrder];
+  List<Object?> get props => [
+    id,
+    workoutId,
+    type,
+    scoreType,
+    title,
+    description,
+    sortOrder,
+  ];
 }
 
 class WorkoutAssignment extends Equatable {
@@ -176,6 +185,7 @@ class WorkoutAssignment extends Equatable {
   final String programId;
   final DateTime assignedAt;
   final String? programName;
+  final int? workoutNumber;
 
   // Backward-compat aliases
   String get groupId => programId;
@@ -186,10 +196,17 @@ class WorkoutAssignment extends Equatable {
     required this.programId,
     required this.assignedAt,
     this.programName,
+    this.workoutNumber,
   });
 
   @override
-  List<Object?> get props => [workoutId, programId, assignedAt, programName];
+  List<Object?> get props => [
+    workoutId,
+    programId,
+    assignedAt,
+    programName,
+    workoutNumber,
+  ];
 }
 
 class CrossfitWorkout extends Equatable {
@@ -224,6 +241,25 @@ class CrossfitWorkout extends Equatable {
   bool get isPublished => status == WorkoutStatus.published;
   bool get isNew => isPublished && publishedAt != null && viewedAt == null;
 
+  /// Номера стабильны внутри программы. У неназначенного черновика номера нет.
+  String nameForProgram([String? programId]) {
+    final relevant =
+        assignments
+            .where((a) => programId == null || a.programId == programId)
+            .toList()
+          ..sort((a, b) => a.programId.compareTo(b.programId));
+    final numbered = relevant.where((a) => a.workoutNumber != null).toList();
+    if (numbered.isEmpty) return 'Тренировка';
+    if (numbered.length == 1)
+      return 'Тренировка ${numbered.single.workoutNumber}';
+    return numbered
+        .map(
+          (a) =>
+              '${a.programName ?? 'Программа'}: Тренировка ${a.workoutNumber}',
+        )
+        .join(' · ');
+  }
+
   String get workoutTypesSummary {
     if (parts.isEmpty) return 'Тренировка';
     final firstTitle = parts.first.title.trim().isNotEmpty
@@ -233,7 +269,8 @@ class CrossfitWorkout extends Equatable {
     return '$firstTitle и ещё ${parts.length - 1}';
   }
 
-  List<String> get assignedProgramIds => assignments.map((a) => a.programId).toList();
+  List<String> get assignedProgramIds =>
+      assignments.map((a) => a.programId).toList();
   List<String> get assignedGroupIds => assignedProgramIds;
 
   CrossfitWorkout copyWith({
@@ -268,17 +305,17 @@ class CrossfitWorkout extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        coachId,
-        title,
-        description,
-        scheduledAt,
-        status,
-        createdAt,
-        updatedAt,
-        publishedAt,
-        viewedAt,
-        parts,
-        assignments,
-      ];
+    id,
+    coachId,
+    title,
+    description,
+    scheduledAt,
+    status,
+    createdAt,
+    updatedAt,
+    publishedAt,
+    viewedAt,
+    parts,
+    assignments,
+  ];
 }

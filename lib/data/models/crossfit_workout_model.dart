@@ -48,7 +48,9 @@ class WorkoutPartModel {
       id: id,
       workoutId: workoutId,
       type: type != null ? WorkoutPartType.fromString(type!) : null,
-      scoreType: scoreType != null ? WorkoutScoreType.fromString(scoreType) : null,
+      scoreType: scoreType != null
+          ? WorkoutScoreType.fromString(scoreType)
+          : null,
       title: title,
       description: description,
       sortOrder: sortOrder,
@@ -73,6 +75,7 @@ class WorkoutAssignmentModel {
   final String programId;
   final String assignedAt;
   final String? programName;
+  final int? workoutNumber;
 
   // Backward compatibility aliases
   String get groupId => programId;
@@ -83,6 +86,7 @@ class WorkoutAssignmentModel {
     required this.programId,
     required this.assignedAt,
     this.programName,
+    this.workoutNumber,
   });
 
   factory WorkoutAssignmentModel.fromJson(Map<String, dynamic> json) {
@@ -98,8 +102,10 @@ class WorkoutAssignmentModel {
     return WorkoutAssignmentModel(
       workoutId: json['workout_id'] as String,
       programId: pId,
-      assignedAt: (json['assigned_at'] as String?) ?? DateTime.now().toIso8601String(),
+      assignedAt:
+          (json['assigned_at'] as String?) ?? DateTime.now().toIso8601String(),
       programName: name,
+      workoutNumber: (json['workout_number'] as num?)?.toInt(),
     );
   }
 
@@ -109,6 +115,7 @@ class WorkoutAssignmentModel {
       programId: programId,
       assignedAt: (DateTime.tryParse(assignedAt) ?? DateTime.now()).toLocal(),
       programName: programName,
+      workoutNumber: workoutNumber,
     );
   }
 }
@@ -144,13 +151,23 @@ class CrossfitWorkoutModel {
 
   factory CrossfitWorkoutModel.fromJson(Map<String, dynamic> json) {
     final views = json['workout_views'] as List<dynamic>?;
-    final partsList = (json['workout_parts'] as List<dynamic>?)
-            ?.map((e) => WorkoutPartModel.fromJson(Map<String, dynamic>.from(e as Map)))
+    final partsList =
+        (json['workout_parts'] as List<dynamic>?)
+            ?.map(
+              (e) => WorkoutPartModel.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ),
+            )
             .toList() ??
         [];
 
-    final assignmentsList = (json['workout_assignments'] as List<dynamic>?)
-            ?.map((e) => WorkoutAssignmentModel.fromJson(Map<String, dynamic>.from(e as Map)))
+    final assignmentsList =
+        (json['workout_assignments'] as List<dynamic>?)
+            ?.map(
+              (e) => WorkoutAssignmentModel.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ),
+            )
             .toList() ??
         [];
 
@@ -159,10 +176,13 @@ class CrossfitWorkoutModel {
       coachId: json['coach_id'] as String,
       title: json['title'] as String,
       description: (json['description'] as String?) ?? '',
-      scheduledAt: (json['scheduled_at'] as String?) ?? DateTime.now().toIso8601String(),
+      scheduledAt:
+          (json['scheduled_at'] as String?) ?? DateTime.now().toIso8601String(),
       status: (json['status'] as String?) ?? 'draft',
-      createdAt: (json['created_at'] as String?) ?? DateTime.now().toIso8601String(),
-      updatedAt: (json['updated_at'] as String?) ?? DateTime.now().toIso8601String(),
+      createdAt:
+          (json['created_at'] as String?) ?? DateTime.now().toIso8601String(),
+      updatedAt:
+          (json['updated_at'] as String?) ?? DateTime.now().toIso8601String(),
       publishedAt: json['published_at'] as String?,
       viewedAt: views?.isNotEmpty == true
           ? (views!.first as Map)['viewed_at'] as String?
@@ -182,8 +202,12 @@ class CrossfitWorkoutModel {
       status: WorkoutStatus.fromString(status),
       createdAt: (DateTime.tryParse(createdAt) ?? DateTime.now()).toLocal(),
       updatedAt: (DateTime.tryParse(updatedAt) ?? DateTime.now()).toLocal(),
-      publishedAt: publishedAt == null ? null : DateTime.tryParse(publishedAt!)?.toLocal(),
-      viewedAt: viewedAt == null ? null : DateTime.tryParse(viewedAt!)?.toLocal(),
+      publishedAt: publishedAt == null
+          ? null
+          : DateTime.tryParse(publishedAt!)?.toLocal(),
+      viewedAt: viewedAt == null
+          ? null
+          : DateTime.tryParse(viewedAt!)?.toLocal(),
       parts: parts.map((p) => p.toDomain()).toList(),
       assignments: assignments.map((a) => a.toDomain()).toList(),
     );

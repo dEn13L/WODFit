@@ -90,10 +90,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          WorkoutDateFormatter.formatDetail(
-                            workout.scheduledAt,
-                            workout.title,
-                          ),
+                          '${workout.nameForProgram()}\n${WorkoutDateFormatter.formatDetail(workout.scheduledAt)}',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),

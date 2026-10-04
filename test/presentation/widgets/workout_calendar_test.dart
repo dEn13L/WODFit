@@ -38,6 +38,7 @@ CrossfitWorkout workout(
       programId: program,
       programName: program,
       assignedAt: date,
+      workoutNumber: {'TODAY': 1, 'TOMORROW': 2, 'DRAFT': 3, 'OTHER': 4}[title],
     ),
   ],
 );
@@ -315,10 +316,10 @@ void main() {
         final list = find.byType(ListView).first;
         await tester.drag(list, const Offset(0, -400));
         await tester.pumpAndSettle();
-        expect(find.textContaining('(TODAY)'), findsOneWidget);
-        expect(find.textContaining('(TOMORROW)'), findsNothing);
+        expect(find.textContaining('Тренировка 1\n'), findsOneWidget);
+        expect(find.textContaining('Тренировка 2\n'), findsNothing);
         expect(
-          find.textContaining('(DRAFT)'),
+          find.textContaining('Тренировка 3\n'),
           coach ? findsOneWidget : findsNothing,
         );
         final key = ValueKey(
@@ -330,8 +331,8 @@ void main() {
         await tester.pumpAndSettle();
         await tester.drag(list, const Offset(0, -400));
         await tester.pumpAndSettle();
-        expect(find.textContaining('(TOMORROW)'), findsOneWidget);
-        expect(find.textContaining('(TODAY)'), findsNothing);
+        expect(find.textContaining('Тренировка 2\n'), findsOneWidget);
+        expect(find.textContaining('Тренировка 1\n'), findsNothing);
         await tester.drag(list, const Offset(0, 1200));
         await tester.pumpAndSettle();
         await tester.ensureVisible(
@@ -344,7 +345,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.drag(list, const Offset(0, -400));
         await tester.pumpAndSettle();
-        expect(find.textContaining('(TOMORROW)'), findsNothing);
+        expect(find.textContaining('Тренировка 2\n'), findsNothing);
         expect(repo.reads, 1);
         expect(tester.takeException(), isNull);
       },

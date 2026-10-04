@@ -17,9 +17,38 @@ void main() {
       ],
     }).toDomain();
 
-    expect(workout.publishedAt, DateTime.parse('2026-10-02T10:00:00Z').toLocal());
+    expect(
+      workout.publishedAt,
+      DateTime.parse('2026-10-02T10:00:00Z').toLocal(),
+    );
     expect(workout.viewedAt, DateTime.parse('2026-10-03T10:00:00Z').toLocal());
     expect(workout.isNew, isFalse);
+  });
+
+  test('program numbers are independent and legacy title is hidden', () {
+    final workout = CrossfitWorkoutModel.fromJson({
+      'id': 'w',
+      'coach_id': 'c',
+      'title': 'Старое уточнение',
+      'workout_assignments': [
+        {
+          'workout_id': 'w',
+          'program_id': 'a',
+          'workout_number': 13,
+          'programs': {'name': 'A'},
+        },
+        {
+          'workout_id': 'w',
+          'program_id': 'b',
+          'workout_number': 2,
+          'programs': {'name': 'B'},
+        },
+      ],
+    }).toDomain();
+    expect(workout.nameForProgram('a'), 'Тренировка 13');
+    expect(workout.nameForProgram('b'), 'Тренировка 2');
+    expect(workout.nameForProgram(), 'A: Тренировка 13 · B: Тренировка 2');
+    expect(workout.nameForProgram('unassigned'), 'Тренировка');
   });
 
   test('published workout without a view is new', () {

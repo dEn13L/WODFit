@@ -69,7 +69,7 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
         backgroundColor: colorScheme.surface,
         title: const Text('Удалить тренировку?'),
         content: Text(
-          'Вы уверены, что хотите удалить "${workout.title}"?\n'
+          'Вы уверены, что хотите удалить "${workout.nameForProgram()}"?\n'
           'Все связанные результаты атлетов и назначения будут удалены.',
         ),
         actions: [
@@ -158,7 +158,7 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
                       (programId == null ||
                           w.assignedProgramIds.contains(programId)) &&
                       (query.isEmpty ||
-                          w.title.toLowerCase().contains(query) ||
+                          w.nameForProgram(programId).toLowerCase().contains(query) ||
                           w.assignments.any(
                             (a) => (a.programName ?? '').toLowerCase().contains(
                               query,
@@ -284,6 +284,7 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
                   for (final workout in workouts) ...[
                     _CoachWorkoutItemCard(
                       workout: workout,
+                      programId: programId,
                       onTap: () async {
                         if (workout.status == WorkoutStatus.draft) {
                           await context.push(
@@ -314,12 +315,14 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
 
 class _CoachWorkoutItemCard extends StatelessWidget {
   final CrossfitWorkout workout;
+  final String? programId;
   final VoidCallback onTap;
   final VoidCallback onDuplicate;
   final VoidCallback onDelete;
 
   const _CoachWorkoutItemCard({
     required this.workout,
+    this.programId,
     required this.onTap,
     required this.onDuplicate,
     required this.onDelete,
@@ -346,7 +349,7 @@ class _CoachWorkoutItemCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
+                      '${workout.nameForProgram(programId)}\n${WorkoutDateFormatter.formatList(workout.scheduledAt)}',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
