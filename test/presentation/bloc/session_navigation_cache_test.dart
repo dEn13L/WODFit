@@ -524,7 +524,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final workoutA = find.textContaining('Тренировка 1\n').first;
+      final workoutA = find.text('Тренировка 1').first;
       await tester.ensureVisible(workoutA);
       await tester.pumpAndSettle();
       await tester.tap(workoutA, warnIfMissed: true);
@@ -540,10 +540,10 @@ void main() {
       await tester.tap(find.text('Program P'));
       await tester.pumpAndSettle();
       expect(find.byType(AppLoadingView), findsNothing);
-      expect(find.textContaining('Тренировка 2\n'), findsOneWidget);
-      await tester.ensureVisible(find.textContaining('Тренировка 2\n'));
+      expect(find.text('Тренировка 2'), findsOneWidget);
+      await tester.ensureVisible(find.text('Тренировка 2'));
       await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('Тренировка 2\n'));
+      await tester.tap(find.text('Тренировка 2'));
       await tester.pumpAndSettle();
       expect(
         tester
