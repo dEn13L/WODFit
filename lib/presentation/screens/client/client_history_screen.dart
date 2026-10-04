@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/utils/workout_date_formatter.dart';
 import '../../../core/utils/workout_progress_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/training_program.dart';
 import '../../../domain/entities/part_result.dart';
+import '../../widgets/workout_calendar.dart';
+import '../../widgets/app_state_view.dart';
 import '../../bloc/program/program_cubit.dart';
 import '../../bloc/workout/crossfit_workout_cubit.dart';
 
@@ -17,27 +20,14 @@ class ClientHistoryScreen extends StatefulWidget {
   State<ClientHistoryScreen> createState() => _ClientHistoryScreenState();
 }
 
-class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  String? _selectedProgramId; // null means 'All programs'
-  bool _sortAscending = false; // false = newest first, true = oldest first
+class _ClientHistoryScreenState extends State<ClientHistoryScreen> {
+  DateTime _selectedDate = WorkoutDateFormatter.localDay(DateTime.now());
+  String? _selectedProgramId;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() {});
-      }
-    });
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadData() => Future.wait([
@@ -47,272 +37,112 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final appTheme = context.appTheme;
-
+    final programState = context.watch<ProgramCubit>().state;
+    final programs = programState is ProgramLoaded
+        ? programState.programs
+        : <TrainingProgram>[];
+    final programId = programs.any((p) => p.id == _selectedProgramId)
+        ? _selectedProgramId
+        : null;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('История тренировок'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: colorScheme.primary,
-          labelColor: colorScheme.primary,
-          unselectedLabelColor: colorScheme.onSurfaceVariant,
-          tabs: const [
-            Tab(icon: Icon(Icons.history), text: 'Прошедшие'),
-            Tab(icon: Icon(Icons.upcoming), text: 'Будущие'),
-          ],
-        ),
-      ),
+      appBar: AppBar(title: const Text('Все тренировки')),
       body: BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
-        builder: (context, workoutState) {
-          final programState = context.watch<ProgramCubit>().state;
-          final programs = programState is ProgramLoaded ? programState.programs : <TrainingProgram>[];
-
-          if (workoutState is CrossfitWorkoutLoading) {
-            return Center(
-              child: CircularProgressIndicator(color: colorScheme.primary),
-            );
+        builder: (context, state) {
+          if (state is CrossfitWorkoutError) {
+            return AppErrorView(message: state.message, onRetry: _loadData);
           }
-
-          if (workoutState is CrossfitWorkoutError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      workoutState.message,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: appTheme.destructive),
+          if (state is! CrossfitWorkoutListLoaded) {
+            return const AppLoadingView(semanticLabel: 'Загрузка тренировок');
+          }
+          final visible = state.workouts
+              .where(
+                (w) =>
+                    w.status == WorkoutStatus.published &&
+                    (programId == null ||
+                        w.assignedProgramIds.contains(programId)),
+              )
+              .toList();
+          final dayWorkouts =
+              visible
+                  .where(
+                    (w) => WorkoutDateFormatter.sameDay(
+                      w.scheduledAt,
+                      _selectedDate,
                     ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _loadData,
-                      child: const Text('Повторить'),
+                  )
+                  .toList()
+                ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+          return RefreshIndicator(
+            onRefresh: _loadData,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              children: [
+                DropdownButtonFormField<String>(
+                  key: ValueKey(programId),
+                  initialValue: programId ?? '',
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Программа'),
+                  items: [
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Все программы'),
+                    ),
+                    ...programs.map(
+                      (p) => DropdownMenuItem(
+                        value: p.id,
+                        child: Text(p.name, overflow: TextOverflow.ellipsis),
+                      ),
                     ),
                   ],
-                ),
-              ),
-            );
-          }
-
-          if (workoutState is CrossfitWorkoutListLoaded) {
-            final allWorkouts = workoutState.workouts;
-            final userResults = workoutState.userResults;
-            final now = DateTime.now();
-
-            // Split into past and future
-            final pastWorkouts = allWorkouts.where((w) => w.scheduledAt.toLocal().isBefore(now)).toList();
-            final futureWorkouts = allWorkouts.where((w) => !w.scheduledAt.toLocal().isBefore(now)).toList();
-
-            return Column(
-              children: [
-                _buildFiltersBar(programs),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildWorkoutList(
-                        workouts: pastWorkouts,
-                        userResults: userResults,
-                        isPast: true,
-                      ),
-                      _buildWorkoutList(
-                        workouts: futureWorkouts,
-                        userResults: userResults,
-                        isPast: false,
-                      ),
-                    ],
+                  onChanged: (value) => setState(
+                    () => _selectedProgramId = value == '' ? null : value,
                   ),
                 ),
-              ],
-            );
-          }
-
-          return const SizedBox.shrink();
-        },
-      ),
-    );
-  }
-
-  Widget _buildFiltersBar(List<TrainingProgram> programs) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(color: colorScheme.outlineVariant, width: 1),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              // Program selector
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(10),
+                const SizedBox(height: 12),
+                if (programState is ProgramError)
+                  TextButton(
+                    onPressed: _loadData,
+                    child: const Text('Повторить загрузку программ'),
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String?>(
-                      isExpanded: true,
-                      value: _selectedProgramId,
-                      hint: Text(
-                        'Все программы',
-                        style: TextStyle(color: colorScheme.onSurface, fontSize: 13),
-                      ),
-                      dropdownColor: colorScheme.surface,
-                      icon: Icon(Icons.arrow_drop_down, color: colorScheme.primary),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('Все программы', style: TextStyle(fontSize: 13)),
-                        ),
-                        ...programs.map(
-                          (p) => DropdownMenuItem<String?>(
-                            value: p.id,
-                            child: Text(
-                              '${p.name} (${p.kind.displayName})',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedProgramId = val;
-                        });
-                      },
-                    ),
+                if (state.refreshError != null)
+                  TextButton(
+                    onPressed: _loadData,
+                    child: Text('${state.refreshError} · Повторить'),
                   ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Sort toggle
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    _sortAscending = !_sortAscending;
-                  });
-                },
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                        size: 16,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _sortAscending ? 'Сначала старые' : 'Сначала новые',
-                        style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWorkoutList({
-    required List<CrossfitWorkout> workouts,
-    required List<PartResult> userResults,
-    required bool isPast,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    // Filter by program if selected
-    var filtered = workouts;
-    if (_selectedProgramId != null) {
-      filtered = filtered.where((w) => w.assignments.any((a) => a.programId == _selectedProgramId)).toList();
-    }
-
-    // Sort by date
-    filtered.sort((a, b) {
-      return _sortAscending
-          ? a.scheduledAt.toLocal().compareTo(b.scheduledAt.toLocal())
-          : b.scheduledAt.toLocal().compareTo(a.scheduledAt.toLocal());
-    });
-
-    if (filtered.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: () async => _loadData(),
-        color: colorScheme.primary,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isPast ? Icons.history_toggle_off : Icons.event_available,
-                  size: 64,
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                WorkoutCalendar(
+                  workouts: visible,
+                  selectedDate: _selectedDate,
+                  monthView: true,
+                  onDateSelected: (date) =>
+                      setState(() => _selectedDate = date),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  _selectedProgramId != null
-                      ? 'В выбранной программе нет ${isPast ? 'прошедших' : 'предстоящих'} тренировок'
-                      : (isPast ? 'Нет прошедших тренировок' : 'Нет запланированных тренировок'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  WorkoutDateFormatter.formatCalendarDay(_selectedDate),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  isPast
-                      ? 'Здесь будут отображаться завершенные тренировки и ваши результаты.'
-                      : 'Когда тренер назначит новую тренировку, она появится здесь.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
-                ),
+                const SizedBox(height: 12),
+                if (dayWorkouts.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'На выбранный день тренировок нет. Выберите другую дату.',
+                    ),
+                  ),
+                for (final workout in dayWorkouts) ...[
+                  _HistoryWorkoutCard(
+                    workout: workout,
+                    userResults: state.userResults
+                        .where((r) => r.workoutId == workout.id)
+                        .toList(),
+                    isPast: workout.scheduledAt.isBefore(DateTime.now()),
+                    onRefreshNeeded: _loadData,
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ],
             ),
-          ),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async => _loadData(),
-      color: colorScheme.primary,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: filtered.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 16),
-        itemBuilder: (context, index) {
-          final workout = filtered[index];
-          final workoutResults = userResults.where((r) => r.workoutId == workout.id).toList();
-
-          return _HistoryWorkoutCard(
-            workout: workout,
-            userResults: workoutResults,
-            isPast: isPast,
-            onRefreshNeeded: _loadData,
           );
         },
       ),

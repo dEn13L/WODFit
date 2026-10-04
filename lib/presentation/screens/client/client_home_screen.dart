@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/part_result.dart';
+import '../../widgets/workout_calendar.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
@@ -21,6 +22,7 @@ class ClientHomeScreen extends StatefulWidget {
 }
 
 class _ClientHomeScreenState extends State<ClientHomeScreen> {
+  DateTime _selectedDate = WorkoutDateFormatter.localDay(DateTime.now());
   @override
   void initState() {
     super.initState();
@@ -64,8 +66,8 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             },
           ),
           IconButton(
-            tooltip: 'История тренировок',
-            icon: const Icon(Icons.history),
+            tooltip: 'Все тренировки',
+            icon: const Icon(Icons.calendar_month_outlined),
             onPressed: () async {
               await context.push('/client/history');
               if (mounted) _loadData();
@@ -89,6 +91,116 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Assigned Workouts Section
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    WorkoutDateFormatter.formatCalendarDay(_selectedDate),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await context.push('/client/history');
+                      if (mounted) _loadData();
+                    },
+                    child: Text('Все →', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
+                builder: (context, state) {
+                  final colorScheme = Theme.of(context).colorScheme;
+                  final appTheme = context.appTheme;
+
+                  if (state is CrossfitWorkoutLoading) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40.0),
+                      child: Center(child: CircularProgressIndicator(color: colorScheme.primary)),
+                    );
+                  }
+
+                  if (state is CrossfitWorkoutError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 30.0),
+                        child: Column(
+                          children: [
+                            Text(state.message, style: TextStyle(color: appTheme.destructive)),
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: _loadData,
+                              child: const Text('Повторить'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (state is CrossfitWorkoutListLoaded) {
+                    final workouts = state.workouts.where((w) =>
+                        w.status == WorkoutStatus.published &&
+                        WorkoutDateFormatter.sameDay(w.scheduledAt, _selectedDate)).toList()
+                      ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+                    final calendar = WorkoutCalendar(
+                      workouts: state.workouts,
+                      selectedDate: _selectedDate,
+                      onDateSelected: (date) => setState(() => _selectedDate = date),
+                    );
+                    if (workouts.isEmpty) {
+                      return Column(children: [calendar, const SizedBox(height: 12), Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Icon(Icons.fitness_center_outlined, size: 48, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'На выбранный день тренировок нет',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Когда тренер опубликует тренировку для вашей программы, она появится здесь.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )]);
+                    }
+
+                    return Column(children: [calendar, const SizedBox(height: 12), ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: workouts.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final workout = workouts[index];
+                        final workoutResults = state.userResults.where((r) => r.workoutId == workout.id).toList();
+
+                        return _WorkoutClientCard(
+                          workout: workout,
+                          userResults: workoutResults,
+                          onTap: () async {
+                            await context.push('/workout/${workout.id}');
+                            if (mounted) _loadData();
+                          },
+                        );
+                      },
+                    )]);
+                  }
+
+                  return const SizedBox.shrink();
+                },
+              ),
+              const SizedBox(height: 24),
               // Programs section & Join button
               BlocConsumer<ProgramCubit, ProgramState>(
                 listener: (context, state) {
@@ -282,58 +394,6 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
 
               const SizedBox(height: 16),
 
-              // Quick Actions Bar: History button
-              InkWell(
-                onTap: () async {
-                  await context.push('/client/history');
-                  if (mounted) _loadData();
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.history, color: Theme.of(context).colorScheme.primary, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'История и результаты тренировок',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              'Просмотр прошедших WOD и фильтрация',
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.arrow_forward_ios, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
               BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
                 builder: (context, state) {
                   if (state is! CrossfitWorkoutListLoaded) {
@@ -393,105 +453,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
 
               const SizedBox(height: 24),
 
-              // Assigned Workouts Section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Назначенные тренировки (WOD)',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      await context.push('/client/history');
-                      if (mounted) _loadData();
-                    },
-                    child: Text('Все →', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              BlocBuilder<CrossfitWorkoutCubit, CrossfitWorkoutState>(
-                builder: (context, state) {
-                  final colorScheme = Theme.of(context).colorScheme;
-                  final appTheme = context.appTheme;
 
-                  if (state is CrossfitWorkoutLoading) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40.0),
-                      child: Center(child: CircularProgressIndicator(color: colorScheme.primary)),
-                    );
-                  }
-
-                  if (state is CrossfitWorkoutError) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 30.0),
-                        child: Column(
-                          children: [
-                            Text(state.message, style: TextStyle(color: appTheme.destructive)),
-                            const SizedBox(height: 12),
-                            ElevatedButton(
-                              onPressed: _loadData,
-                              child: const Text('Повторить'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-
-                  if (state is CrossfitWorkoutListLoaded) {
-                    if (state.workouts.isEmpty) {
-                      return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Icon(Icons.fitness_center_outlined, size: 48, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Нет назначенных тренировок',
-                                  style: TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Когда тренер опубликует тренировку для вашей программы, она появится здесь.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: state.workouts.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final workout = state.workouts[index];
-                        final workoutResults = state.userResults.where((r) => r.workoutId == workout.id).toList();
-
-                        return _WorkoutClientCard(
-                          workout: workout,
-                          userResults: workoutResults,
-                          onTap: () async {
-                            await context.push('/workout/${workout.id}');
-                            if (mounted) _loadData();
-                          },
-                        );
-                      },
-                    );
-                  }
-
-                  return const SizedBox.shrink();
-                },
-              ),
             ],
           ),
         ),
@@ -526,7 +488,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                   await context.push('/client/history');
                   if (mounted) _loadData();
                 },
-                child: Text('Вся история', style: TextStyle(color: colorScheme.primary, fontSize: 13)),
+                child: Text('Все тренировки', style: TextStyle(color: colorScheme.primary, fontSize: 13)),
               ),
           ],
         ),
