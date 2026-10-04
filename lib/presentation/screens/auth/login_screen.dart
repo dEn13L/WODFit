@@ -44,6 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final appTheme = context.appTheme;
+    // Scaffold убирает viewInsets из MediaQuery своего body после resize.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Scaffold(
       body: BlocConsumer<AuthBloc, AuthState>(
@@ -60,7 +62,6 @@ class _LoginScreenState extends State<LoginScreen> {
         builder: (context, state) {
           final isLoading = state is AuthLoading;
 
-          final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
           final form = Card(
             margin: EdgeInsets.zero,
             child: Padding(
