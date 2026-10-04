@@ -548,7 +548,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
+                        '${workout.nameForProgram()}\n${WorkoutDateFormatter.formatList(workout.scheduledAt)}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -642,7 +642,7 @@ class _WorkoutClientCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
+                      '${workout.nameForProgram()}\n${WorkoutDateFormatter.formatList(workout.scheduledAt)}',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

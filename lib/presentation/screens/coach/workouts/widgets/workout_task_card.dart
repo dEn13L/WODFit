@@ -23,7 +23,8 @@ class WorkoutTaskCard extends StatefulWidget {
   State<WorkoutTaskCard> createState() => _WorkoutTaskCardState();
 }
 
-class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
+class _WorkoutTaskCardState extends State<WorkoutTaskCard>
+    with WidgetsBindingObserver {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   final FocusNode _titleFocusNode = FocusNode();
@@ -33,6 +34,7 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _titleController = TextEditingController(text: widget.task.title);
     _descriptionController = TextEditingController(
       text: widget.task.description,
@@ -59,6 +61,24 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
       _isCardFocused =
           _titleFocusNode.hasFocus || _descriptionFocusNode.hasFocus;
     });
+    if (_isCardFocused) _revealFocusedCard();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (_isCardFocused) _revealFocusedCard();
+  }
+
+  void _revealFocusedCard() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_isCardFocused) return;
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 200),
+        alignment: 0,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+      );
+    });
   }
 
   @override
@@ -69,6 +89,7 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
     _titleFocusNode.removeListener(_onFocusChange);
     _titleFocusNode.dispose();
     _titleController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -196,6 +217,11 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard> {
               constraints: const BoxConstraints(),
               tooltip: 'Удалить задание',
               onPressed: () async {
+                if (_titleController.text.trim().isEmpty &&
+                    _descriptionController.text.trim().isEmpty) {
+                  widget.onDelete();
+                  return;
+                }
                 final confirmed = await ConfirmDialog.show(
                   context,
                   title: 'Удалить задание?',

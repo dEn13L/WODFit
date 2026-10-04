@@ -199,7 +199,7 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                           ),
                         ),
                         content: Text(
-                          'Вы действительно хотите удалить тренировку "${WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title)}"?\n\n'
+                          'Вы действительно хотите удалить тренировку "${workout.nameForProgram()} (${WorkoutDateFormatter.formatList(workout.scheduledAt)})"?\n\n'
                           'Все данные тренировки, назначения и внесенные результаты участников будут безвозвратно удалены.',
                           style: TextStyle(color: colorScheme.onSurface),
                         ),
@@ -262,7 +262,7 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          WorkoutDateFormatter.formatDay(workout.scheduledAt),
+                          workout.nameForProgram(),
                           style:
                               theme.textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
@@ -302,24 +302,13 @@ class _CoachWorkoutDetailView extends StatelessWidget {
                   const SizedBox(height: 6),
                   // Row 2: Time
                   Text(
-                    WorkoutDateFormatter.formatTime(workout.scheduledAt),
+                    WorkoutDateFormatter.formatDetail(workout.scheduledAt),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: colorScheme.onSurface,
                     ),
                   ),
-                  // Row 3: Session note / title
-                  if (workout.title.trim().isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      workout.title.trim(),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: 24),
 
                   // Label: ЗАДАНИЯ ТРЕНИРОВКИ
@@ -567,10 +556,7 @@ class _ClientWorkoutDetailView extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Text(
-                                  WorkoutDateFormatter.formatDetail(
-                                    workout.scheduledAt,
-                                    workout.title,
-                                  ),
+                                  '${workout.nameForProgram()}\n${WorkoutDateFormatter.formatDetail(workout.scheduledAt)}',
                                   style: Theme.of(context)
                                       .textTheme
                                       .headlineSmall

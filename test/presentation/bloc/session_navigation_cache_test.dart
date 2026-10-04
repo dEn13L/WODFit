@@ -62,6 +62,7 @@ CrossfitWorkout workout(String id) => CrossfitWorkout(
       workoutId: id,
       programId: 'p',
       programName: 'Program P',
+      workoutNumber: id == 'a' ? 1 : 2,
       assignedAt: now,
     ),
   ],
@@ -523,7 +524,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final workoutA = find.textContaining('(A)').first;
+      final workoutA = find.textContaining('Тренировка 1\n').first;
       await tester.ensureVisible(workoutA);
       await tester.pumpAndSettle();
       await tester.tap(workoutA, warnIfMissed: true);
@@ -539,10 +540,10 @@ void main() {
       await tester.tap(find.text('Program P'));
       await tester.pumpAndSettle();
       expect(find.byType(AppLoadingView), findsNothing);
-      expect(find.textContaining('(B)'), findsOneWidget);
-      await tester.ensureVisible(find.textContaining('(B)'));
+      expect(find.textContaining('Тренировка 2\n'), findsOneWidget);
+      await tester.ensureVisible(find.textContaining('Тренировка 2\n'));
       await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('(B)'));
+      await tester.tap(find.textContaining('Тренировка 2\n'));
       await tester.pumpAndSettle();
       expect(
         tester

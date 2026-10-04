@@ -611,6 +611,7 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                     final completedCount = _workoutResultUserCount[workout.id] ?? 0;
                     return _ProgramWorkoutCard(
                       workout: workout,
+                      programId: widget.programId,
                       completedCount: completedCount,
                       totalMembers: memberCount,
                       onTap: () async {
@@ -663,6 +664,7 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                     final completedCount = _workoutResultUserCount[workout.id] ?? 0;
                     return _ProgramWorkoutCard(
                       workout: workout,
+                      programId: widget.programId,
                       completedCount: completedCount,
                       totalMembers: memberCount,
                       onTap: () async {
@@ -686,12 +688,14 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
 
 class _ProgramWorkoutCard extends StatelessWidget {
   final CrossfitWorkout workout;
+  final String programId;
   final int completedCount;
   final int totalMembers;
   final VoidCallback onTap;
 
   const _ProgramWorkoutCard({
     required this.workout,
+    required this.programId,
     required this.completedCount,
     required this.totalMembers,
     required this.onTap,
@@ -718,7 +722,7 @@ class _ProgramWorkoutCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
+                      '${workout.nameForProgram(programId)}\n${WorkoutDateFormatter.formatList(workout.scheduledAt)}',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,

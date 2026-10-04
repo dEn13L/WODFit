@@ -151,6 +151,72 @@ void main() {
     },
   );
 
+  for (final empty in ['', '  \n  ']) {
+    testWidgets('empty task is deleted without confirmation: $empty', (
+      tester,
+    ) async {
+      var deletions = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: WorkoutTaskCard(
+              task: WorkoutFormTask(
+                id: 'task',
+                title: empty,
+                description: empty,
+              ),
+              index: 0,
+              onDelete: () => deletions++,
+              onTitleChanged: (_) {},
+              onDescriptionChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byTooltip('Удалить задание'));
+      await tester.pumpAndSettle();
+      expect(deletions, 1);
+      expect(find.byType(ConfirmDialog), findsNothing);
+    });
+  }
+
+  testWidgets('card scrolls above keyboard when its fields gain focus', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: [
+              const SizedBox(height: 450),
+              WorkoutTaskCard(
+                key: const ValueKey('task-card'),
+                task: const WorkoutFormTask(id: 'task'),
+                index: 0,
+                onDelete: () {},
+                onTitleChanged: (_) {},
+                onDescriptionChanged: (_) {},
+              ),
+              const SizedBox(height: 400),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byType(TextField).first);
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    final card = tester.getRect(find.byKey(const ValueKey('task-card')));
+    expect(card.bottom, lessThanOrEqualTo(400));
+    expect(card.top, greaterThanOrEqualTo(0));
+  });
+
   testWidgets('task removal requires confirmation; cancellation retains task', (
     tester,
   ) async {

@@ -57,34 +57,27 @@ class CreateWorkoutScreen extends StatelessWidget {
         initialProgramIds: initialProgramIds,
         initialScheduledAt: initialScheduledAt,
       ),
-      child: const _CreateWorkoutView(),
+      child: _CreateWorkoutView(workoutToEdit: workoutToEdit),
     );
   }
 }
 
 class _CreateWorkoutView extends StatefulWidget {
-  const _CreateWorkoutView();
+  final CrossfitWorkout? workoutToEdit;
+
+  const _CreateWorkoutView({this.workoutToEdit});
 
   @override
   State<_CreateWorkoutView> createState() => _CreateWorkoutViewState();
 }
 
 class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
-  late final TextEditingController _sessionNameController;
   bool _bannerShown = false;
-  bool _showSessionName = false;
 
   @override
   void initState() {
     super.initState();
-    _sessionNameController = TextEditingController();
     context.read<ProgramCubit>().loadCoachPrograms();
-  }
-
-  @override
-  void dispose() {
-    _sessionNameController.dispose();
-    super.dispose();
   }
 
   String _formatPluralTasks(int count) {
@@ -131,6 +124,10 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initialDate),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
     );
 
     if (picked != null) {
@@ -170,10 +167,6 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                 textColor: colorScheme.primary,
                 onPressed: () {
                   context.read<WorkoutFormCubit>().restoreCachedDraft();
-                  _sessionNameController.text = context
-                      .read<WorkoutFormCubit>()
-                      .state
-                      .sessionName;
                 },
               ),
               duration: const Duration(seconds: 6),
@@ -204,12 +197,6 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
         }
       },
       builder: (context, formState) {
-        if (_sessionNameController.text != formState.sessionName &&
-            _sessionNameController.text.isEmpty &&
-            formState.sessionName.isNotEmpty) {
-          _sessionNameController.text = formState.sessionName;
-        }
-
         final cubit = context.read<WorkoutFormCubit>();
         final isSubmitting =
             formState.submitStatus == WorkoutFormSubmitStatus.loading;
@@ -227,6 +214,14 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
             actions: [
               // Text button "Черновик"
               TextButton.icon(
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 onPressed: isSubmitting ? null : () => cubit.saveDraft(),
                 icon: Icon(
                   Icons.folder_outlined,
@@ -250,11 +245,16 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                 child: ElevatedButton(
                   onPressed: isSubmitting ? null : () => cubit.publishWorkout(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: appTheme.publish,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    minimumSize: const Size(0, 40),
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
+                      horizontal: 12,
                       vertical: 8,
                     ),
                     shape: RoundedRectangleBorder(
@@ -262,19 +262,19 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                     ),
                   ),
                   child: isSubmitting
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: colorScheme.onPrimary,
                           ),
                         )
                       : const Text(
                           'Опубликовать',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                 ),
@@ -285,6 +285,8 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),
               child: CustomScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: [
                   // Top section (Title, Programs, Date/Time, Session name, Tasks header)
                   SliverToBoxAdapter(
@@ -296,7 +298,7 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                           // 4. Header title
                           Text(
                             formState.isEditMode
-                                ? 'Редактирование тренировки'
+                                ? widget.workoutToEdit!.nameForProgram()
                                 : 'Новая тренировка',
                             style: TextStyle(
                               fontSize: 24,
@@ -578,26 +580,6 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Уже заполненное уточнение видно при редактировании и восстановлении.
-                          if (_showSessionName ||
-                              formState.sessionName.isNotEmpty)
-                            TextField(
-                              controller: _sessionNameController,
-                              maxLength: 40,
-                              onChanged: cubit.setSessionName,
-                              decoration: const InputDecoration(
-                                labelText: 'Уточнение (необязательно)',
-                                hintText: 'Например, утро или вечер',
-                                counterText: '',
-                              ),
-                            )
-                          else
-                            TextButton.icon(
-                              onPressed: () =>
-                                  setState(() => _showSessionName = true),
-                              icon: const Icon(Icons.add, size: 18),
-                              label: const Text('Добавить уточнение'),
-                            ),
                           const SizedBox(height: 28),
 
                           // 7. Section header: "ЗАДАНИЯ ТРЕНИРОВКИ" + Pill counter

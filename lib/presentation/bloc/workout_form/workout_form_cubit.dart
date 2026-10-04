@@ -477,7 +477,7 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
       if (state.isEditMode && state.workoutId != null) {
         final workout = await workoutRepository.updateWorkout(
           id: state.workoutId!,
-          title: state.sessionName.trim(),
+          title: '',
           description: '',
           scheduledAt: state.scheduledAt,
           parts: parts,
@@ -491,7 +491,7 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
         ));
       } else {
         final workout = await workoutRepository.createWorkout(
-          title: state.sessionName.trim(),
+          title: '',
           description: '',
           scheduledAt: state.scheduledAt,
           parts: parts,

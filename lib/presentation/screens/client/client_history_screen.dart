@@ -189,7 +189,7 @@ class _HistoryWorkoutCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    WorkoutDateFormatter.formatList(workout.scheduledAt, workout.title),
+                    '${workout.nameForProgram()}\n${WorkoutDateFormatter.formatList(workout.scheduledAt)}',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
