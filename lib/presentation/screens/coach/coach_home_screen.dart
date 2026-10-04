@@ -7,6 +7,7 @@ import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/training_program.dart';
 import 'widgets/coach_welcome_banner.dart';
+import '../../widgets/workout_calendar.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
@@ -22,6 +23,7 @@ class CoachHomeScreen extends StatefulWidget {
 }
 
 class _CoachHomeScreenState extends State<CoachHomeScreen> {
+  DateTime _selectedDate = WorkoutDateFormatter.localDay(DateTime.now());
   @override
   void initState() {
     super.initState();
@@ -55,12 +57,13 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
         : <TrainingProgram>[];
 
     final now = DateTime.now();
-    final todayWorkouts = allWorkouts.where((w) {
-      final scheduled = w.scheduledAt.toLocal();
-      return scheduled.year == now.year &&
-          scheduled.month == now.month &&
-          scheduled.day == now.day;
-    }).toList()..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+    final todayWorkouts =
+        allWorkouts
+            .where(
+              (w) => WorkoutDateFormatter.sameDay(w.scheduledAt, _selectedDate),
+            )
+            .toList()
+          ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
 
     final nearestDates = <String, DateTime>{};
     for (final workout in allWorkouts) {
@@ -156,7 +159,12 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                           ),
                         ),
                         onPressed: () async {
-                          await context.push('/coach/workouts/create');
+                          await context.push(
+                            '/coach/workouts/create',
+                            extra: <String, dynamic>{
+                              'initialScheduledAt': _selectedDate,
+                            },
+                          );
                           if (mounted) _loadData();
                         },
                       ),
@@ -166,12 +174,22 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
 
                     _HomeSectionHeader(
                       icon: Icons.today,
-                      title: 'Сегодня',
+                      title: WorkoutDateFormatter.formatCalendarDay(
+                        _selectedDate,
+                      ),
                       linkLabel: 'Все тренировки',
                       onPressed: () async {
                         await context.push('/coach/workouts');
                         if (mounted) _loadData();
                       },
+                    ),
+                    const SizedBox(height: 12),
+                    WorkoutCalendar(
+                      workouts: allWorkouts,
+                      selectedDate: _selectedDate,
+                      showDrafts: true,
+                      onDateSelected: (date) =>
+                          setState(() => _selectedDate = date),
                     ),
                     const SizedBox(height: 12),
                     if (workoutState is CrossfitWorkoutError)
@@ -231,7 +249,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              'Сегодня тренировок нет',
+                              'На выбранный день тренировок нет',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -240,7 +258,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Запланируйте тренировку на сегодня кнопкой «Создать тренировку».',
+                              'Запланируйте тренировку на выбранную дату кнопкой «Создать тренировку».',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 12,

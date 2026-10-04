@@ -1,4 +1,33 @@
 class WorkoutDateFormatter {
+  static DateTime localDay(DateTime value) {
+    final local = value.toLocal();
+    return DateTime(local.year, local.month, local.day);
+  }
+
+  static bool sameDay(DateTime a, DateTime b) => localDay(a) == localDay(b);
+
+  static String formatCalendarMonth(DateTime value) {
+    const months = [
+      'Январь',
+      'Февраль',
+      'Март',
+      'Апрель',
+      'Май',
+      'Июнь',
+      'Июль',
+      'Август',
+      'Сентябрь',
+      'Октябрь',
+      'Ноябрь',
+      'Декабрь',
+    ];
+    final local = value.toLocal();
+    return '${months[local.month - 1]} ${local.year}';
+  }
+
+  static String formatCalendarDay(DateTime value) =>
+      sameDay(value, DateTime.now()) ? 'Сегодня' : formatDay(value);
+
   static const List<String> _weekdaysFull = [
     '',
     'Понедельник',

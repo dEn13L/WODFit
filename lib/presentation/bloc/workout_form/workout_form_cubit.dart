@@ -87,6 +87,7 @@ class WorkoutFormState extends Equatable {
   factory WorkoutFormState.initial({
     String? initialProgramId,
     List<String>? initialProgramIds,
+    DateTime? initialScheduledAt,
   }) {
     final selectedPrograms = <String>{};
     if (initialProgramId != null) selectedPrograms.add(initialProgramId);
@@ -97,7 +98,7 @@ class WorkoutFormState extends Equatable {
         WorkoutFormTask(id: const Uuid().v4()),
       ],
       selectedProgramIds: selectedPrograms,
-      scheduledAt: DateTime.now(),
+      scheduledAt: initialScheduledAt ?? DateTime.now(),
       sessionName: '',
       isEditMode: false,
     );
@@ -169,12 +170,14 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
     CrossfitWorkout? workoutToCopy,
     String? initialProgramId,
     List<String>? initialProgramIds,
+    DateTime? initialScheduledAt,
   }) : assert(workoutToEdit == null || workoutToCopy == null),
        _isCopy = workoutToCopy != null,
        super(
          WorkoutFormState.initial(
            initialProgramId: initialProgramId,
            initialProgramIds: initialProgramIds,
+           initialScheduledAt: initialScheduledAt,
          ),
        ) {
     if (workoutToEdit != null) {

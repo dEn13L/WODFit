@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/theme/app_theme_extension.dart';
 import '../../../../core/utils/workout_date_formatter.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
+import '../../../bloc/program/program_cubit.dart';
 import '../../../bloc/workout/crossfit_workout_cubit.dart';
 import '../../../widgets/app_state_view.dart';
+import '../../../widgets/workout_calendar.dart';
 import 'create_workout_screen.dart';
 
 class CoachAllWorkoutsScreen extends StatefulWidget {
@@ -17,6 +20,9 @@ class CoachAllWorkoutsScreen extends StatefulWidget {
 
 class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
   String _searchQuery = '';
+  final _searchController = TextEditingController();
+  DateTime _selectedDate = WorkoutDateFormatter.localDay(DateTime.now());
+  String? _programFilter;
   WorkoutStatus? _statusFilter;
 
   @override
@@ -25,7 +31,27 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
     _loadWorkouts();
   }
 
-  Future<void> _loadWorkouts() => context.read<CrossfitWorkoutCubit>().loadCoachWorkouts();
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openCreate() async {
+    await context.push(
+      '/coach/workouts/create',
+      extra: <String, dynamic>{
+        'initialScheduledAt': _selectedDate,
+        if (_programFilter != null) 'initialProgramId': _programFilter,
+      },
+    );
+    if (mounted) await _loadWorkouts();
+  }
+
+  Future<void> _loadWorkouts() => Future.wait([
+    context.read<CrossfitWorkoutCubit>().loadCoachWorkouts(),
+    context.read<ProgramCubit>().loadCoachPrograms(),
+  ]);
 
   Future<void> _duplicateWorkout(CrossfitWorkout workout) async {
     final saved = await CreateWorkoutScreen.openCopy(context, workout);
@@ -89,10 +115,7 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
           IconButton(
             tooltip: 'Создать тренировку',
             icon: Icon(Icons.add, color: colorScheme.primary),
-            onPressed: () async {
-              await context.push('/coach/workouts/create');
-              if (mounted) _loadWorkouts();
-            },
+            onPressed: _openCreate,
           ),
         ],
       ),
@@ -103,132 +126,180 @@ class _CoachAllWorkoutsScreenState extends State<CoachAllWorkoutsScreen> {
           }
 
           if (state is CrossfitWorkoutError) {
-            return AppErrorView(message: state.message, onRetry: () async => _loadWorkouts());
+            return AppErrorView(
+              message: state.message,
+              onRetry: () async => _loadWorkouts(),
+            );
           }
 
           if (state is CrossfitWorkoutListLoaded) {
-            var workouts = state.workouts;
-
-            if (workouts.isEmpty) {
-              return AppEmptyView(
-                icon: Icons.fitness_center_outlined,
-                title: 'У вас пока нет тренировок',
-                description: 'Создайте первую тренировку и назначьте её программам.',
-                actionLabel: 'Создать тренировку',
-                onAction: () async {
-                  await context.push('/coach/workouts/create');
-                  if (mounted) _loadWorkouts();
-                },
-              );
+            final programState = context.watch<ProgramCubit>().state;
+            final programs = <String, String>{
+              if (programState is ProgramLoaded)
+                for (final program in programState.programs)
+                  program.id: program.name,
+            };
+            for (final workout in state.workouts) {
+              for (final assignment in workout.assignments) {
+                programs.putIfAbsent(
+                  assignment.programId,
+                  () => assignment.programName ?? 'Программа',
+                );
+              }
             }
-
-            if (_statusFilter != null) {
-              workouts = workouts.where((w) => w.status == _statusFilter).toList();
-            }
-
-            if (_searchQuery.trim().isNotEmpty) {
-              final query = _searchQuery.toLowerCase().trim();
-              workouts = workouts.where((w) {
-                final matchTitle = w.title.toLowerCase().contains(query);
-                final matchDesc = w.description.toLowerCase().contains(query);
-                final matchPrograms = w.assignments.any((a) => (a.programName ?? '').toLowerCase().contains(query));
-                return matchTitle || matchDesc || matchPrograms;
-              }).toList();
-            }
-
-            return RefreshIndicator(
-              onRefresh: () async => _loadWorkouts(),
-              color: colorScheme.primary,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Поиск тренировки...',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  setState(() {
-                                    _searchQuery = '';
-                                  });
-                                },
-                              )
-                            : null,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      onChanged: (val) {
-                        setState(() {
-                          _searchQuery = val;
-                        });
-                      },
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
-                    child: Row(
-                      children: [
-                        FilterChip(
-                          label: const Text('Все'),
-                          selected: _statusFilter == null,
-                          onSelected: (_) {
-                            setState(() {
-                              _statusFilter = null;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        FilterChip(
-                          label: const Text('Опубликованные'),
-                          selected: _statusFilter == WorkoutStatus.published,
-                          onSelected: (_) {
-                            setState(() {
-                              _statusFilter = WorkoutStatus.published;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        FilterChip(
-                          label: const Text('Черновики'),
-                          selected: _statusFilter == WorkoutStatus.draft,
-                          onSelected: (_) {
-                            setState(() {
-                              _statusFilter = WorkoutStatus.draft;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: workouts.isEmpty
-                        ? Center(
-                            child: Text(
-                              'Ничего не найдено',
-                              style: TextStyle(color: colorScheme.onSurfaceVariant),
+            final programId = programs.containsKey(_programFilter)
+                ? _programFilter
+                : null;
+            final query = _searchQuery.toLowerCase().trim();
+            final visible = state.workouts
+                .where(
+                  (w) =>
+                      (_statusFilter == null || w.status == _statusFilter) &&
+                      (programId == null ||
+                          w.assignedProgramIds.contains(programId)) &&
+                      (query.isEmpty ||
+                          w.title.toLowerCase().contains(query) ||
+                          w.assignments.any(
+                            (a) => (a.programName ?? '').toLowerCase().contains(
+                              query,
                             ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: workouts.length,
-                            separatorBuilder: (context, index) => const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final workout = workouts[index];
-                              return _CoachWorkoutItemCard(
-                                workout: workout,
-                                onTap: () async {
-                                  await context.push('/workout/${workout.id}');
-                                  if (mounted) _loadWorkouts();
-                                },
-                                onDuplicate: () => _duplicateWorkout(workout),
-                                onDelete: () => _deleteWorkout(workout),
-                              );
-                            },
-                          ),
+                          )),
+                )
+                .toList();
+            final workouts =
+                visible
+                    .where(
+                      (w) => WorkoutDateFormatter.sameDay(
+                        w.scheduledAt,
+                        _selectedDate,
+                      ),
+                    )
+                    .toList()
+                  ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+            return RefreshIndicator(
+              onRefresh: _loadWorkouts,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Поиск по уточнению или программе',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchQuery.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Очистить поиск',
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            ),
+                    ),
+                    onChanged: (value) => setState(() => _searchQuery = value),
                   ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(programId),
+                    initialValue: programId ?? '',
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Программа'),
+                    items: [
+                      const DropdownMenuItem(
+                        value: '',
+                        child: Text('Все программы'),
+                      ),
+                      ...programs.entries.map(
+                        (p) => DropdownMenuItem(
+                          value: p.key,
+                          child: Text(p.value, overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) => setState(
+                      () => _programFilter = value == '' ? null : value,
+                    ),
+                  ),
+                  if (programState is ProgramError)
+                    TextButton(
+                      onPressed: _loadWorkouts,
+                      child: const Text('Повторить загрузку программ'),
+                    ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      FilterChip(
+                        label: const Text('Все'),
+                        selected: _statusFilter == null,
+                        onSelected: (_) => setState(() => _statusFilter = null),
+                      ),
+                      FilterChip(
+                        label: const Text('Опубликованные'),
+                        selected: _statusFilter == WorkoutStatus.published,
+                        onSelected: (_) => setState(
+                          () => _statusFilter = WorkoutStatus.published,
+                        ),
+                      ),
+                      FilterChip(
+                        label: const Text('Черновики'),
+                        selected: _statusFilter == WorkoutStatus.draft,
+                        onSelected: (_) =>
+                            setState(() => _statusFilter = WorkoutStatus.draft),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (state.refreshError != null)
+                    TextButton(
+                      onPressed: _loadWorkouts,
+                      child: Text('${state.refreshError} · Повторить'),
+                    ),
+                  WorkoutCalendar(
+                    workouts: visible,
+                    selectedDate: _selectedDate,
+                    showDrafts: true,
+                    monthView: true,
+                    onDateSelected: (date) =>
+                        setState(() => _selectedDate = date),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    WorkoutDateFormatter.formatCalendarDay(_selectedDate),
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  if (workouts.isEmpty) ...[
+                    const Text(
+                      'На выбранный день тренировок нет с учётом фильтров.',
+                    ),
+                    TextButton.icon(
+                      onPressed: _openCreate,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Создать тренировку'),
+                    ),
+                  ],
+                  for (final workout in workouts) ...[
+                    _CoachWorkoutItemCard(
+                      workout: workout,
+                      onTap: () async {
+                        if (workout.status == WorkoutStatus.draft) {
+                          await context.push(
+                            '/coach/workouts/create',
+                            extra: workout,
+                          );
+                        } else {
+                          await context.push('/workout/${workout.id}');
+                        }
+                        if (mounted) _loadWorkouts();
+                      },
+                      onDuplicate: () => _duplicateWorkout(workout),
+                      onDelete: () => _deleteWorkout(workout),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                 ],
               ),
             );
@@ -361,12 +432,12 @@ class _CoachWorkoutItemCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Icon(Icons.groups_outlined, size: 14, color: colorScheme.primary),
                     const SizedBox(width: 4),
-                    Text(
+                    Flexible(child: Text(
                       workout.assignments.map((a) => a.programName ?? 'Программа').join(', '),
                       style: TextStyle(fontSize: 12, color: colorScheme.primary),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                    ),
+                    )),
                   ],
                 ],
               ),

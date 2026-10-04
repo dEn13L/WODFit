@@ -18,6 +18,7 @@ class CreateWorkoutScreen extends StatelessWidget {
   final CrossfitWorkout? workoutToCopy;
   final String? initialProgramId;
   final List<String>? initialProgramIds;
+  final DateTime? initialScheduledAt;
 
   const CreateWorkoutScreen({
     super.key,
@@ -25,6 +26,7 @@ class CreateWorkoutScreen extends StatelessWidget {
     this.workoutToCopy,
     this.initialProgramId,
     this.initialProgramIds,
+    this.initialScheduledAt,
   });
 
   static Future<CrossfitWorkout?> openCopy(
@@ -53,6 +55,7 @@ class CreateWorkoutScreen extends StatelessWidget {
         workoutToCopy: workoutToCopy,
         initialProgramId: initialProgramId,
         initialProgramIds: initialProgramIds,
+        initialScheduledAt: initialScheduledAt,
       ),
       child: const _CreateWorkoutView(),
     );

@@ -102,6 +102,7 @@ class AppRouter {
                     workoutToEdit: extra['workoutToEdit'] as CrossfitWorkout?,
                     initialProgramId: extra['initialProgramId'] as String?,
                     initialProgramIds: extra['initialProgramIds'] as List<String>?,
+                    initialScheduledAt: extra['initialScheduledAt'] as DateTime?,
                   ));
                 }
                 return const ScreenDataScope(child: CreateWorkoutScreen());
