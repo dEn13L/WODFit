@@ -3,10 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme_extension.dart';
+import '../../../core/theme/app_layout.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/workout_date_formatter.dart';
 import '../../../domain/entities/crossfit_workout.dart';
 import '../../../domain/entities/training_program.dart';
-import 'widgets/coach_welcome_banner.dart';
+import '../../widgets/home_welcome_banner.dart';
 import '../../widgets/workout_calendar.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
@@ -135,11 +137,24 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
               )
             : SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.symmetric(
+                  horizontal:
+                      ((MediaQuery.sizeOf(context).width -
+                                  AppLayout.maxContentWidth) /
+                              2)
+                          .clamp(16.0, double.infinity),
+                  vertical: 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CoachWelcomeBanner(name: user?.fullName),
+                    HomeWelcomeBanner(
+                      name: user?.fullName,
+                      headline: 'Всё для сильной команды',
+                      subtitle:
+                          'Планируйте тренировки и следите за результатами.',
+                      assetPath: HomeWelcomeBanner.coachAsset,
+                    ),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -172,6 +187,14 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
 
                     const SizedBox(height: 24),
 
+                    WorkoutCalendar(
+                      workouts: allWorkouts,
+                      selectedDate: _selectedDate,
+                      showDrafts: true,
+                      onDateSelected: (date) =>
+                          setState(() => _selectedDate = date),
+                    ),
+                    const SizedBox(height: 12),
                     _HomeSectionHeader(
                       icon: Icons.today,
                       title: WorkoutDateFormatter.formatCalendarDay(
@@ -183,15 +206,7 @@ class _CoachHomeScreenState extends State<CoachHomeScreen> {
                         if (mounted) _loadData();
                       },
                     ),
-                    const SizedBox(height: 12),
-                    WorkoutCalendar(
-                      workouts: allWorkouts,
-                      selectedDate: _selectedDate,
-                      showDrafts: true,
-                      onDateSelected: (date) =>
-                          setState(() => _selectedDate = date),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     if (workoutState is CrossfitWorkoutError)
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -521,6 +536,7 @@ class _TodayWorkoutCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
+                    fontFamily: AppTheme.resultFontFamily,
                     color: colorScheme.primary,
                   ),
                 ),
@@ -531,7 +547,7 @@ class _TodayWorkoutCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${workout.nameForProgram()}\n${WorkoutDateFormatter.formatTodayTomorrow(workout.scheduledAt)}',
+                      workout.nameForProgram(),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -629,18 +645,16 @@ class _CoachProgramDashboardCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              ExcludeSemantics(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    CoachWelcomeBanner.assetPath,
-                    width: 56,
-                    height: 64,
-                    fit: BoxFit.cover,
-                    alignment: isPersonal
-                        ? Alignment.centerRight
-                        : Alignment.center,
-                  ),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  isPersonal ? Icons.person_outline : Icons.groups_outlined,
+                  color: colors.onPrimaryContainer,
                 ),
               ),
               const SizedBox(width: 12),
