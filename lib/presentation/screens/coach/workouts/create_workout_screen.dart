@@ -262,7 +262,7 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                     ),
                   ),
                   child: isSubmitting
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(

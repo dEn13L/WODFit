@@ -250,8 +250,9 @@ class CrossfitWorkout extends Equatable {
           ..sort((a, b) => a.programId.compareTo(b.programId));
     final numbered = relevant.where((a) => a.workoutNumber != null).toList();
     if (numbered.isEmpty) return 'Тренировка';
-    if (numbered.length == 1)
+    if (numbered.length == 1) {
       return 'Тренировка ${numbered.single.workoutNumber}';
+    }
     return numbered
         .map(
           (a) =>
