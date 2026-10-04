@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/theme/app_theme_extension.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
+import '../../widgets/login_welcome_panel.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,11 +31,11 @@ class _LoginScreenState extends State<LoginScreen> {
   void _onLoginPressed() {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
-            SignInRequested(
-              email: _emailController.text,
-              password: _passwordController.text,
-            ),
-          );
+        SignInRequested(
+          email: _emailController.text,
+          password: _passwordController.text,
+        ),
+      );
     }
   }
 
@@ -42,6 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final appTheme = context.appTheme;
+    // Scaffold убирает viewInsets из MediaQuery своего body после resize.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Scaffold(
       body: BlocConsumer<AuthBloc, AuthState>(
@@ -58,40 +62,33 @@ class _LoginScreenState extends State<LoginScreen> {
         builder: (context, state) {
           final isLoading = state is AuthLoading;
 
-          return SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          final form = Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: AutofillGroup(
                 child: Form(
                   key: _formKey,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.fitness_center,
-                        size: 64,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(height: 16),
                       Text(
-                        'WOD FIT',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w900,
-                            ),
+                        'С возвращением!',
+                        style: theme.textTheme.headlineMedium,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Вход в систему тренировок',
-                        textAlign: TextAlign.center,
+                        'Войдите, чтобы продолжить тренировки',
                         style: theme.textTheme.bodyMedium,
                       ),
-                      const SizedBox(height: 36),
+                      const SizedBox(height: 24),
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.username],
+                        textInputAction: TextInputAction.next,
+                        enabled: !isLoading,
                         decoration: const InputDecoration(
                           labelText: 'Email',
                           prefixIcon: Icon(Icons.email_outlined),
@@ -110,12 +107,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
+                        autofillHints: const [AutofillHints.password],
+                        textInputAction: TextInputAction.done,
+                        enabled: !isLoading,
+                        onFieldSubmitted: (_) {
+                          if (!isLoading) _onLoginPressed();
+                        },
                         decoration: InputDecoration(
                           labelText: 'Пароль',
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
+                            tooltip: _obscurePassword
+                                ? 'Показать пароль'
+                                : 'Скрыть пароль',
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                             ),
                             onPressed: () {
                               setState(() {
@@ -155,8 +163,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                         child: Text.rich(
                           TextSpan(
-                            text: 'Нет аккаунта? ',
-                            style: TextStyle(color: colorScheme.onSurfaceVariant),
+                            text: 'Нет аккаунта?\n',
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                             children: [
                               TextSpan(
                                 text: 'Зарегистрироваться',
@@ -167,12 +177,53 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
+            ),
+          );
+
+          return SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 840 && !keyboardOpen;
+                return Center(
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.all(16),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: wide ? 1000 : 440),
+                      child: wide
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const Expanded(
+                                  child: LoginWelcomePanel(wide: true),
+                                ),
+                                const SizedBox(width: 32),
+                                Expanded(child: form),
+                              ],
+                            )
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (!keyboardOpen) ...[
+                                  const LoginWelcomePanel(),
+                                  const SizedBox(height: 20),
+                                ],
+                                form,
+                              ],
+                            ),
+                    ),
+                  ),
+                );
+              },
             ),
           );
         },
