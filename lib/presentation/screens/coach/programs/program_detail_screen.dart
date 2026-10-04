@@ -664,7 +664,7 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                   Card(
                     margin: EdgeInsets.zero,
                     child: ExpansionTile(
-                      key: const PageStorageKey('program-members'),
+                      key: PageStorageKey('program-members-${program.id}'),
                       leading: Icon(
                         Icons.people_alt_outlined,
                         color: colorScheme.primary,
@@ -703,6 +703,8 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
                               ),
                             ),
                             child: ListView.separated(
+                              key: const PageStorageKey('members-scroll'),
+                              primary: false,
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: _members.length,
