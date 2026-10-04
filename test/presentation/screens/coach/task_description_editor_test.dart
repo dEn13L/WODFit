@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wod_fit/core/theme/app_theme.dart';
-import 'package:wod_fit/presentation/screens/coach/widgets/coach_welcome_banner.dart';
+import 'package:wod_fit/presentation/widgets/home_welcome_banner.dart';
 import 'package:wod_fit/presentation/screens/coach/workouts/widgets/task_description_editor.dart';
 
 void main() {
@@ -64,7 +64,13 @@ void main() {
                 data: const MediaQueryData(textScaler: TextScaler.linear(1.5)),
                 child: const Padding(
                   padding: EdgeInsets.all(16),
-                  child: CoachWelcomeBanner(name: 'Александра Тестовая'),
+                  child: HomeWelcomeBanner(
+                    name: 'Александра Тестовая',
+                    headline: 'Всё для сильной команды',
+                    subtitle:
+                        'Планируйте тренировки и следите за результатами.',
+                    assetPath: HomeWelcomeBanner.coachAsset,
+                  ),
                 ),
               ),
             ),
