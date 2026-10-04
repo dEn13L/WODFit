@@ -208,8 +208,9 @@ RLS-принципы (не нарушать):
   после удаления. Исторические номера — по scheduled_at/created_at/id.
   Read-only live-сверка: save_workout из 14 уже есть, workout_number отсутствует.
   SQL-проверки 12–15 и rollback/security сценарии прошли в локальном PGlite.
-  Ветка опубликована в PR #25; SQL job прошёл в PostgreSQL 17, Flutter-проверки
-  выполняются в PR CI. Локальный запуск SDK заблокирован auto-review
+  Ветка опубликована в PR #25; для коммита b01a341 PR CI подтвердил чистый
+  flutter analyze, успешные flutter test и release web-сборку; SQL job прошёл
+  в PostgreSQL 17. Локальный запуск SDK заблокирован auto-review
   из-за обращения к служебному адресу метаданных облака. Миграция 15 не применялась.
 
 - Календарь тренировок: общий WorkoutCalendar, неделя с понедельника на главных
