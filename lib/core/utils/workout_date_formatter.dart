@@ -94,14 +94,15 @@ class WorkoutDateFormatter {
   }
 
   /// Формат для деталей:
-  /// "Вторник, 22 сентября, 07:00" или "Вторник, 22 сентября, 07:00 (Сессия 1)"
+  /// "Вторник, 22 сентября 2026, 07:00" или
+  /// "Вторник, 22 сентября 2026, 07:00 (Сессия 1)"
   static String formatDetail(DateTime dateTime, [String? label]) {
     final local = dateTime.toLocal();
     final weekday = _weekdaysFull[local.weekday];
     final day = local.day;
     final month = _monthsGenitive[local.month];
     final time = _formatTime(local);
-    final base = '$weekday, $day $month, $time';
+    final base = '$weekday, $day $month ${local.year}, $time';
     return _appendLabel(base, label);
   }
 
