@@ -5,6 +5,7 @@ import 'package:wod_fit/domain/entities/crossfit_workout.dart';
 import 'package:wod_fit/domain/entities/part_result.dart';
 import 'package:wod_fit/domain/entities/user_profile.dart';
 import 'package:wod_fit/presentation/bloc/workout/crossfit_workout_cubit.dart';
+import 'package:wod_fit/presentation/screens/workout/results_matrix.dart';
 import 'package:wod_fit/presentation/screens/workout/results_screen.dart';
 
 import '../../../support/fake_crossfit_workout_repository.dart';
@@ -14,7 +15,7 @@ class _ResultsTestCubit extends CrossfitWorkoutCubit {
   int loadCount = 0;
 
   _ResultsTestCubit(this.nextState)
-      : super(workoutRepository: FakeCrossfitWorkoutRepository());
+    : super(workoutRepository: FakeCrossfitWorkoutRepository());
 
   @override
   Future<void> loadWorkoutDetails(String workoutId) async {
@@ -38,12 +39,12 @@ void main() {
       );
 
   UserProfile participant(String id, String name) => UserProfile(
-        id: id,
-        email: '$id@example.com',
-        fullName: name,
-        role: UserRole.client,
-        createdAt: now,
-      );
+    id: id,
+    email: '$id@example.com',
+    fullName: name,
+    role: UserRole.client,
+    createdAt: now,
+  );
 
   Future<_ResultsTestCubit> pumpScreen(
     WidgetTester tester,
@@ -114,13 +115,52 @@ void main() {
       ),
     );
 
+    final tabs = find.byType(SegmentedButton<ResultsFilter>);
+    void expectCounts() {
+      for (final label in [
+        'Все 2',
+        'Выполнили 1',
+        'Частично 0',
+        'Не заполнили 1',
+      ]) {
+        expect(
+          find.descendant(of: tabs, matching: find.text(label)),
+          findsOneWidget,
+        );
+      }
+      expect(find.byType(Chip), findsNothing);
+    }
+
+    expectCounts();
     expect(find.text('Анна'), findsOneWidget);
     expect(find.text('Борис'), findsOneWidget);
-    await tester.tap(find.text('Не заполнили').last);
+    await tester.ensureVisible(find.text('Не заполнили 1'));
+    await tester.tap(find.text('Не заполнили 1'));
     await tester.pump();
 
     expect(find.text('Анна'), findsNothing);
     expect(find.text('Борис'), findsOneWidget);
+    expectCounts();
+
+    await tester.tap(find.text('Выполнили 1'));
+    await tester.pump();
+    expect(find.text('Анна'), findsOneWidget);
+    expect(find.text('Борис'), findsNothing);
+    expectCounts();
+
+    await tester.tap(find.text('Частично 0'));
+    await tester.pump();
+    expect(find.text('В этой категории нет участников'), findsOneWidget);
+    expect(find.text('Анна'), findsNothing);
+    expect(find.text('Борис'), findsNothing);
+    expectCounts();
+
+    await tester.ensureVisible(find.text('Все 2'));
+    await tester.tap(find.text('Все 2'));
+    await tester.pump();
+    expect(find.text('Анна'), findsOneWidget);
+    expect(find.text('Борис'), findsOneWidget);
+    expectCounts();
   });
 
   testWidgets('shows error and retries loading', (tester) async {
@@ -139,28 +179,34 @@ void main() {
   });
 
   for (final width in [320.0, 375.0, 430.0, 1000.0, 1200.0, 1440.0]) {
-    testWidgets('handles long content without overflow at ${width.toInt()} px', (tester) async {
-      final part = WorkoutPart(
-        id: 'part',
-        workoutId: 'workout',
-        title: 'Очень длинное название задания с дополнительными уточнениями для атлетов',
-        sortOrder: 0,
-      );
-      await pumpScreen(
-        tester,
-        CrossfitWorkoutDetailLoaded(
-          workout: workout(parts: [part]),
-          userResults: const [],
-          allResults: const [],
-          participants: [
-            participant('anna', 'Очень длинное имя участника программы без сокращений'),
-          ],
-        ),
-        size: Size(width, 900),
-      );
+    testWidgets(
+      'handles long content without overflow at ${width.toInt()} px',
+      (tester) async {
+        final part = WorkoutPart(
+          id: 'part',
+          workoutId: 'workout',
+          title: 'Очень длинное название задания с дополнительными уточнениями для атлетов',
+          sortOrder: 0,
+        );
+        await pumpScreen(
+          tester,
+          CrossfitWorkoutDetailLoaded(
+            workout: workout(parts: [part]),
+            userResults: const [],
+            allResults: const [],
+            participants: [
+              participant(
+                'anna',
+                'Очень длинное имя участника программы без сокращений',
+              ),
+            ],
+          ),
+          size: Size(width, 900),
+        );
 
-      expect(tester.takeException(), isNull);
-      expect(find.textContaining('Очень длинное имя'), findsOneWidget);
-    });
+        expect(tester.takeException(), isNull);
+        expect(find.textContaining('Очень длинное имя'), findsOneWidget);
+      },
+    );
   }
 }
