@@ -157,6 +157,9 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final appTheme = context.appTheme;
+    final compactActions =
+        MediaQuery.sizeOf(context).width <
+        400 * MediaQuery.textScalerOf(context).scale(1);
 
     return BlocConsumer<WorkoutFormCubit, WorkoutFormState>(
       listenWhen: (previous, current) =>
@@ -213,6 +216,9 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
 
         return Scaffold(
           appBar: AppBar(
+            toolbarHeight: compactActions
+                ? 56 * MediaQuery.textScalerOf(context).scale(1)
+                : 56,
             leading: IconButton(
               icon: Icon(
                 Icons.arrow_back_ios_new,
@@ -222,483 +228,532 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
               onPressed: () => context.pop(),
             ),
             actions: [
-              // Text button "Черновик"
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  textStyle: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+              if (compactActions)
+                IconButton(
+                  tooltip: 'Черновик',
+                  onPressed: isSubmitting ? null : () => cubit.saveDraft(),
+                  icon: const Icon(Icons.folder_outlined),
+                )
+              else
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                onPressed: isSubmitting ? null : () => cubit.saveDraft(),
-                icon: Icon(
-                  Icons.folder_outlined,
-                  size: 18,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                label: Text(
-                  'Черновик',
-                  style: TextStyle(
+                  onPressed: isSubmitting ? null : () => cubit.saveDraft(),
+                  icon: Icon(
+                    Icons.folder_outlined,
+                    size: 18,
                     color: colorScheme.onSurfaceVariant,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  ),
+                  label: Text(
+                    'Черновик',
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(width: 8),
 
               // Capsule button "Опубликовать"
               Padding(
                 padding: const EdgeInsets.only(right: 16),
-                child: ElevatedButton(
-                  onPressed: isSubmitting ? null : () => cubit.publishWorkout(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                    minimumSize: const Size(0, 40),
-                    textStyle: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                child: SizedBox(
+                  // Reserve space for back, draft and toolbar padding.
+                  width: compactActions
+                      ? MediaQuery.sizeOf(context).width - 144
+                      : null,
+                  child: ElevatedButton(
+                    onPressed: isSubmitting
+                        ? null
+                        : () => cubit.publishWorkout(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                      minimumSize: const Size(0, 40),
+                      textStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                    child: isSubmitting
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colorScheme.onPrimary,
+                            ),
+                          )
+                        : const Text(
+                            'Опубликовать',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
-                  child: isSubmitting
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: colorScheme.onPrimary,
-                          ),
-                        )
-                      : const Text(
-                          'Опубликовать',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                 ),
               ),
             ],
           ),
-          body: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
-              child: CustomScrollView(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                slivers: [
-                  // Top section (Title, Programs, Date/Time, Session name, Tasks header)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 4. Header title
-                          Text(
-                            formState.isEditMode
-                                ? widget.workoutToEdit!.nameForProgram()
-                                : 'Новая тренировка',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: colorScheme.onSurface,
-                              height: 1.15,
+          body: SafeArea(
+            top: false,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: CustomScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  slivers: [
+                    // Top section (Title, Programs, Date/Time, Session name, Tasks header)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 4. Header title
+                            Text(
+                              formState.isEditMode
+                                  ? widget.workoutToEdit!.nameForProgram()
+                                  : 'Новая тренировка',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: colorScheme.onSurface,
+                                height: 1.15,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                          // 5. Section "НАЗНАЧИТЬ ПРОГРАММАМ"
-                          Text('Кому', style: theme.textTheme.titleMedium),
-                          const SizedBox(height: 10),
+                            // 5. Section "НАЗНАЧИТЬ ПРОГРАММАМ"
+                            Text('Кому', style: theme.textTheme.titleMedium),
+                            const SizedBox(height: 10),
 
-                          BlocBuilder<ProgramCubit, ProgramState>(
-                            builder: (context, programState) {
-                              final programs = programState is ProgramLoaded
-                                  ? programState.programs
-                                  : <TrainingProgram>[];
+                            BlocBuilder<ProgramCubit, ProgramState>(
+                              builder: (context, programState) {
+                                final programs = programState is ProgramLoaded
+                                    ? programState.programs
+                                    : <TrainingProgram>[];
 
-                              if (programState is ProgramLoading ||
-                                  programState is ProgramInitial) {
-                                return const LinearProgressIndicator();
-                              }
-                              if (programState is ProgramError) {
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(programState.message),
-                                    TextButton(
-                                      onPressed: () => context
-                                          .read<ProgramCubit>()
-                                          .loadCoachPrograms(),
-                                      child: const Text('Повторить'),
+                                if (programState is ProgramLoading ||
+                                    programState is ProgramInitial) {
+                                  return const LinearProgressIndicator();
+                                }
+                                if (programState is ProgramError) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(programState.message),
+                                      TextButton(
+                                        onPressed: () => context
+                                            .read<ProgramCubit>()
+                                            .loadCoachPrograms(),
+                                        child: const Text('Повторить'),
+                                      ),
+                                    ],
+                                  );
+                                }
+                                if (programs.isEmpty) {
+                                  return Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          theme.cardTheme.color ??
+                                          colorScheme.surface,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: colorScheme.outlineVariant,
+                                      ),
                                     ),
-                                  ],
-                                );
-                              }
-                              if (programs.isEmpty) {
-                                return Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        theme.cardTheme.color ??
-                                        colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: colorScheme.outlineVariant,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'У вас пока нет созданных программ. Тренировка сохранится в черновик.',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                );
-                              }
-
-                              return Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: programs.map((program) {
-                                  final isSelected = formState
-                                      .selectedProgramIds
-                                      .contains(program.id);
-
-                                  return Semantics(
-                                    selected: isSelected,
-                                    button: true,
-                                    child: InkWell(
-                                      onTap: () =>
-                                          cubit.toggleProgram(program.id),
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? colorScheme.primary.withValues(
-                                                  alpha: 0.15,
-                                                )
-                                              : (theme.cardTheme.color ??
-                                                    colorScheme.surface),
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                          border: Border.all(
-                                            color: isSelected
-                                                ? colorScheme.primary
-                                                : colorScheme.outlineVariant,
-                                            width: isSelected ? 1.5 : 1.0,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              program.kind ==
-                                                      ProgramKind.personal
-                                                  ? Icons.person_outline
-                                                  : Icons.groups_outlined,
-                                              size: 18,
-                                              color: isSelected
-                                                  ? colorScheme.primary
-                                                  : colorScheme
-                                                        .onSurfaceVariant,
-                                            ),
-                                            const SizedBox(width: 6),
-                                            ConstrainedBox(
-                                              constraints: const BoxConstraints(
-                                                maxWidth: 220,
-                                              ),
-                                              child: Text(
-                                                program.name,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isSelected
-                                                      ? colorScheme.primary
-                                                      : colorScheme.onSurface,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                    child: Text(
+                                      'У вас пока нет созданных программ. Тренировка сохранится в черновик.',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                   );
-                                }).toList(),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 24),
+                                }
 
-                          Text('Когда', style: theme.textTheme.titleMedium),
-                          const SizedBox(height: 12),
-                          // Дата и время
-                          Row(
-                            children: [
-                              // Date field
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Дата',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: colorScheme.onSurfaceVariant,
-                                        letterSpacing: 0.8,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    InkWell(
-                                      onTap: () => _pickDate(
-                                        context,
-                                        cubit,
-                                        formState.scheduledAt,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                          vertical: 12,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              theme.cardTheme.color ??
-                                              colorScheme.surface,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
+                                return Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: programs.map((program) {
+                                    final isSelected = formState
+                                        .selectedProgramIds
+                                        .contains(program.id);
+
+                                    return Semantics(
+                                      selected: isSelected,
+                                      button: true,
+                                      child: InkWell(
+                                        onTap: () =>
+                                            cubit.toggleProgram(program.id),
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 8,
                                           ),
-                                          border: Border.all(
-                                            color: colorScheme.outlineVariant,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              DateFormat(
-                                                'dd.MM.yyyy',
-                                              ).format(formState.scheduledAt),
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: colorScheme.onSurface,
-                                              ),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? colorScheme.primary
+                                                      .withValues(alpha: 0.15)
+                                                : (theme.cardTheme.color ??
+                                                      colorScheme.surface),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
                                             ),
-                                            Icon(
-                                              Icons.calendar_today_outlined,
-                                              size: 18,
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? colorScheme.primary
+                                                  : colorScheme.outlineVariant,
+                                              width: isSelected ? 1.5 : 1.0,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                program.kind ==
+                                                        ProgramKind.personal
+                                                    ? Icons.person_outline
+                                                    : Icons.groups_outlined,
+                                                size: 18,
+                                                color: isSelected
+                                                    ? colorScheme.primary
+                                                    : colorScheme
+                                                          .onSurfaceVariant,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Flexible(
+                                                child: Text(
+                                                  program.name,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: isSelected
+                                                        ? colorScheme.primary
+                                                        : colorScheme.onSurface,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 24),
+
+                            Text('Когда', style: theme.textTheme.titleMedium),
+                            const SizedBox(height: 12),
+                            // Дата и время
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final fieldWidth =
+                                    constraints.maxWidth <
+                                        420 *
+                                            MediaQuery.textScalerOf(context)
+                                                .scale(1)
+                                    ? constraints.maxWidth
+                                    : (constraints.maxWidth - 12) / 2;
+                                return Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children: [
+                                    // Date field
+                                    SizedBox(
+                                      width: fieldWidth,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Дата',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
                                               color:
                                                   colorScheme.onSurfaceVariant,
+                                              letterSpacing: 0.8,
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          InkWell(
+                                            onTap: () => _pickDate(
+                                              context,
+                                              cubit,
+                                              formState.scheduledAt,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 12,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    theme.cardTheme.color ??
+                                                    colorScheme.surface,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: colorScheme
+                                                      .outlineVariant,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    DateFormat('dd.MM.yyyy')
+                                                        .format(
+                                                          formState.scheduledAt,
+                                                        ),
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color:
+                                                          colorScheme.onSurface,
+                                                    ),
+                                                  ),
+                                                  Icon(
+                                                    Icons
+                                                        .calendar_today_outlined,
+                                                    size: 18,
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // Time field
+                                    SizedBox(
+                                      width: fieldWidth,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Время',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                              letterSpacing: 0.8,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          InkWell(
+                                            onTap: () => _pickTime(
+                                              context,
+                                              cubit,
+                                              formState.scheduledAt,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 12,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    theme.cardTheme.color ??
+                                                    colorScheme.surface,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: colorScheme
+                                                      .outlineVariant,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    DateFormat('HH:mm').format(
+                                                      formState.scheduledAt,
+                                                    ),
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color:
+                                                          colorScheme.onSurface,
+                                                    ),
+                                                  ),
+                                                  Icon(
+                                                    Icons.access_time,
+                                                    size: 18,
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
 
-                              // Time field
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Время',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: colorScheme.onSurfaceVariant,
-                                        letterSpacing: 0.8,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    InkWell(
-                                      onTap: () => _pickTime(
-                                        context,
-                                        cubit,
-                                        formState.scheduledAt,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                          vertical: 12,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              theme.cardTheme.color ??
-                                              colorScheme.surface,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          border: Border.all(
-                                            color: colorScheme.outlineVariant,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              DateFormat(
-                                                'HH:mm',
-                                              ).format(formState.scheduledAt),
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: colorScheme.onSurface,
-                                              ),
-                                            ),
-                                            Icon(
-                                              Icons.access_time,
-                                              size: 18,
-                                              color:
-                                                  colorScheme.onSurfaceVariant,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 28),
 
-                          const SizedBox(height: 28),
-
-                          // 7. Section header: "ЗАДАНИЯ ТРЕНИРОВКИ" + Pill counter
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'ЗАДАНИЯ ТРЕНИРОВКИ',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: colorScheme.onSurfaceVariant,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  _formatPluralTasks(formState.tasks.length),
+                            // Allow the counter to wrap on narrow screens and large text.
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  'ЗАДАНИЯ ТРЕНИРОВКИ',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // 8. SliverReorderableList for Task Cards
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    sliver: SliverReorderableList(
-                      itemCount: formState.tasks.length,
-                      onReorderItem: (oldIndex, newIndex) {
-                        cubit.reorderTasks(oldIndex, newIndex);
-                      },
-                      itemBuilder: (context, index) {
-                        final task = formState.tasks[index];
-                        return WorkoutTaskCard(
-                          key: ValueKey(task.id),
-                          task: task,
-                          index: index,
-                          onDelete: () => cubit.removeTask(task.id),
-                          onTitleChanged: (title) =>
-                              cubit.setTaskTitle(task.id, title),
-                          onDescriptionChanged: (desc) =>
-                              cubit.setTaskDescription(task.id, desc),
-                        );
-                      },
-                    ),
-                  ),
-
-                  // 11. Add Task Button (Dashed border)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
-                      child: InkWell(
-                        onTap: () => cubit.addTask(),
-                        borderRadius: BorderRadius.circular(16),
-                        child: CustomPaint(
-                          painter: DashedRRectPainter(
-                            color: colorScheme.outlineVariant,
-                            strokeWidth: 1.5,
-                            radius: 16,
-                          ),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.add_circle_outline,
-                                  size: 24,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'ДОБАВИТЬ ЗАДАНИЕ',
-                                  style: TextStyle(
-                                    fontSize: 13,
                                     fontWeight: FontWeight.w700,
                                     color: colorScheme.onSurfaceVariant,
                                     letterSpacing: 0.8,
                                   ),
                                 ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    _formatPluralTasks(formState.tasks.length),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
                               ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // 8. SliverReorderableList for Task Cards
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverReorderableList(
+                        itemCount: formState.tasks.length,
+                        onReorderItem: (oldIndex, newIndex) {
+                          cubit.reorderTasks(oldIndex, newIndex);
+                        },
+                        itemBuilder: (context, index) {
+                          final task = formState.tasks[index];
+                          return WorkoutTaskCard(
+                            key: ValueKey(task.id),
+                            task: task,
+                            index: index,
+                            onDelete: () => cubit.removeTask(task.id),
+                            onTitleChanged: (title) =>
+                                cubit.setTaskTitle(task.id, title),
+                            onDescriptionChanged: (desc) =>
+                                cubit.setTaskDescription(task.id, desc),
+                          );
+                        },
+                      ),
+                    ),
+
+                    // 11. Add Task Button (Dashed border)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
+                        child: InkWell(
+                          onTap: () => cubit.addTask(),
+                          borderRadius: BorderRadius.circular(16),
+                          child: CustomPaint(
+                            painter: DashedRRectPainter(
+                              color: colorScheme.outlineVariant,
+                              strokeWidth: 1.5,
+                              radius: 16,
+                            ),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.add_circle_outline,
+                                    size: 24,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'ДОБАВИТЬ ЗАДАНИЕ',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: colorScheme.onSurfaceVariant,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
