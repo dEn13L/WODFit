@@ -17,6 +17,12 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+  <style>
+    /* Flutter on iOS measures documentElement.clientHeight. Keep that height
+       inside Safari's expanding/collapsing browser chrome, including rotation. */
+    html { height: 100%; height: 100dvh; }
+    body { margin: 0; }
+  </style>
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="CrossFit Training app">
 

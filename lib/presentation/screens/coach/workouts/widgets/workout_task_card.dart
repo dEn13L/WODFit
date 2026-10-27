@@ -179,8 +179,9 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard>
                     textCapitalization: TextCapitalization.sentences,
                     minLines: 3,
                     maxLines: null,
+                    // iOS Safari auto-zooms focused inputs smaller than 16px.
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 16,
                       color: colorScheme.onSurface,
                       height: 1.4,
                     ),
@@ -189,7 +190,7 @@ class _WorkoutTaskCardState extends State<WorkoutTaskCard>
                           'Текст задания: движения, раунды, повторы, вес…',
                       hintStyle: TextStyle(
                         color: colorScheme.onSurfaceVariant,
-                        fontSize: 14,
+                        fontSize: 16,
                       ),
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 8),
