@@ -68,6 +68,22 @@ void main() {
         button.style!.backgroundColor!.resolve({}),
         theme.colorScheme.primary,
       );
+      await tester.tap(find.text('04.10.2026'));
+      await tester.pumpAndSettle();
+      final dialog = find.byType(DatePickerDialog);
+      final monday = find.descendant(of: dialog, matching: find.text('5'));
+      final thursday = find.descendant(of: dialog, matching: find.text('1'));
+      final sunday = find.descendant(of: dialog, matching: find.text('4'));
+      expect(
+        tester.getTopLeft(monday).dx,
+        lessThan(tester.getTopLeft(thursday).dx),
+      );
+      expect(
+        tester.getTopLeft(sunday).dx,
+        greaterThan(tester.getTopLeft(thursday).dx),
+      );
+      Navigator.of(tester.element(dialog)).pop();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('13:15'));
       await tester.pumpAndSettle();
       final pickerContext = tester.element(find.byType(TimePickerDialog));

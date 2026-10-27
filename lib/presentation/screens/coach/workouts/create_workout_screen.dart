@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -102,6 +103,15 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
       initialDate: initialDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
+      builder: (context, child) => Localizations.override(
+        context: context,
+        locale: const Locale('ru'),
+        delegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        child: child!,
+      ),
     );
 
     if (picked != null) {
