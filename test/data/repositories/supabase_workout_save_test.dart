@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:wod_fit/data/models/crossfit_workout_model.dart';
 import 'package:wod_fit/data/repositories/supabase_crossfit_workout_repository.dart';
 import 'package:wod_fit/domain/entities/crossfit_workout.dart';
 import 'package:wod_fit/presentation/bloc/workout_form/workout_form_cubit.dart';
@@ -53,6 +54,84 @@ Map<String, dynamic> savedWorkout(Map<String, dynamic> payload) => {
 };
 
 void main() {
+  test(
+    'unordered embedded tasks keep their saved order through edit and save',
+    () async {
+      final row = savedWorkout({
+        'p_title': '',
+        'p_description': '',
+        'p_scheduled_at': scheduledAt.toIso8601String(),
+        'p_status': 'draft',
+        'p_program_ids': [programId],
+        'p_parts': [
+          {'id': 'first', 'title': 'Первое', 'description': ''},
+          {'id': 'second', 'title': 'Второе', 'description': ''},
+          {'id': 'third', 'title': 'Третье', 'description': ''},
+        ],
+      });
+      row['workout_parts'] = (row['workout_parts'] as List).reversed.toList();
+      final payloads = <Map<String, dynamic>>[];
+      final client = SupabaseClient(
+        'https://example.supabase.co',
+        'test-key',
+        httpClient: MockClient((request) async {
+          final payload = jsonDecode(request.body) as Map<String, dynamic>;
+          payloads.add(payload);
+          final response = savedWorkout(payload);
+          response['workout_parts'] = (response['workout_parts'] as List)
+              .reversed
+              .toList();
+          return http.Response(
+            jsonEncode(response),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+      addTearDown(client.dispose);
+      final repository = SupabaseCrossfitWorkoutRepository(client: client);
+      final workout = CrossfitWorkoutModel.fromJson(row).toDomain();
+      final cubit = WorkoutFormCubit(
+        workoutRepository: repository,
+        workoutToEdit: workout,
+      );
+      addTearDown(cubit.close);
+      expect(workout.parts.map((p) => p.id), ['first', 'second', 'third']);
+      expect(cubit.state.tasks.map((t) => t.id), ['first', 'second', 'third']);
+
+      await cubit.saveDraft();
+      expect(cubit.state.submitStatus, WorkoutFormSubmitStatus.success);
+      expect((payloads.last['p_parts'] as List).map((p) => (p as Map)['id']), [
+        'first',
+        'second',
+        'third',
+      ]);
+      expect(cubit.state.savedWorkout!.parts.map((p) => p.id), [
+        'first',
+        'second',
+        'third',
+      ]);
+
+      cubit.reorderTasks(2, 0);
+      await cubit.saveDraft();
+      expect((payloads.last['p_parts'] as List).map((p) => (p as Map)['id']), [
+        'third',
+        'first',
+        'second',
+      ]);
+      expect(cubit.state.savedWorkout!.parts.map((p) => p.id), [
+        'third',
+        'first',
+        'second',
+      ]);
+      expect(cubit.state.savedWorkout!.parts.map((p) => p.sortOrder), [
+        0,
+        1,
+        2,
+      ]);
+    },
+  );
+
   for (final create in [true, false]) {
     test(
       '${create ? "create" : "update"} saves and reads the entire form in one RPC',

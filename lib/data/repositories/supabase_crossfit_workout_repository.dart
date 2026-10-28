@@ -112,11 +112,9 @@ class SupabaseCrossfitWorkoutRepository implements CrossfitWorkoutRepository {
           .eq('id', id)
           .single();
 
-      final model = CrossfitWorkoutModel.fromJson(Map<String, dynamic>.from(response));
-      final sortedParts = List<WorkoutPart>.from(model.parts.map((p) => p.toDomain()))
-        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-
-      return model.toDomain().copyWith(parts: sortedParts);
+      return CrossfitWorkoutModel.fromJson(
+        Map<String, dynamic>.from(response),
+      ).toDomain();
     } on PostgrestException catch (e, st) {
       AppLogger.e(_tag, 'Workout $id: ${e.message}; details=${e.details}; hint=${e.hint}; code=${e.code}', e, st);
       if (e.code == 'PGRST116' || e.code == '42501') {

@@ -193,6 +193,9 @@ class CrossfitWorkoutModel {
   }
 
   CrossfitWorkout toDomain() {
+    // Embedded rows are not ordered by the API unless explicitly requested.
+    final sortedParts = parts.map((p) => p.toDomain()).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     return CrossfitWorkout(
       id: id,
       coachId: coachId,
@@ -208,7 +211,7 @@ class CrossfitWorkoutModel {
       viewedAt: viewedAt == null
           ? null
           : DateTime.tryParse(viewedAt!)?.toLocal(),
-      parts: parts.map((p) => p.toDomain()).toList(),
+      parts: sortedParts,
       assignments: assignments.map((a) => a.toDomain()).toList(),
     );
   }
