@@ -117,91 +117,144 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
     ProgramKind selectedKind = program.kind;
     final formKey = GlobalKey<FormState>();
 
-    final result = await showDialog<Map<String, dynamic>>(
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: colorScheme.surface,
-          title: Text(
-            'Редактировать программу',
-            style: TextStyle(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SegmentedButton<ProgramKind>(
-                    segments: const [
-                      ButtonSegment(
-                        value: ProgramKind.group,
-                        label: Text('Группа'),
-                        icon: Icon(Icons.groups, size: 18),
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetCtx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final viewInsets = MediaQuery.viewInsetsOf(context);
+          final mediaQuery = MediaQuery.of(context);
+          final availableHeight =
+              mediaQuery.size.height -
+              viewInsets.bottom -
+              mediaQuery.padding.top;
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: viewInsets.bottom),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 640,
+                  maxHeight: availableHeight * 0.9,
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Редактировать программу',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                tooltip: 'Закрыть',
+                                onPressed: () =>
+                                    Navigator.of(bottomSheetCtx).pop(),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          SegmentedButton<ProgramKind>(
+                            segments: const [
+                              ButtonSegment(
+                                value: ProgramKind.group,
+                                label: Text('Группа'),
+                                icon: Icon(Icons.groups, size: 18),
+                              ),
+                              ButtonSegment(
+                                value: ProgramKind.personal,
+                                label: Text('Персональная'),
+                                icon: Icon(Icons.person, size: 18),
+                              ),
+                            ],
+                            selected: {selectedKind},
+                            onSelectionChanged: (val) {
+                              setModalState(() {
+                                selectedKind = val.first;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: nameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Название программы',
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Введите название';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: descriptionController,
+                            maxLines: 2,
+                            decoration: const InputDecoration(
+                              labelText: 'Описание',
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(bottomSheetCtx).pop(),
+                                child: Text(
+                                  'Отмена',
+                                  style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: () {
+                                  if (formKey.currentState?.validate() ??
+                                      false) {
+                                    Navigator.of(bottomSheetCtx).pop({
+                                      'name': nameController.text.trim(),
+                                      'kind': selectedKind,
+                                      'description': descriptionController.text
+                                          .trim(),
+                                    });
+                                  }
+                                },
+                                child: const Text('Сохранить'),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      ButtonSegment(
-                        value: ProgramKind.personal,
-                        label: Text('Персональная'),
-                        icon: Icon(Icons.person, size: 18),
-                      ),
-                    ],
-                    selected: {selectedKind},
-                    onSelectionChanged: (val) {
-                      setDialogState(() {
-                        selectedKind = val.first;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: nameController,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Название программы',
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Введите название';
-                      }
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: descriptionController,
-                    maxLines: 2,
-                    decoration: const InputDecoration(labelText: 'Описание'),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: Text(
-                'Отмена',
-                style: TextStyle(color: colorScheme.onSurfaceVariant),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() ?? false) {
-                  Navigator.of(dialogCtx).pop({
-                    'name': nameController.text.trim(),
-                    'kind': selectedKind,
-                    'description': descriptionController.text.trim(),
-                  });
-                }
-              },
-              child: const Text('Сохранить'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
 

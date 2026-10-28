@@ -66,6 +66,29 @@ class _Programs extends Fake implements ProgramRepository {
     joinRequests++;
     return joinResponse.future;
   }
+
+  @override
+  Future<TrainingProgram> updateProgram({
+    required String programId,
+    required String name,
+    ProgramKind? kind,
+    String? description,
+  }) async {
+    final index = programs.indexWhere((p) => p.id == programId);
+    final current = programs[index];
+    final updated = TrainingProgram(
+      id: programId,
+      coachId: current.coachId,
+      name: name,
+      kind: kind ?? current.kind,
+      description: description ?? current.description,
+      inviteCode: current.inviteCode,
+      memberCount: current.memberCount,
+      createdAt: current.createdAt,
+    );
+    programs[index] = updated;
+    return updated;
+  }
 }
 
 class _Workouts extends FakeCrossfitWorkoutRepository {
@@ -296,5 +319,41 @@ void main() {
     programs.joinResponse.complete(_program(ProgramKind.group));
     await tester.pumpAndSettle();
     expect(find.text('Home'), findsOneWidget);
+  });
+
+  testWidgets('edit program opens bottom sheet and updates program details', (
+    tester,
+  ) async {
+    final programs = _Programs();
+    await _pump(tester, screen: '/coach/programs/group', repository: programs);
+
+    // Open overflow menu
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+
+    // Tap "Редактировать"
+    await tester.tap(find.text('Редактировать'));
+    await tester.pumpAndSettle();
+
+    // Verify bottom sheet appears with title and close button
+    expect(find.text('Редактировать программу'), findsOneWidget);
+    expect(find.byIcon(Icons.close), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
+
+    // Modify the name
+    final nameField = find.widgetWithText(
+      TextFormField,
+      'Сила и выносливость с длинным названием',
+    );
+    expect(nameField, findsOneWidget);
+    await tester.enterText(nameField, 'Обновлённая программа');
+
+    // Tap "Сохранить"
+    await tester.tap(find.text('Сохранить'));
+    await tester.pumpAndSettle();
+
+    // Bottom sheet is dismissed and program name updated
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.text('Обновлённая программа'), findsOneWidget);
   });
 }
