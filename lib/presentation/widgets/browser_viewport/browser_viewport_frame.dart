@@ -6,11 +6,13 @@ import 'package:flutter/material.dart';
 /// visible rectangle while retaining keyboard insets for Scaffold/bottom sheets.
 class BrowserViewportFrame extends StatefulWidget {
   final Rect viewport;
+  final EdgeInsets safeArea;
   final Widget child;
 
   const BrowserViewportFrame({
     super.key,
     required this.viewport,
+    this.safeArea = EdgeInsets.zero,
     required this.child,
   });
 
@@ -28,11 +30,17 @@ class _BrowserViewportFrameState extends State<BrowserViewportFrame> {
     final visible = widget.viewport.intersect(bounds);
     if (visible.isEmpty) return widget.child;
 
-    final occlusion = EdgeInsets.fromLTRB(
+    final rawOcclusion = EdgeInsets.fromLTRB(
       visible.left,
       visible.top,
-      math.max(0, bounds.right - visible.right),
-      math.max(0, bounds.bottom - visible.bottom),
+      math.max(0.0, bounds.right - visible.right),
+      math.max(0.0, bounds.bottom - visible.bottom),
+    );
+    final occlusion = EdgeInsets.fromLTRB(
+      math.max(rawOcclusion.left, widget.safeArea.left),
+      math.max(rawOcclusion.top, widget.safeArea.top),
+      math.max(rawOcclusion.right, widget.safeArea.right),
+      math.max(rawOcclusion.bottom, widget.safeArea.bottom),
     );
     // Flutter's full-page web engine preserves physicalSize during editing and
     // reports the keyboard through viewInsets. Remember browser chrome separately

@@ -137,5 +137,106 @@ void main() {
         },
       );
     }
+
+    testWidgets(
+      'iPhone Safari full-screen mode keeps actions and card within safe bounds (${theme.brightness})',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final auth = AuthBloc(authRepository: _Auth());
+        final workouts = CrossfitWorkoutCubit(workoutRepository: _Workouts());
+        addTearDown(auth.close);
+        addTearDown(workouts.close);
+        auth.add(
+          AuthUserChanged(
+            UserProfile(
+              id: 'coach',
+              email: 'test@example.com',
+              fullName: 'Тренер',
+              role: UserRole.coach,
+              createdAt: DateTime(2031),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // In Safari full-screen mode, bars are collapsed and hardware safe areas active
+        const viewport = Rect.fromLTWH(0, 0, 390, 844);
+        const safeArea = EdgeInsets.only(top: 47, bottom: 34);
+
+        await tester.pumpWidget(
+          MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: auth),
+              BlocProvider.value(value: workouts),
+            ],
+            child: MaterialApp(
+              theme: theme,
+              builder: (context, child) => BrowserViewportFrame(
+                viewport: viewport,
+                safeArea: safeArea,
+                child: child!,
+              ),
+              home: const WorkoutDetailScreen(workoutId: 'workout'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Check AppBar leading and actions are positioned below notch/status bar (>= 47)
+        final backButton = find.byIcon(Icons.arrow_back_ios_new);
+        expect(backButton.hitTestable(), findsOneWidget);
+        expect(tester.getRect(backButton).top, greaterThanOrEqualTo(47));
+
+        final diagnosticsButton = find.byIcon(Icons.bug_report_outlined);
+        expect(diagnosticsButton.hitTestable(), findsOneWidget);
+        expect(tester.getRect(diagnosticsButton).top, greaterThanOrEqualTo(47));
+
+        for (final icon in [
+          Icons.edit_outlined,
+          Icons.copy_outlined,
+          Icons.delete_outline,
+        ]) {
+          final button = find.byIcon(icon);
+          expect(button.hitTestable(), findsOneWidget);
+          final rect = tester.getRect(button);
+          expect(rect.top, greaterThanOrEqualTo(47));
+          expect(rect.left, greaterThanOrEqualTo(0));
+          expect(rect.right, lessThanOrEqualTo(390));
+        }
+
+        // Check card bounds stay inside screen
+        final card = find
+            .ancestor(
+              of: find.text(_title),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Container && widget.decoration is BoxDecoration,
+              ),
+            )
+            .first;
+        final cardRect = tester.getRect(card);
+        expect(cardRect.left, greaterThanOrEqualTo(0));
+        expect(cardRect.right, lessThanOrEqualTo(390));
+
+        // Check bottom results button is scrollable and reachable above home indicator
+        final resultsButton = find.text('Результаты участников');
+        await tester.scrollUntilVisible(
+          resultsButton,
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        expect(resultsButton.hitTestable(), findsOneWidget);
+        expect(
+          tester.getRect(resultsButton).bottom,
+          lessThanOrEqualTo(844 - 34),
+        );
+
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 }

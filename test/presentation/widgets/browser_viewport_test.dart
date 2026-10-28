@@ -13,14 +13,22 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         MediaQueryData? innerMedia;
-        Future<void> show(Rect viewport, {double keyboard = 0}) async {
+        Future<void> show(
+          Rect viewport, {
+          double keyboard = 0,
+          EdgeInsets safeArea = EdgeInsets.zero,
+        }) async {
           await tester.pumpWidget(
             MaterialApp(
               theme: theme,
               builder: (context, child) => MediaQuery(
                 data: MediaQuery.of(context)
                     .copyWith(viewInsets: EdgeInsets.only(bottom: keyboard)),
-                child: BrowserViewportFrame(viewport: viewport, child: child!),
+                child: BrowserViewportFrame(
+                  viewport: viewport,
+                  safeArea: safeArea,
+                  child: child!,
+                ),
               ),
               home: Builder(
                 builder: (context) {
@@ -105,11 +113,35 @@ void main() {
         expectButtonsInside(collapsed);
         expect(innerMedia!.viewInsets, EdgeInsets.zero);
 
+        // Safari full-screen mode on iPhone: bars collapsed, hardware safe areas active.
+        await show(
+          const Rect.fromLTWH(0, 0, 390, 844),
+          safeArea: const EdgeInsets.only(top: 47, bottom: 34),
+        );
+        expectButtonsInside(const Rect.fromLTWH(0, 47, 390, 763));
+        expect(innerMedia!.size, const Size(390, 844 - 47 - 34));
+        expect(innerMedia!.viewInsets, EdgeInsets.zero);
+        expect(
+          tester.getRect(find.text('Сохранить')).top,
+          greaterThanOrEqualTo(47),
+        );
+        expect(
+          tester.getRect(find.text('Добавить задание')).bottom,
+          lessThanOrEqualTo(844 - 34),
+        );
+
         tester.view.physicalSize = const Size(844, 390);
         const landscape = Rect.fromLTWH(47, 0, 750, 340);
         await show(landscape);
         expectButtonsInside(landscape);
         expect(innerMedia!.size, const Size(750, 340));
+
+        await show(
+          const Rect.fromLTWH(0, 0, 844, 390),
+          safeArea: const EdgeInsets.only(left: 47, right: 47, bottom: 21),
+        );
+        expectButtonsInside(const Rect.fromLTWH(47, 0, 750, 369));
+        expect(innerMedia!.size, const Size(750, 369));
       },
     );
   }
