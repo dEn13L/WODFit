@@ -18,6 +18,7 @@ import 'data/repositories/supabase_program_repository.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/crossfit_workout_repository.dart';
 import 'domain/repositories/program_repository.dart';
+import 'presentation/widgets/browser_viewport/browser_viewport.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/bloc/auth/auth_event.dart';
 import 'presentation/bloc/auth/auth_state.dart';
@@ -105,7 +106,9 @@ class _WodFitAppState extends State<WodFitApp> {
       ..add(const AuthCheckRequested());
     _cacheAuthSubscription = _authBloc.stream.listen((state) {
       if (state is AuthLoading) return;
-      final owner = state is Authenticated ? '${state.user.id}:${state.user.role.name}' : null;
+      final owner = state is Authenticated
+          ? '${state.user.id}:${state.user.role.name}'
+          : null;
       if (owner != _cacheOwner) {
         _cacheOwner = owner;
         _sessionCache.clear();
@@ -144,8 +147,10 @@ class _WodFitAppState extends State<WodFitApp> {
             create: (context) => ThemeCubit(themeService: widget.themeService),
           ),
           BlocProvider<ProgramCubit>(
-            create: (context) =>
-                ProgramCubit(programRepository: widget.programRepository, cache: _sessionCache),
+            create: (context) => ProgramCubit(
+              programRepository: widget.programRepository,
+              cache: _sessionCache,
+            ),
           ),
           BlocProvider<CrossfitWorkoutCubit>(
             create: (context) => CrossfitWorkoutCubit(
@@ -163,6 +168,7 @@ class _WodFitAppState extends State<WodFitApp> {
               darkTheme: AppTheme.darkTheme,
               themeMode: themeMode,
               routerConfig: router,
+              builder: (context, child) => BrowserViewport(child: child!),
             );
           },
         ),
