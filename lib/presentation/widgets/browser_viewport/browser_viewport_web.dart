@@ -7,6 +7,22 @@ import 'browser_viewport_frame.dart';
 @JS('window.visualViewport')
 external _VisualViewport? get _visualViewport;
 
+@JS('window.addEventListener')
+external void _windowAddEventListener(String type, JSFunction listener);
+
+@JS('window.removeEventListener')
+external void _windowRemoveEventListener(String type, JSFunction listener);
+
+@JS('window._getSafeAreaInsets')
+external _JSSafeAreaInsets? _getSafeAreaInsets();
+
+extension type _JSSafeAreaInsets(JSObject _) implements JSObject {
+  external double get top;
+  external double get right;
+  external double get bottom;
+  external double get left;
+}
+
 extension type _VisualViewport(JSObject _) implements JSObject {
   external double get width;
   external double get height;
@@ -43,13 +59,36 @@ class _BrowserViewportState extends State<BrowserViewport> {
     }).toJS;
     _viewport?.addEventListener('resize', _listener);
     _viewport?.addEventListener('scroll', _listener);
+    try {
+      _windowAddEventListener('resize', _listener);
+      _windowAddEventListener('scroll', _listener);
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     _viewport?.removeEventListener('resize', _listener);
     _viewport?.removeEventListener('scroll', _listener);
+    try {
+      _windowRemoveEventListener('resize', _listener);
+      _windowRemoveEventListener('scroll', _listener);
+    } catch (_) {}
     super.dispose();
+  }
+
+  EdgeInsets _readSafeArea() {
+    try {
+      final insets = _getSafeAreaInsets();
+      if (insets != null) {
+        return EdgeInsets.fromLTRB(
+          insets.left,
+          insets.top,
+          insets.right,
+          insets.bottom,
+        );
+      }
+    } catch (_) {}
+    return EdgeInsets.zero;
   }
 
   @override
@@ -66,8 +105,13 @@ class _BrowserViewportState extends State<BrowserViewport> {
       );
       if (rect.isFinite && !rect.isEmpty) _lastUnzoomedViewport = rect;
     }
-    final rect = _lastUnzoomedViewport;
-    if (rect == null) return widget.child;
-    return BrowserViewportFrame(viewport: rect, child: widget.child);
+    final rect =
+        _lastUnzoomedViewport ?? (Offset.zero & MediaQuery.sizeOf(context));
+    final safeArea = _readSafeArea();
+    return BrowserViewportFrame(
+      viewport: rect,
+      safeArea: safeArea,
+      child: widget.child,
+    );
   }
 }
