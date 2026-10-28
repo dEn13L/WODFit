@@ -36,6 +36,15 @@ class _Programs implements ProgramRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _StaticPrograms implements ProgramRepository {
+  final List<TrainingProgram> programs;
+  _StaticPrograms(this.programs);
+  @override
+  Future<List<TrainingProgram>> getCoachPrograms() async => programs;
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   late Directory directory;
   setUp(() async {
@@ -218,4 +227,121 @@ void main() {
       await tester.pumpAndSettle();
     });
   }
+
+  testWidgets('auto-selects single program when creating workout', (
+    tester,
+  ) async {
+    final singleProgram = TrainingProgram(
+      id: 'prog-single',
+      inviteCode: 'SINGLE',
+      coachId: 'coach',
+      name: 'Единственная программа',
+      kind: ProgramKind.group,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    final programs = ProgramCubit(
+      programRepository: _StaticPrograms([singleProgram]),
+    );
+    addTearDown(programs.close);
+
+    await tester.pumpWidget(
+      RepositoryProvider<CrossfitWorkoutRepository>.value(
+        value: FakeCrossfitWorkoutRepository(),
+        child: BlocProvider.value(
+          value: programs,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const CreateWorkoutScreen(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final formFinder = find.byType(CustomScrollView);
+    final cubit = tester.element(formFinder).read<WorkoutFormCubit>();
+
+    expect(cubit.state.selectedProgramIds, {'prog-single'});
+
+    final chipFinder = find.ancestor(
+      of: find.text('Единственная программа'),
+      matching: find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.button == true,
+      ),
+    );
+    final semantics = tester.widget<Semantics>(chipFinder);
+    expect(semantics.properties.selected, isTrue);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('does not auto-select when multiple programs exist', (
+    tester,
+  ) async {
+    final prog1 = TrainingProgram(
+      id: 'p1',
+      inviteCode: 'C1',
+      coachId: 'coach',
+      name: 'Программа 1',
+      kind: ProgramKind.group,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    final prog2 = TrainingProgram(
+      id: 'p2',
+      inviteCode: 'C2',
+      coachId: 'coach',
+      name: 'Программа 2',
+      kind: ProgramKind.personal,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    final programs = ProgramCubit(
+      programRepository: _StaticPrograms([prog1, prog2]),
+    );
+    addTearDown(programs.close);
+
+    await tester.pumpWidget(
+      RepositoryProvider<CrossfitWorkoutRepository>.value(
+        value: FakeCrossfitWorkoutRepository(),
+        child: BlocProvider.value(
+          value: programs,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const CreateWorkoutScreen(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final formFinder = find.byType(CustomScrollView);
+    final cubit = tester.element(formFinder).read<WorkoutFormCubit>();
+
+    expect(cubit.state.selectedProgramIds, isEmpty);
+
+    final chip1 = tester.widget<Semantics>(
+      find.ancestor(
+        of: find.text('Программа 1'),
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.button == true,
+        ),
+      ),
+    );
+    final chip2 = tester.widget<Semantics>(
+      find.ancestor(
+        of: find.text('Программа 2'),
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.button == true,
+        ),
+      ),
+    );
+    expect(chip1.properties.selected, isFalse);
+    expect(chip2.properties.selected, isFalse);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
 }
