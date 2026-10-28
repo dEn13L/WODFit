@@ -1,8 +1,10 @@
 import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
+
 import '../../../../core/utils/app_logger.dart';
 import '../../../../domain/entities/crossfit_workout.dart';
 import '../../../../domain/exceptions/workout_save_exception.dart';
@@ -19,11 +21,7 @@ class WorkoutFormTask extends Equatable {
     this.description = '',
   });
 
-  WorkoutFormTask copyWith({
-    String? id,
-    String? title,
-    String? description,
-  }) {
+  WorkoutFormTask copyWith({String? id, String? title, String? description}) {
     return WorkoutFormTask(
       id: id ?? this.id,
       title: title ?? this.title,
@@ -32,11 +30,7 @@ class WorkoutFormTask extends Equatable {
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-    };
+    return {'id': id, 'title': title, 'description': description};
   }
 
   factory WorkoutFormTask.fromMap(Map<dynamic, dynamic> map) {
@@ -94,9 +88,7 @@ class WorkoutFormState extends Equatable {
     if (initialProgramIds != null) selectedPrograms.addAll(initialProgramIds);
 
     return WorkoutFormState(
-      tasks: [
-        WorkoutFormTask(id: const Uuid().v4()),
-      ],
+      tasks: [WorkoutFormTask(id: const Uuid().v4())],
       selectedProgramIds: selectedPrograms,
       scheduledAt: initialScheduledAt ?? DateTime.now(),
       sessionName: '',
@@ -138,20 +130,20 @@ class WorkoutFormState extends Equatable {
 
   @override
   List<Object?> get props => [
-        tasks,
-        selectedProgramIds,
-        scheduledAt,
-        sessionName,
-        isEditMode,
-        workoutId,
-        initialStatus,
-        submitStatus,
-        errorMessage,
-        successMessage,
-        savedWorkout,
-        hasCachedDraft,
-        cachedDraftData,
-      ];
+    tasks,
+    selectedProgramIds,
+    scheduledAt,
+    sessionName,
+    isEditMode,
+    workoutId,
+    initialStatus,
+    submitStatus,
+    errorMessage,
+    successMessage,
+    savedWorkout,
+    hasCachedDraft,
+    cachedDraftData,
+  ];
 }
 
 class WorkoutFormCubit extends Cubit<WorkoutFormState> {
@@ -163,6 +155,7 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   final bool _isCopy;
   Timer? _debounceTimer;
   final _removedTasks = <({WorkoutFormTask task, int index})>[];
+  bool _hasUserInteractedWithPrograms = false;
 
   WorkoutFormCubit({
     required this.workoutRepository,
@@ -180,6 +173,10 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
            initialScheduledAt: initialScheduledAt,
          ),
        ) {
+    if (initialProgramId != null ||
+        (initialProgramIds != null && initialProgramIds.isNotEmpty)) {
+      _hasUserInteractedWithPrograms = true;
+    }
     if (workoutToEdit != null) {
       loadForEdit(workoutToEdit);
     } else if (workoutToCopy != null) {
@@ -208,25 +205,30 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   }
 
   void loadForEdit(CrossfitWorkout workout) {
+    _hasUserInteractedWithPrograms = true;
     final tasks = workout.parts.isNotEmpty
         ? workout.parts
-            .map((p) => WorkoutFormTask(
+              .map(
+                (p) => WorkoutFormTask(
                   id: p.id,
                   title: p.title,
                   description: p.description,
-                ))
-            .toList()
+                ),
+              )
+              .toList()
         : [WorkoutFormTask(id: const Uuid().v4())];
 
-    emit(state.copyWith(
-      tasks: tasks,
-      selectedProgramIds: workout.assignedProgramIds.toSet(),
-      scheduledAt: workout.scheduledAt.toLocal(),
-      sessionName: workout.title,
-      isEditMode: true,
-      workoutId: workout.id,
-      initialStatus: workout.status,
-    ));
+    emit(
+      state.copyWith(
+        tasks: tasks,
+        selectedProgramIds: workout.assignedProgramIds.toSet(),
+        scheduledAt: workout.scheduledAt.toLocal(),
+        sessionName: workout.title,
+        isEditMode: true,
+        workoutId: workout.id,
+        initialStatus: workout.status,
+      ),
+    );
   }
 
   Future<void> _checkCachedDraft() async {
@@ -235,15 +237,13 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
       final draft = box.get(_draftKey);
       if (draft is Map && draft.isNotEmpty) {
         final draftMap = Map<String, dynamic>.from(draft);
-        final hasContent = (draftMap['tasks'] as List?)?.isNotEmpty == true ||
+        final hasContent =
+            (draftMap['tasks'] as List?)?.isNotEmpty == true ||
             (draftMap['session_name'] as String?)?.isNotEmpty == true ||
             (draftMap['program_ids'] as List?)?.isNotEmpty == true;
 
         if (hasContent) {
-          emit(state.copyWith(
-            hasCachedDraft: true,
-            cachedDraftData: draftMap,
-          ));
+          emit(state.copyWith(hasCachedDraft: true, cachedDraftData: draftMap));
         }
       }
     } catch (e, st) {
@@ -254,17 +254,23 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   void restoreCachedDraft() {
     final draft = state.cachedDraftData;
     if (draft == null) return;
+    _hasUserInteractedWithPrograms = true;
 
     try {
       final rawTasks = draft['tasks'] as List<dynamic>?;
       final tasks = rawTasks != null && rawTasks.isNotEmpty
           ? rawTasks
-              .map((t) => WorkoutFormTask.fromMap(Map<dynamic, dynamic>.from(t as Map)))
-              .toList()
+                .map(
+                  (t) => WorkoutFormTask.fromMap(
+                    Map<dynamic, dynamic>.from(t as Map),
+                  ),
+                )
+                .toList()
           : [WorkoutFormTask(id: const Uuid().v4())];
 
       final rawProgramIds = draft['program_ids'] as List<dynamic>?;
-      final programIds = rawProgramIds?.map((e) => e.toString()).toSet() ?? <String>{};
+      final programIds =
+          rawProgramIds?.map((e) => e.toString()).toSet() ?? <String>{};
 
       final rawScheduledAt = draft['scheduled_at'] as String?;
       final scheduledAt = rawScheduledAt != null
@@ -273,13 +279,15 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
 
       final sessionName = (draft['session_name'] as String?) ?? '';
 
-      emit(state.copyWith(
-        tasks: tasks,
-        selectedProgramIds: programIds,
-        scheduledAt: scheduledAt,
-        sessionName: sessionName,
-        hasCachedDraft: false,
-      ));
+      emit(
+        state.copyWith(
+          tasks: tasks,
+          selectedProgramIds: programIds,
+          scheduledAt: scheduledAt,
+          sessionName: sessionName,
+          hasCachedDraft: false,
+        ),
+      );
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при восстановлении черновика', e, st);
     }
@@ -292,11 +300,13 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
 
   void addTask({String title = '', String description = ''}) {
     final updated = List<WorkoutFormTask>.from(state.tasks)
-      ..add(WorkoutFormTask(
-        id: const Uuid().v4(),
-        title: title,
-        description: description,
-      ));
+      ..add(
+        WorkoutFormTask(
+          id: const Uuid().v4(),
+          title: title,
+          description: description,
+        ),
+      );
     emit(state.copyWith(tasks: updated));
     _scheduleAutoSave();
   }
@@ -306,14 +316,16 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
     if (index < 0) return;
     if (state.isEditMode) {
       _removedTasks.add((task: state.tasks[index], index: index));
-      emit(state.copyWith(tasks: state.tasks.where((task) => task.id != taskId).toList()));
+      emit(
+        state.copyWith(
+          tasks: state.tasks.where((task) => task.id != taskId).toList(),
+        ),
+      );
       return;
     }
     if (state.tasks.length <= 1) {
       // Keep at least one empty task
-      emit(state.copyWith(
-        tasks: [WorkoutFormTask(id: const Uuid().v4())],
-      ));
+      emit(state.copyWith(tasks: [WorkoutFormTask(id: const Uuid().v4())]));
     } else {
       final updated = state.tasks.where((t) => t.id != taskId).toList();
       emit(state.copyWith(tasks: updated));
@@ -354,7 +366,22 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
     _scheduleAutoSave();
   }
 
+  void autoSelectIfSingleProgram(List<String> programIds) {
+    if (state.isEditMode || _isCopy || _hasUserInteractedWithPrograms) return;
+    if (state.selectedProgramIds.isNotEmpty) {
+      _hasUserInteractedWithPrograms = true;
+      return;
+    }
+    if (programIds.length == 1) {
+      _hasUserInteractedWithPrograms = true;
+      emit(state.copyWith(selectedProgramIds: {programIds.first}));
+    } else if (programIds.length > 1) {
+      _hasUserInteractedWithPrograms = true;
+    }
+  }
+
   void toggleProgram(String programId) {
+    _hasUserInteractedWithPrograms = true;
     final updated = Set<String>.from(state.selectedProgramIds);
     if (updated.contains(programId)) {
       updated.remove(programId);
@@ -366,6 +393,7 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   }
 
   void setPrograms(Set<String> programIds) {
+    _hasUserInteractedWithPrograms = true;
     emit(state.copyWith(selectedProgramIds: Set<String>.from(programIds)));
     _scheduleAutoSave();
   }
@@ -428,27 +456,33 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   Future<void> publishWorkout() async {
     // 14. Валидация публикации: >=1 программа, >=1 задание, у каждого задания непустое название.
     if (state.selectedProgramIds.isEmpty) {
-      emit(state.copyWith(
-        submitStatus: WorkoutFormSubmitStatus.error,
-        errorMessage: 'Для публикации выберите хотя бы одну программу',
-      ));
+      emit(
+        state.copyWith(
+          submitStatus: WorkoutFormSubmitStatus.error,
+          errorMessage: 'Для публикации выберите хотя бы одну программу',
+        ),
+      );
       return;
     }
 
     if (state.tasks.isEmpty) {
-      emit(state.copyWith(
-        submitStatus: WorkoutFormSubmitStatus.error,
-        errorMessage: 'Добавьте хотя бы одно задание для публикации',
-      ));
+      emit(
+        state.copyWith(
+          submitStatus: WorkoutFormSubmitStatus.error,
+          errorMessage: 'Добавьте хотя бы одно задание для публикации',
+        ),
+      );
       return;
     }
 
     final hasEmptyTitle = state.tasks.any((t) => t.title.trim().isEmpty);
     if (hasEmptyTitle) {
-      emit(state.copyWith(
-        submitStatus: WorkoutFormSubmitStatus.error,
-        errorMessage: 'Заполните название для всех заданий',
-      ));
+      emit(
+        state.copyWith(
+          submitStatus: WorkoutFormSubmitStatus.error,
+          errorMessage: 'Заполните название для всех заданий',
+        ),
+      );
       return;
     }
 
@@ -484,11 +518,15 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
           programIds: state.selectedProgramIds.toList(),
           status: publish ? WorkoutStatus.published : WorkoutStatus.draft,
         );
-        emit(state.copyWith(
-          savedWorkout: workout,
-          submitStatus: WorkoutFormSubmitStatus.success,
-          successMessage: publish ? 'Тренировка опубликована' : 'Черновик сохранён',
-        ));
+        emit(
+          state.copyWith(
+            savedWorkout: workout,
+            submitStatus: WorkoutFormSubmitStatus.success,
+            successMessage: publish
+                ? 'Тренировка опубликована'
+                : 'Черновик сохранён',
+          ),
+        );
       } else {
         final workout = await workoutRepository.createWorkout(
           title: '',
@@ -499,11 +537,15 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
           publish: publish,
         );
         if (!_isCopy) await clearDraftCache();
-        emit(state.copyWith(
-          savedWorkout: workout,
-          submitStatus: WorkoutFormSubmitStatus.success,
-          successMessage: publish ? 'Тренировка опубликована' : 'Черновик сохранён',
-        ));
+        emit(
+          state.copyWith(
+            savedWorkout: workout,
+            submitStatus: WorkoutFormSubmitStatus.success,
+            successMessage: publish
+                ? 'Тренировка опубликована'
+                : 'Черновик сохранён',
+          ),
+        );
       }
     } catch (e, st) {
       AppLogger.e(_tag, 'Ошибка при сохранении тренировки', e, st);
@@ -517,12 +559,14 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
         _removedTasks.clear();
         emit(state.copyWith(tasks: tasks));
       }
-      emit(state.copyWith(
-        submitStatus: WorkoutFormSubmitStatus.error,
-        errorMessage: e is WorkoutSaveException
-            ? e.message
-            : 'Не удалось сохранить тренировку. Попробуйте ещё раз.',
-      ));
+      emit(
+        state.copyWith(
+          submitStatus: WorkoutFormSubmitStatus.error,
+          errorMessage: e is WorkoutSaveException
+              ? e.message
+              : 'Не удалось сохранить тренировку. Попробуйте ещё раз.',
+        ),
+      );
     }
   }
 
