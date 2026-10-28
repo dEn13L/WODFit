@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 class HomeWelcomeBanner extends StatelessWidget {
   static const coachAsset = 'assets/images/coach_athlete.webp';
   static const clientAsset = 'assets/images/client_athlete.webp';
+  static const authAsset = 'assets/images/auth_athlete.webp';
 
   final String? name;
   final String headline;

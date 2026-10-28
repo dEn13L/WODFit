@@ -48,7 +48,7 @@ class LoginWelcomePanel extends StatelessWidget {
     );
     final illustration = ExcludeSemantics(
       child: Image.asset(
-        HomeWelcomeBanner.clientAsset,
+        HomeWelcomeBanner.authAsset,
         width: wide ? 200 : 112,
         height: wide ? 320 : 224,
         fit: BoxFit.contain,
