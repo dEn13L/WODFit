@@ -320,10 +320,11 @@ class _CreateWorkoutViewState extends State<_CreateWorkoutView> {
                         textStyle: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
+			  letterSpacing: 0,
                         ),
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
+                          horizontal: 8,
                           vertical: 8,
                         ),
                         shape: RoundedRectangleBorder(
