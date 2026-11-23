@@ -218,6 +218,11 @@ void main() {
           }),
         );
         addTearDown(client.dispose);
+        const secondPart = WorkoutPart(
+          id: 'part-2',
+          workoutId: workoutId,
+          title: 'Второе задание',
+        );
         final cubit = WorkoutFormCubit(
           workoutRepository: SupabaseCrossfitWorkoutRepository(client: client),
           workoutToEdit: CrossfitWorkout(
@@ -228,7 +233,7 @@ void main() {
             status: WorkoutStatus.draft,
             createdAt: scheduledAt,
             updatedAt: scheduledAt,
-            parts: [part],
+            parts: [part, secondPart],
           ),
         );
         addTearDown(cubit.close);
@@ -241,8 +246,10 @@ void main() {
         expect(cubit.state.errorMessage, isNot(contains('internal')));
         expect(cubit.state.sessionName, 'Изменение');
         if (code == 'W0001') {
-          expect(cubit.state.tasks.single.id, partId);
-          expect(cubit.state.tasks.single.title, 'Изменённое задание');
+          final restoredTask = cubit.state.tasks.singleWhere(
+            (task) => task.id == partId,
+          );
+          expect(restoredTask.title, 'Изменённое задание');
           expect(cubit.state.errorMessage, contains('результатами'));
         }
         expect(requests, hasLength(1));
