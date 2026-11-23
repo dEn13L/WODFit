@@ -450,6 +450,16 @@ class WorkoutFormCubit extends Cubit<WorkoutFormState> {
   }
 
   Future<void> saveDraft() async {
+    if (state.tasks.isEmpty) {
+      emit(
+        state.copyWith(
+          submitStatus: WorkoutFormSubmitStatus.error,
+          errorMessage: 'Добавьте хотя бы одно задание для сохранения черновика',
+        ),
+      );
+      return;
+    }
+
     await _submitWorkout(publish: false);
   }
 
